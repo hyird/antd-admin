@@ -3,6 +3,7 @@
  */
 import type { Context } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
+import { ZodError, type ZodSchema } from 'zod';
 import type { QueryResult } from './types';
 
 export interface ApiResponse<T = unknown> {
@@ -32,6 +33,18 @@ export class AppError extends Error {
 
 export function throwAppError(err: AppErrorDef): never {
     throw new AppError(err.code, err.message, err.status);
+}
+
+export function parseOrThrow<T>(schema: ZodSchema<T>, input: unknown): T {
+    try {
+        return schema.parse(input);
+    } catch (error) {
+        if (error instanceof ZodError) {
+            const message = error.issues[0]?.message || '请求参数不合法';
+            throw new AppError('VALIDATION_ERROR', message, 400);
+        }
+        throw error;
+    }
 }
 
 class ResponseBuilder {

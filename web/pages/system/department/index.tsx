@@ -5,6 +5,10 @@
 export { departmentKeys, departmentQueryKeys } from './department.types';
 export {
     useDepartmentSave,
+    useDepartmentDetail,
+    useDepartmentList,
+    useDepartmentTree,
+    useDepartmentTreeSelect,
     getList,
     getTree,
     getDetail,
@@ -12,12 +16,6 @@ export {
     update,
     remove,
 } from './department.service';
-export {
-    useDepartmentDetail,
-    useDepartmentList,
-    useDepartmentTree,
-    useDepartmentTreeSelect,
-} from './department.queries';
 
 import { PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';

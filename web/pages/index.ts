@@ -192,3 +192,19 @@ registerPage({
         { code: 'system:dept:delete', name: '删除部门', action: 'delete' },
     ],
 });
+
+// 菜单管理
+registerPage({
+    component: 'Menu',
+    name: '菜单管理',
+    icon: 'MenuOutlined',
+    module: '系统管理',
+    description: '菜单、页面与按钮权限配置',
+    loader: () => import('./system/menu'),
+    permissions: [
+        { code: 'system:menu:query', name: '查询菜单', action: 'query' },
+        { code: 'system:menu:add', name: '新增菜单', action: 'add' },
+        { code: 'system:menu:edit', name: '编辑菜单', action: 'edit' },
+        { code: 'system:menu:delete', name: '删除菜单', action: 'delete' },
+    ],
+});

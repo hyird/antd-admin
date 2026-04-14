@@ -23,7 +23,7 @@ export interface UserItem {
     phone?: string;
     email?: string;
     department_id?: number | null;
-    departmentName?: string;
+    department_name?: string;
     status: UserStatus;
     roles: UserRole[];
     created_at?: string;
@@ -43,7 +43,7 @@ export interface CreateUserDto {
     email?: string;
     department_id?: number | null;
     status?: UserStatus;
-    roleIds?: number[];
+    role_ids?: number[];
 }
 
 export interface UpdateUserDto {
@@ -53,10 +53,10 @@ export interface UpdateUserDto {
     department_id?: number | null;
     status?: UserStatus;
     password?: string;
-    roleIds?: number[];
+    role_ids?: number[];
 }
 
 export interface UpdatePasswordDto {
-    oldPassword: string;
-    newPassword: string;
+    old_password: string;
+    new_password: string;
 }

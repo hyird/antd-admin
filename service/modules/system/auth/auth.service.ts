@@ -176,9 +176,9 @@ export class AuthService {
         // 登录成功，清除失败记录
         rateLimitService.clearFailure(username);
 
-        const tokenPayload = { userId: user.id, username: user.username };
+        const tokenPayload = { user_id: user.id, username: user.username };
         const token = signAccessToken(tokenPayload);
-        const refreshToken = signRefreshToken(tokenPayload);
+        const refresh_token = signRefreshToken(tokenPayload);
         const userInfo = await this.buildUserInfo(
             user.id,
             user.username,
@@ -186,29 +186,29 @@ export class AuthService {
             user.status
         );
 
-        return { token, refreshToken, user: userInfo };
+        return { token, refresh_token, user: userInfo };
     }
 
-    async refresh(refreshToken: string): Promise<RefreshResult> {
-        if (!refreshToken) {
+    async refresh(refresh_token: string): Promise<RefreshResult> {
+        if (!refresh_token) {
             throwAppError(AuthError.UNAUTHORIZED);
         }
 
-        let payload: { userId: number; username: string };
+        let payload: { user_id: number; username: string };
         try {
-            payload = verifyRefreshToken(refreshToken);
+            payload = verifyRefreshToken(refresh_token);
         } catch {
             throwAppError(AuthError.TOKEN_INVALID);
         }
 
         const user = await repo.user.findOne({
-            where: { id: payload.userId, deleted_at: IsNull() },
+            where: { id: payload.user_id, deleted_at: IsNull() },
         });
 
         if (!user) throwAppError(AuthError.USER_NOT_FOUND);
         if (user.status === 'disabled') throwAppError(AuthError.USER_DISABLED);
 
-        const tokenPayload = { userId: user.id, username: user.username };
+        const tokenPayload = { user_id: user.id, username: user.username };
         const userInfo = await this.buildUserInfo(
             user.id,
             user.username,
@@ -217,7 +217,7 @@ export class AuthService {
         );
         return {
             token: signAccessToken(tokenPayload),
-            refreshToken: signRefreshToken(tokenPayload),
+            refresh_token: signRefreshToken(tokenPayload),
             user: userInfo,
         };
     }

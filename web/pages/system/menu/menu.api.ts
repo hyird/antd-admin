@@ -3,7 +3,7 @@
  */
 
 import type { Menu } from './menu.types';
-import type { PaginatedResult } from '@/utils/types';
+import { appendQueryParams } from '@/utils/query';
 import request from '@/utils/http';
 
 /** API 端点 */
@@ -16,14 +16,12 @@ const ENDPOINTS = {
 
 /** 获取菜单列表 */
 export function getList(params?: Menu.Query) {
-    return request.get<PaginatedResult<Menu.Item>>(ENDPOINTS.BASE, { params });
+    return request.get<Menu.Item[]>(appendQueryParams(ENDPOINTS.BASE, params));
 }
 
 /** 获取菜单树 */
 export function getTree(status?: Menu.Status) {
-    return request.get<Menu.TreeItem[]>(ENDPOINTS.TREE, {
-        params: status ? { status } : undefined,
-    });
+    return request.get<Menu.TreeItem[]>(appendQueryParams(ENDPOINTS.TREE, status ? { status } : undefined));
 }
 
 /** 获取菜单详情 */

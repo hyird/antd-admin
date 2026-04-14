@@ -23,13 +23,13 @@ export interface LoginRequest {
 
 export interface LoginResult {
     token: string;
-    refreshToken: string;
+    refresh_token: string;
     user: UserInfo;
 }
 
 export interface RefreshResult {
     token: string;
-    refreshToken: string;
+    refresh_token: string;
     user: UserInfo;
 }
 

@@ -5,12 +5,12 @@ import { refreshToken } from '@/pages/login/login.api';
 
 interface AuthState {
     token: string | null;
-    refreshToken: string | null;
+    refresh_token: string | null;
     user: Auth.UserInfo | null;
 }
 
 interface AuthActions {
-    setAuth: (token: string, refreshToken: string, user: Auth.UserInfo) => void;
+    setAuth: (token: string, refresh_token: string, user: Auth.UserInfo) => void;
     clearAuth: () => void;
     setUser: (user: Auth.UserInfo) => void;
     refreshAccessToken: () => Promise<boolean>;
@@ -20,15 +20,15 @@ export type AuthStore = AuthState & AuthActions;
 
 const authStateCreator: StateCreator<AuthStore> = (set, get) => ({
     token: null,
-    refreshToken: null,
+    refresh_token: null,
     user: null,
 
-    setAuth: (token, refreshToken, user) => {
-        set({ token, refreshToken, user });
+    setAuth: (token, refresh_token, user) => {
+        set({ token, refresh_token, user });
     },
 
     clearAuth: () => {
-        set({ token: null, refreshToken: null, user: null });
+        set({ token: null, refresh_token: null, user: null });
     },
 
     setUser: (user) => {
@@ -36,20 +36,21 @@ const authStateCreator: StateCreator<AuthStore> = (set, get) => ({
     },
 
     refreshAccessToken: async () => {
-        const { refreshToken: currentRefreshToken } = get();
+        const { refresh_token: currentRefreshToken } = get();
         if (!currentRefreshToken) return false;
 
         try {
-            const { token, refreshToken: nextRefreshToken, user } = await refreshToken(
-                currentRefreshToken,
-                {
+            const {
+                token,
+                refresh_token: nextRefreshToken,
+                user,
+            } = await refreshToken(currentRefreshToken, {
                 _silent: true,
-                }
-            );
-            set({ token, refreshToken: nextRefreshToken, user });
+            });
+            set({ token, refresh_token: nextRefreshToken, user });
             return true;
         } catch {
-            set({ token: null, refreshToken: null, user: null });
+            set({ token: null, refresh_token: null, user: null });
             return false;
         }
     },
@@ -73,7 +74,7 @@ export const useAuthStore = create<AuthStore>()(
         partialize: (state) =>
             ({
                 token: state.token,
-                refreshToken: state.refreshToken,
+                refresh_token: state.refresh_token,
                 user: state.user,
             }) as AuthStore,
     })

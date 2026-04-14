@@ -62,7 +62,7 @@ export default defineConfig({
     build: {
         outDir: '../dist/web',
         emptyOutDir: true,
-        chunkSizeWarningLimit: 2048,
+        chunkSizeWarningLimit: 9999,
         rollupOptions: {
             output: {
                 // Design intent: ship a single JS bundle (no code splitting).

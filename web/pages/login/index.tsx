@@ -3,8 +3,7 @@
  */
 
 export { login, refreshToken, fetchCurrentUser, logout } from './login.api';
-export { useLogin, useLogout } from './login.hooks';
-export { loginKeys, useCurrentUser } from './login.queries';
+export { loginKeys, useCurrentUser, useLogin, useLogout } from './login.service';
 export type * from './login.types';
 
 import { useMutation } from '@tanstack/react-query';
@@ -199,7 +198,7 @@ export function LoginPage() {
     const mutation = useMutation({
         mutationFn: login,
         onSuccess: (data) => {
-            setAuth(data.token, data.refreshToken, data.user);
+            setAuth(data.token, data.refresh_token, data.user);
         },
     });
 

@@ -7,40 +7,9 @@ import type { User } from './user.types';
 import { userQueryKeys } from './user.types';
 import type { PaginatedResult } from '@/utils/types';
 import { useMutationWithMessage, useSaveMutation } from '@/hooks/useMutation';
+import { create, getDetail, getList, getOptions, remove, update } from './user.api';
 
-// ============ API ============
-
-import request from '@/utils/http';
-
-const ENDPOINTS = {
-    BASE: '/api/users',
-    DETAIL: (id: number) => `/api/users/${id}`,
-    OPTIONS: '/api/users/options',
-} as const;
-
-export function getList(params?: User.Query) {
-    return request.get<PaginatedResult<User.Item>>(ENDPOINTS.BASE, { params });
-}
-
-export function getDetail(id: number) {
-    return request.get<User.Item>(ENDPOINTS.DETAIL(id));
-}
-
-export function getOptions(params?: Pick<User.Query, 'keyword'>) {
-    return request.get<User.Option[]>(ENDPOINTS.OPTIONS, { params });
-}
-
-export function create(data: User.CreateDto) {
-    return request.post<void>(ENDPOINTS.BASE, data);
-}
-
-export function update(id: number, data: User.UpdateDto) {
-    return request.put<void>(ENDPOINTS.DETAIL(id), data);
-}
-
-export function remove(id: number) {
-    return request.delete<void>(ENDPOINTS.DETAIL(id));
-}
+export { create, getDetail, getList, getOptions, remove, update } from './user.api';
 
 // ============ Queries ============
 

@@ -100,7 +100,7 @@ export class UserService {
             phone: u.phone,
             email: u.email,
             department_id: u.department_id,
-            departmentName: u.department?.name,
+            department_name: u.department?.name,
             status: u.status,
             roles: (u.roles || []).map((r) => ({
                 id: r.id,
@@ -601,10 +601,10 @@ export class UserService {
         await this.checkPhoneUnique(data.phone);
         await this.checkEmailUnique(data.email);
 
-        if (!data.roleIds?.length) {
+        if (!data.role_ids?.length) {
             throwAppError(UserError.ROLE_REQUIRED);
         }
-        const roles = await repo.role.findBy({ id: In(data.roleIds) });
+        const roles = await repo.role.findBy({ id: In(data.role_ids) });
 
         const user = repo.user.create({
             username: data.username,
@@ -626,7 +626,7 @@ export class UserService {
             relations: ['roles'],
         });
         if (!user) throwAppError(UserError.USER_NOT_FOUND);
-        if (user.username === 'admin' && data.roleIds !== undefined) {
+        if (user.username === 'admin' && data.role_ids !== undefined) {
             throwAppError(UserError.ADMIN_ROLE_PROTECTED);
         }
         if (data.phone !== undefined) {
@@ -645,15 +645,15 @@ export class UserService {
         if (data.status !== undefined) user.status = data.status;
         if (data.department_id !== undefined) user.department_id = data.department_id;
         if (data.password) user.password_hash = await hashPassword(data.password);
-        if (data.roleIds !== undefined) {
-            if (data.roleIds.length === 0) {
+        if (data.role_ids !== undefined) {
+            if (data.role_ids.length === 0) {
                 throwAppError(UserError.ROLE_REQUIRED);
             }
-            user.roles = await repo.role.findBy({ id: In(data.roleIds) });
+            user.roles = await repo.role.findBy({ id: In(data.role_ids) });
         }
 
         await repo.user.save(user);
-        if (data.roleIds) {
+        if (data.role_ids) {
             permissionService.clearUserCache(id);
         }
     }

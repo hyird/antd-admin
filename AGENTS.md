@@ -35,6 +35,8 @@ bun run format:check  # 检查格式化状态
 
 **不要提交**：`dist/`、`web/dist/`、`tsconfig.web.tsbuildinfo`
 
+**构建说明**：前端当前有意保持单文件产物；`vite build` 出现 chunk size warning 视为预期，不需要主动建议拆包、修改 `chunkSizeWarningLimit` 或调整构建策略，除非用户明确提出。
+
 ## 路径别名
 
 `@/*` 在 tsconfig 中映射为 `["web/*", "service/*"]`。前端代码中 `@/` 等价于 `web/` 根路径。
@@ -81,9 +83,10 @@ web/
   store/          # Zustand 状态管理（authStore, tabsStore）
   styles/         # 全局样式
   utils/          # http（axios封装）、tree、query、icon 等工具
-  types/          # 前端共享类型（PaginatedResult 等）
   public/         # 静态资源
 ```
+
+- 前端类型优先页面内就近组织；当前没有独立的 `web/types/` 目录。
 
 ### 页面组织模式（重要）
 
@@ -117,7 +120,7 @@ service/
   modules/        # 功能模块（common/, data/, system/）
     common/       # http.ts（响应封装 R）、types.ts（BaseEntity、分页工具）
     system/       # auth/, user/, role/, menu/, department/
-    data/         # device/, variable/ 等数据模块
+    data/         # 共享 TypeORM 实体层（当前为例外，不按完整业务模块结构组织）
   utils/          # jwt、bcrypt、logger、tree 工具
   server.ts       # 启动入口（Hono 实例 + 路由注册）
 ```
@@ -133,6 +136,9 @@ modules/system/user/
   user.route.ts   # Hono 路由（权限中间件）
   user.error.ts   # 业务错误定义
 ```
+
+- 上述完整模块结构主要适用于 `service/modules/system/*`。
+- `service/modules/data/` 当前仅承载实体定义，待真实出现独立 API / 业务逻辑时再拆为完整模块。
 
 ### 关键模式
 

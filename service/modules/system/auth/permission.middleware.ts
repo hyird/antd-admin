@@ -10,10 +10,10 @@ import { AppEnv } from '@/core/hono.env';
 export function requirePermission(code: string) {
     return createMiddleware<AppEnv>(async (c, next) => {
         const jwt = c.get('jwt');
-        if (!jwt?.userId) {
+        if (!jwt?.user_id) {
             throwAppError(AuthError.UNAUTHORIZED);
         }
-        const hasPermission = await permissionService.hasPermission(jwt.userId, code);
+        const hasPermission = await permissionService.hasPermission(jwt.user_id, code);
         if (!hasPermission) {
             throwAppError(AuthError.PERMISSION_DENIED);
         }
@@ -27,10 +27,10 @@ export function requirePermission(code: string) {
 export function requireAnyPermission(codes: string[]) {
     return createMiddleware<AppEnv>(async (c, next) => {
         const jwt = c.get('jwt');
-        if (!jwt?.userId) {
+        if (!jwt?.user_id) {
             throwAppError(AuthError.UNAUTHORIZED);
         }
-        const hasPermission = await permissionService.hasAnyPermission(jwt.userId, codes);
+        const hasPermission = await permissionService.hasAnyPermission(jwt.user_id, codes);
         if (!hasPermission) {
             throwAppError(AuthError.PERMISSION_DENIED);
         }
@@ -44,10 +44,10 @@ export function requireAnyPermission(codes: string[]) {
 export function requireAllPermissions(codes: string[]) {
     return createMiddleware<AppEnv>(async (c, next) => {
         const jwt = c.get('jwt');
-        if (!jwt?.userId) {
+        if (!jwt?.user_id) {
             throwAppError(AuthError.UNAUTHORIZED);
         }
-        const hasPermission = await permissionService.hasAllPermissions(jwt.userId, codes);
+        const hasPermission = await permissionService.hasAllPermissions(jwt.user_id, codes);
         if (!hasPermission) {
             throwAppError(AuthError.PERMISSION_DENIED);
         }

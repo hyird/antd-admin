@@ -21,6 +21,7 @@ export {
     useUserDelete,
     useUserSave,
 } from './user.service';
+export { getList, getDetail, getOptions, create, update, remove } from './user.api';
 
 import {
     App,
@@ -42,7 +43,7 @@ import { PageContainer } from '@/components/PageContainer';
 import { StatusTag } from '@/components/StatusTag';
 import { useDebounceFn } from '@/hooks/useDebounceFn';
 import { usePermissions } from '@/hooks/usePermission';
-import { useDepartmentTreeSelect } from '../department/department.queries';
+import { useDepartmentTreeSelect } from '../department/department.service';
 import { useRoleOptions } from '../role/role.service';
 import { useUserDelete, useUserList, useUserSave } from './user.service';
 import type { Role } from '../role/role.types';
@@ -59,7 +60,7 @@ interface UserFormValues {
     email?: string;
     department_id?: number | null;
     status: User.Status;
-    roleIds?: number[];
+    role_ids?: number[];
 }
 
 const SystemUserPage = () => {
@@ -124,7 +125,7 @@ const SystemUserPage = () => {
             email: record.email ?? undefined,
             department_id: record.department_id ?? undefined,
             status: record.status,
-            roleIds: record.roles.map((r) => r.id),
+            role_ids: record.roles.map((r) => r.id),
         });
         setModalVisible(true);
     };
@@ -345,7 +346,7 @@ const SystemUserPage = () => {
                     </Form.Item>
                     <Form.Item
                         label="角色"
-                        name="roleIds"
+                        name="role_ids"
                         rules={[{ required: true, message: '请选择至少一个角色' }]}
                     >
                         <Select

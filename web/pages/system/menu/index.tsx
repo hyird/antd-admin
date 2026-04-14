@@ -5,6 +5,11 @@
 export { menuKeys, menuQueryKeys } from './menu.types';
 export {
     useMenuSave,
+    useMenuDetail,
+    useMenuList,
+    useMenuTree,
+    useMenuTreeForPermission,
+    useMenuTreeSelect,
     getList,
     getTree,
     getDetail,
@@ -14,13 +19,6 @@ export {
     reorder,
     batchCreateButtons,
 } from './menu.service';
-export {
-    useMenuDetail,
-    useMenuList,
-    useMenuTree,
-    useMenuTreeForPermission,
-    useMenuTreeSelect,
-} from './menu.queries';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -57,7 +55,7 @@ import { StatusTag } from '@/components/StatusTag';
 import { getPageConfig, getRegisteredPages, getRegisteredPermissions } from '@/pages';
 import { useDebounceFn } from '@/hooks/useDebounceFn';
 import { usePermissions } from '@/hooks/usePermission';
-import { loginKeys } from '@/pages/login/login.queries';
+import { loginKeys } from '@/pages/login/login.service';
 import { batchCreateButtons, create, getTree, remove, reorder, update } from './menu.api';
 import { menuQueryKeys } from './';
 import type { Menu } from './menu.types';
@@ -191,7 +189,7 @@ const SystemMenuPage = () => {
 
     const sortChildCountById = useMemo(() => {
         const map: Record<number, number> = {};
-        Object.values(fullMenuMap).forEach((item) => {
+        (Object.values(fullMenuMap) as Menu.TreeItem[]).forEach((item) => {
             map[item.id] = item.children?.length ?? 0;
         });
         return map;

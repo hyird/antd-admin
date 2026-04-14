@@ -9,7 +9,7 @@ export const createUserSchema = z.object({
     email: z.string().email('邮箱格式不正确').max(100, '邮箱最多100个字符').optional(),
     department_id: z.number().int().positive().optional().nullable(),
     status: z.enum(['enabled', 'disabled']).optional(),
-    roleIds: z.array(z.number().int().positive()).min(1, '至少选择一个角色'),
+    role_ids: z.array(z.number().int().positive()).min(1, '至少选择一个角色'),
 });
 
 export const updateUserSchema = z.object({
@@ -19,7 +19,7 @@ export const updateUserSchema = z.object({
     department_id: z.number().int().positive().optional().nullable(),
     status: z.enum(['enabled', 'disabled']).optional(),
     password: z.string().min(6, '密码至少6个字符').max(100, '密码最多100个字符').optional(),
-    roleIds: z.array(z.number().int().positive()).min(1, '至少选择一个角色').optional(),
+    role_ids: z.array(z.number().int().positive()).min(1, '至少选择一个角色').optional(),
 });
 
 export const userQuerySchema = pageParamsSchema.extend({
@@ -28,8 +28,8 @@ export const userQuerySchema = pageParamsSchema.extend({
 });
 
 export const updatePasswordSchema = z.object({
-    oldPassword: z.string().min(1, '旧密码不能为空'),
-    newPassword: z.string().min(6, '新密码至少6个字符').max(100, '密码最多100个字符'),
+    old_password: z.string().min(1, '旧密码不能为空'),
+    new_password: z.string().min(6, '新密码至少6个字符').max(100, '密码最多100个字符'),
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;

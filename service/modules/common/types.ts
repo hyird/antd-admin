@@ -44,6 +44,7 @@ export interface ApiError {
 export interface PageParams {
     page?: number | string;
     pageSize?: number | string;
+    page_size?: number | string;
     keyword?: string;
 }
 
@@ -79,6 +80,7 @@ export interface NormalizedPagination {
 export interface PaginationParams {
     page?: number | string;
     pageSize?: number | string;
+    page_size?: number | string;
     keyword?: string;
 }
 
@@ -101,6 +103,13 @@ export const pageParamsSchema = z.object({
             if (val === undefined || val === '') return 10;
             return Number(val);
         }),
+    page_size: z
+        .union([z.string(), z.number()])
+        .optional()
+        .transform((val) => {
+            if (val === undefined || val === '') return undefined;
+            return Number(val);
+        }),
     keyword: z.string().optional(),
 });
 
@@ -115,15 +124,17 @@ export type IdParamInput = z.infer<typeof idParamSchema>;
 
 function hasPaginationParams(params: PaginationParams): boolean {
     const hasPage = params.page !== undefined && params.page !== null && params.page !== '';
+    const resolvedPageSize = params.pageSize ?? params.page_size;
     const hasPageSize =
-        params.pageSize !== undefined && params.pageSize !== null && params.pageSize !== '';
+        resolvedPageSize !== undefined && resolvedPageSize !== null && resolvedPageSize !== '';
     return hasPage || hasPageSize;
 }
 
 export function normalizePagination(params: PaginationParams): NormalizedPagination {
     const paginated = hasPaginationParams(params);
     const page = Math.max(1, Number(params.page) || 1);
-    const pageSize = Math.min(100, Math.max(1, Number(params.pageSize) || 10));
+    const rawPageSize = params.pageSize ?? params.page_size;
+    const pageSize = Math.min(100, Math.max(1, Number(rawPageSize) || 10));
     const keyword = params.keyword?.trim() || undefined;
 
     return {

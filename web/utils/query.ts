@@ -36,3 +36,21 @@ export function createQueryKeys<T extends string>(module: T) {
         options: () => [module, 'options'] as const,
     };
 }
+
+export function appendQueryParams<T extends object>(url: string, params?: T) {
+    if (!params) {
+        return url;
+    }
+
+    const searchParams = new URLSearchParams();
+
+    Object.entries(params as Record<string, unknown>).forEach(([key, value]) => {
+        if (value === undefined || value === null || value === '') {
+            return;
+        }
+        searchParams.set(key, String(value));
+    });
+
+    const queryString = searchParams.toString();
+    return queryString ? `${url}?${queryString}` : url;
+}

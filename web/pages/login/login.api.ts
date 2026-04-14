@@ -23,7 +23,7 @@ export function refreshToken(refreshToken: string, config?: RequestConfig) {
     return request.post<Auth.RefreshResult>(
         ENDPOINTS.REFRESH,
         {
-            refreshToken,
+            refresh_token: refreshToken,
         },
         config
     );
@@ -35,6 +35,6 @@ export function fetchCurrentUser(config?: RequestConfig) {
 }
 
 /** 登出 */
-export function logout(refreshToken?: string, config?: RequestConfig) {
-    return request.post<void>(ENDPOINTS.LOGOUT, { refreshToken: refreshToken ?? '' }, config);
+export function logout(config?: RequestConfig) {
+    return request.post<void>(ENDPOINTS.LOGOUT, undefined, config);
 }

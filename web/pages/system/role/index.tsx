@@ -22,6 +22,7 @@ export {
     useRoleDelete,
     useRoleSave,
 } from './role.service';
+export { getList, getDetail, getAll, create, update, remove } from './role.api';
 
 import type { TreeDataNode, TreeProps } from 'antd';
 import {
@@ -44,7 +45,7 @@ import { PageContainer } from '@/components/PageContainer';
 import { StatusTag } from '@/components/StatusTag';
 import { useDebounceFn } from '@/hooks/useDebounceFn';
 import { usePermissions } from '@/hooks/usePermission';
-import { useMenuTree } from '../menu/menu.queries';
+import { useMenuTree } from '../menu/menu.service';
 import {
     useRoleDelete,
     useRoleDetail,

@@ -25,7 +25,7 @@ export interface MenuQuery {
 
 export interface CreateMenuDto {
     name: string;
-    path?: string;
+    path?: string | null;
     icon?: string;
     component?: string;
     parent_id?: number | null;
@@ -38,7 +38,7 @@ export interface CreateMenuDto {
 
 export interface UpdateMenuDto {
     name?: string;
-    path?: string;
+    path?: string | null;
     icon?: string;
     component?: string;
     parent_id?: number | null;

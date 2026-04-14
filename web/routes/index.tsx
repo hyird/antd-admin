@@ -88,15 +88,11 @@ const HomePage = lazy(() => import('@/pages/home'));
 const componentMap: Record<string, () => Promise<{ default: ComponentType<unknown> }>> =
     getComponentLoaderMap();
 
-const internalComponentMap: Record<string, () => Promise<{ default: ComponentType<unknown> }>> = {
-    Menu: () => import('@/pages/system/menu'),
-};
-
 // 懒加载缓存
 const lazyCache = new Map<string, ComponentType<unknown>>();
 
 function getLazyComponent(name: string): ComponentType<unknown> | null {
-    const loader = componentMap[name] || internalComponentMap[name];
+    const loader = componentMap[name];
     if (!loader) {
         return null;
     }

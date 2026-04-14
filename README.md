@@ -35,8 +35,6 @@ bun run lint        # 执行整个工作区的类型检查
 ├─ service/               # 后端源码
 ├─ package.json           # 根目录唯一 package 清单
 ├─ tsconfig.json          # 根级 TypeScript 入口配置
-├─ tsconfig.web.json      # 前端 TypeScript 配置
-├─ tsconfig.service.json  # 后端 TypeScript 配置
 ├─ vite.config.ts         # 前端构建配置
 ├─ vite-env.d.ts          # Vite 环境类型声明
 └─ AGENTS.md              # 开发约束说明
@@ -56,19 +54,19 @@ bun run lint        # 执行整个工作区的类型检查
 - `web/hooks/`：可复用 hooks。
 - `web/layouts/`：页面外壳与布局片段。
 - `web/pages/`：路由级页面。
+- `web/pages/**`：页面级就近组织，通常包含 `*.api.ts` / `*.service.ts` / `*.schema.ts` / `*.types.ts`。
 - `web/providers/`：顶层 providers。
 - `web/routes/`：路由配置与守卫。
-- `web/services/`：API hooks、query keys、mutations 和服务辅助逻辑。
-- `web/services/common/`：通用服务基础设施。
-- `web/store/`：Redux 状态管理。
-- `web/types/`：前端类型与 API 数据结构。
+- `web/store/`：Zustand 状态管理。
 - `web/utils/`：工具函数与树结构辅助方法。
 
 ## 后端
 
 - `service/modules/`：功能模块。
-- `service/core/`：数据库、响应封装与仓储基础设施。
-- `service/types/`：后端共享类型。
+- `service/config/`：DataSource 与 RepositoryManager。
+- `service/core/`：环境初始化与 Hono 环境类型。
+- `service/modules/common/`：响应封装、基础实体、分页与公共 schema/types。
+- `service/modules/data/`：共享 TypeORM 实体层（当前为例外，不强制按完整业务模块结构组织）。
 - `service/utils/`：通用工具函数。
 - `service/server.ts`：后端启动入口。
 
@@ -83,6 +81,7 @@ bun run lint        # 执行整个工作区的类型检查
 - 菜单、认证、角色、用户、部门等模块耦合较紧，修改时要谨慎。
 - WebSocket 事件名与 React Query key 需要保持一致。
 - 修改 TypeORM 实体时，应同步检查依赖它的路由和服务。
+- 前端构建当前**有意输出为单文件**；`vite build` 的大 chunk warning 属于预期现象，不作为优化建议处理，除非明确要求调整打包策略。
 - 下列生成产物不要提交到仓库：`dist/`、`web/dist/`、`tsconfig.web.tsbuildinfo`。
 
 ## 协作约定

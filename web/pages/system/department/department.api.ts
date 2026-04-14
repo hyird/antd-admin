@@ -3,7 +3,7 @@
  */
 
 import type { Department } from './department.types';
-import type { PaginatedResult } from '@/utils/types';
+import { appendQueryParams } from '@/utils/query';
 import request from '@/utils/http';
 
 /** API 端点 */
@@ -15,16 +15,14 @@ const ENDPOINTS = {
 
 /** 获取部门列表 */
 export function getList(params?: Department.Query) {
-    return request.get<PaginatedResult<Department.Item>>(ENDPOINTS.BASE, {
-        params,
-    });
+    return request.get<Department.Item[]>(appendQueryParams(ENDPOINTS.BASE, params));
 }
 
 /** 获取部门树 */
 export function getTree(status?: Department.Status) {
-    return request.get<Department.TreeItem[]>(ENDPOINTS.TREE, {
-        params: status ? { status } : undefined,
-    });
+    return request.get<Department.TreeItem[]>(
+        appendQueryParams(ENDPOINTS.TREE, status ? { status } : undefined)
+    );
 }
 
 /** 获取部门详情 */

@@ -3,20 +3,22 @@ import { Hono } from 'hono';
 import { authService } from './auth.service';
 import { authMiddleware } from './auth.middleware';
 import { R } from '@/modules/common/http';
+import { parseBody } from '@/modules/common/request';
 import { AppEnv } from '@/core/hono.env';
 import type { LoginRequest, RefreshRequest } from './auth.types';
+import { loginSchema, refreshSchema } from './auth.schema';
 
 export const authRoute = new Hono<AppEnv>();
 
 authRoute.post('/login', async (c) => {
-    const body = await c.req.json<LoginRequest>();
+    const body = await parseBody<LoginRequest>(c, loginSchema);
     const data = await authService.login(body);
     return R.ok(c, data);
 });
 
 authRoute.post('/refresh', async (c) => {
-    const body = await c.req.json<RefreshRequest>();
-    const data = await authService.refresh(body.refreshToken);
+    const body = await parseBody<RefreshRequest>(c, refreshSchema);
+    const data = await authService.refresh(body.refresh_token);
     return R.ok(c, data);
 });
 
@@ -26,7 +28,7 @@ authRoute.post('/logout', async (c) => {
 });
 
 authRoute.get('/me', authMiddleware, async (c) => {
-    const { userId } = c.get('jwt');
-    const data = await authService.getCurrentUser(userId);
+    const { user_id } = c.get('jwt');
+    const data = await authService.getCurrentUser(user_id);
     return R.ok(c, data);
 });

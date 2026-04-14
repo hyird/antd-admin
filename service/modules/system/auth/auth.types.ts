@@ -2,7 +2,7 @@ import type { MenuItem } from '../menu/menu.types';
 import type { RoleOption } from '../role/role.types';
 
 export interface JwtPayload {
-    userId: number;
+    user_id: number;
     username: string;
     iat?: number;
     exp?: number;
@@ -14,18 +14,18 @@ export interface LoginRequest {
 }
 
 export interface RefreshRequest {
-    refreshToken: string;
+    refresh_token: string;
 }
 
 export interface RefreshResult {
     token: string;
-    refreshToken: string;
+    refresh_token: string;
     user: UserInfo;
 }
 
 export interface LoginResult {
     token: string;
-    refreshToken: string;
+    refresh_token: string;
     user: UserInfo;
 }
 
