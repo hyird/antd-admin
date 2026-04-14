@@ -28,7 +28,6 @@ import {
     Button,
     Form,
     Input,
-    Modal,
     Pagination,
     Result,
     Select,
@@ -39,6 +38,7 @@ import {
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useMemo, useState } from 'react';
+import { FormModal } from '@/components/FormModal';
 import { PageContainer } from '@/components/PageContainer';
 import { StatusTag } from '@/components/StatusTag';
 import { useDebounceFn } from '@/hooks/useDebounceFn';
@@ -273,7 +273,7 @@ const SystemUserPage = () => {
                 sticky
             />
 
-            <Modal
+            <FormModal
                 open={modalVisible}
                 title={editing ? '编辑用户' : '新建用户'}
                 okText="确定"
@@ -365,7 +365,7 @@ const SystemUserPage = () => {
                         </Select>
                     </Form.Item>
                 </Form>
-            </Modal>
+            </FormModal>
         </PageContainer>
     );
 };

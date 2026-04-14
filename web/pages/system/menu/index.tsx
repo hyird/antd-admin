@@ -50,6 +50,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { DragOutlined } from '@ant-design/icons';
 import { useEffect, useMemo, useState } from 'react';
 import DynamicIcon from '@/components/DynamicIcon';
+import { FormModal } from '@/components/FormModal';
 import { PageContainer } from '@/components/PageContainer';
 import { StatusTag } from '@/components/StatusTag';
 import { getPageConfig, getRegisteredPages, getRegisteredPermissions } from '@/pages';
@@ -700,7 +701,7 @@ const SystemMenuPage = () => {
                 sticky
             />
 
-            <Modal
+            <FormModal
                 open={modalVisible}
                 title={editing ? '编辑菜单' : '新建菜单'}
                 okText="确定"
@@ -871,7 +872,7 @@ const SystemMenuPage = () => {
                         </Select>
                     </Form.Item>
                 </Form>
-            </Modal>
+            </FormModal>
 
             <Modal
                 open={permModalVisible}

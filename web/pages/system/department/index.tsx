@@ -25,7 +25,6 @@ import {
     Form,
     Input,
     InputNumber,
-    Modal,
     Result,
     Select,
     Space,
@@ -35,6 +34,7 @@ import {
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useMemo, useState } from 'react';
+import { FormModal } from '@/components/FormModal';
 import { PageContainer } from '@/components/PageContainer';
 import { StatusTag } from '@/components/StatusTag';
 import { useDebounceFn } from '@/hooks/useDebounceFn';
@@ -349,7 +349,7 @@ const SystemDepartmentPage = () => {
                 sticky
             />
 
-            <Modal
+            <FormModal
                 open={modalVisible}
                 title={editing ? '编辑部门' : '新建部门'}
                 okText="确定"
@@ -413,7 +413,7 @@ const SystemDepartmentPage = () => {
                         </Select>
                     </Form.Item>
                 </Form>
-            </Modal>
+            </FormModal>
         </PageContainer>
     );
 };

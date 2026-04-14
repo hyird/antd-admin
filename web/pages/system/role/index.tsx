@@ -41,6 +41,7 @@ import {
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useMemo, useState } from 'react';
+import { FormModal } from '@/components/FormModal';
 import { PageContainer } from '@/components/PageContainer';
 import { StatusTag } from '@/components/StatusTag';
 import { useDebounceFn } from '@/hooks/useDebounceFn';
@@ -402,7 +403,7 @@ const SystemRolePage = () => {
                 sticky
             />
 
-            <Modal
+            <FormModal
                 open={modalVisible}
                 title={editing ? '编辑角色' : '新建角色'}
                 okText="确定"
@@ -451,7 +452,7 @@ const SystemRolePage = () => {
                         </Select>
                     </Form.Item>
                 </Form>
-            </Modal>
+            </FormModal>
 
             <Modal
                 open={permModalVisible}
