@@ -1,5 +1,5 @@
 import { Entity, Column, Index, ManyToMany } from 'typeorm';
-import { BaseEntity } from '@/modules/common/types';
+import { BaseEntity } from '@/common/types';
 import { Role } from '@/modules/system/role/role.entity';
 import type { MenuType, MenuStatus } from './menu.types';
 

@@ -1,5 +1,5 @@
 // system/role/role.error.ts
-import type { AppErrorDef } from '@/modules/common/http';
+import type { AppErrorDef } from '@/common/http';
 
 export const RoleError = {
     CODE_EXISTS: {

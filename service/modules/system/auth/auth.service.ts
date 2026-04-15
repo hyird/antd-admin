@@ -3,13 +3,204 @@ import { Menu } from '@/modules/system/menu/menu.entity';
 import type { LoginRequest, LoginResult, RefreshResult } from './auth.types';
 import { comparePassword } from '@/utils/bcrypt';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '@/utils/jwt';
-import { throwAppError } from '@/modules/common/http';
+import { throwAppError } from '@/common/http';
 import { AuthError } from './auth.error';
 
 import { IsNull } from 'typeorm';
-import { rateLimitService } from './rate-limit.service';
 import type { MenuItem } from '../menu/menu.types';
 import type { RoleOption } from '../role/role.types';
+
+/**
+ * 登录限流服务（内存存储）
+ * 记录登录失败次数，超过阈值后锁定账户
+ */
+interface FailureRecord {
+    count: number;
+    expiresAt: number;
+}
+
+class RateLimitService {
+    private failureRecords: Map<string, FailureRecord> = new Map();
+    private readonly maxAttempts: number;
+    private readonly lockDurationMs: number;
+    private cleanupInterval: NodeJS.Timeout | null = null;
+
+    constructor(maxAttempts = 5, lockDurationMinutes = 15) {
+        this.maxAttempts = maxAttempts;
+        this.lockDurationMs = lockDurationMinutes * 60 * 1000;
+        this.startCleanupTask();
+    }
+
+    private startCleanupTask(): void {
+        this.cleanupInterval = setInterval(() => {
+            const now = Date.now();
+            for (const [key, record] of this.failureRecords.entries()) {
+                if (record.expiresAt < now) {
+                    this.failureRecords.delete(key);
+                }
+            }
+        }, 60 * 1000);
+
+        if (this.cleanupInterval.unref) {
+            this.cleanupInterval.unref();
+        }
+    }
+
+    stopCleanupTask(): void {
+        if (this.cleanupInterval) {
+            clearInterval(this.cleanupInterval);
+            this.cleanupInterval = null;
+        }
+    }
+
+    isLocked(username: string): boolean {
+        const record = this.failureRecords.get(username);
+        if (!record) return false;
+
+        const now = Date.now();
+        if (record.expiresAt < now) {
+            this.failureRecords.delete(username);
+            return false;
+        }
+
+        return record.count >= this.maxAttempts;
+    }
+
+    getFailureCount(username: string): number {
+        const record = this.failureRecords.get(username);
+        if (!record) return 0;
+
+        const now = Date.now();
+        if (record.expiresAt < now) {
+            this.failureRecords.delete(username);
+            return 0;
+        }
+
+        return record.count;
+    }
+
+    recordFailure(username: string): number {
+        const now = Date.now();
+        const record = this.failureRecords.get(username);
+
+        if (!record || record.expiresAt < now) {
+            this.failureRecords.set(username, {
+                count: 1,
+                expiresAt: now + this.lockDurationMs,
+            });
+            return 1;
+        }
+
+        record.count++;
+        return record.count;
+    }
+
+    clearFailure(username: string): void {
+        this.failureRecords.delete(username);
+    }
+
+    getRemainingLockTime(username: string): number {
+        const record = this.failureRecords.get(username);
+        if (!record) return 0;
+
+        const now = Date.now();
+        if (record.expiresAt < now) {
+            this.failureRecords.delete(username);
+            return 0;
+        }
+
+        if (record.count < this.maxAttempts) {
+            return 0;
+        }
+
+        return Math.ceil((record.expiresAt - now) / 1000);
+    }
+}
+
+/**
+ * 权限服务
+ * 管理用户权限缓存和校验
+ */
+interface UserPermissionCache {
+    permissions: Set<string>;
+    isSuperadmin: boolean;
+    expireAt: number;
+}
+
+class PermissionService {
+    private permissionCache = new Map<number, UserPermissionCache>();
+    private CACHE_TTL = 60 * 1000;
+
+    async getUserPermissions(
+        userId: number
+    ): Promise<{ permissions: Set<string>; isSuperadmin: boolean }> {
+        const now = Date.now();
+        const cached = this.permissionCache.get(userId);
+        if (cached && cached.expireAt > now) {
+            return {
+                permissions: cached.permissions,
+                isSuperadmin: cached.isSuperadmin,
+            };
+        }
+
+        const user = await repo.user.findOne({
+            where: { id: userId },
+            relations: ['roles', 'roles.menus'],
+        });
+
+        if (!user) {
+            return { permissions: new Set(), isSuperadmin: false };
+        }
+
+        const isSuperadmin =
+            user.roles?.some((r) => r.code === 'superadmin' && r.status === 'enabled') ?? false;
+
+        const permissions = new Set<string>();
+        user.roles?.forEach((role) => {
+            if (role.status === 'enabled') {
+                role.menus?.forEach((menu) => {
+                    if (menu.status === 'enabled' && menu.permission_code) {
+                        permissions.add(menu.permission_code);
+                    }
+                });
+            }
+        });
+
+        this.permissionCache.set(userId, {
+            permissions,
+            isSuperadmin,
+            expireAt: now + this.CACHE_TTL,
+        });
+
+        return { permissions, isSuperadmin };
+    }
+
+    clearUserCache(userId: number): void {
+        this.permissionCache.delete(userId);
+    }
+
+    clearAllCache(): void {
+        this.permissionCache.clear();
+    }
+
+    async hasPermission(userId: number, code: string): Promise<boolean> {
+        const { permissions, isSuperadmin } = await this.getUserPermissions(userId);
+        return isSuperadmin || permissions.has(code);
+    }
+
+    async hasAnyPermission(userId: number, codes: string[]): Promise<boolean> {
+        const { permissions, isSuperadmin } = await this.getUserPermissions(userId);
+        return isSuperadmin || codes.some((code) => permissions.has(code));
+    }
+
+    async hasAllPermissions(userId: number, codes: string[]): Promise<boolean> {
+        const { permissions, isSuperadmin } = await this.getUserPermissions(userId);
+        return isSuperadmin || codes.every((code) => permissions.has(code));
+    }
+}
+
+export const rateLimitService = new RateLimitService();
+export const permissionService = new PermissionService();
 
 interface RoleRow {
     id: number;

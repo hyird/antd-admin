@@ -1,5 +1,5 @@
 import { repo } from '@/config/data';
-import { throwAppError } from '@/modules/common/http';
+import { throwAppError } from '@/common/http';
 import { MenuError } from './menu.error';
 import { buildMenuTree } from '@/utils/tree';
 import type {

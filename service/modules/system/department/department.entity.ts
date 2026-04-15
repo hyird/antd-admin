@@ -1,5 +1,5 @@
 import { Entity, Column, OneToMany } from 'typeorm';
-import { BaseEntity } from '@/modules/common/types';
+import { BaseEntity } from '@/common/types';
 import { User } from '@/modules/system/user/user.entity';
 import type { DepartmentStatus } from './department.types';
 

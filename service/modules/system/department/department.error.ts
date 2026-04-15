@@ -1,5 +1,5 @@
 // src/modules/department/department.error.ts
-import type { AppErrorDef } from '@/modules/common/http';
+import type { AppErrorDef } from '@/common/http';
 
 export const DepartmentError = {
     NOT_FOUND: {

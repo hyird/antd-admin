@@ -1,4 +1,4 @@
-import type { PageParams } from '@/modules/common/types';
+import type { PageParams } from '@/common/types';
 import type { MenuType } from '../menu/menu.types';
 
 export type RoleStatus = 'enabled' | 'disabled';

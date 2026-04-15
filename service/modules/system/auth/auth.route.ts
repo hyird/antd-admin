@@ -1,9 +1,9 @@
 // system/auth/auth.route.ts
 import { Hono } from 'hono';
 import { authService } from './auth.service';
-import { authMiddleware } from './auth.middleware';
-import { R } from '@/modules/common/http';
-import { parseBody } from '@/modules/common/request';
+import { authMiddleware } from '@/middleware/auth';
+import { R } from '@/common/http';
+import { parseBody } from '@/common/request';
 import { AppEnv } from '@/core/hono.env';
 import type { LoginRequest, RefreshRequest } from './auth.types';
 import { loginSchema, refreshSchema } from './auth.schema';

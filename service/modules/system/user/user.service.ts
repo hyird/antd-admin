@@ -1,19 +1,19 @@
 import { repo } from '@/config/data';
 import { hashPassword } from '@/utils/bcrypt';
-import { throwAppError } from '@/modules/common/http';
+import { throwAppError } from '@/common/http';
 import { UserError } from './user.error';
 import {
     normalizePagination,
     paginate,
     applyKeywordSearch,
     type QueryResult,
-} from '@/modules/common/types';
+} from '@/common/types';
 import type { UserQuery, UserItem, UserOption, CreateUserDto, UpdateUserDto } from './user.types';
 import { In, Not, type FindOptionsWhere } from 'typeorm';
 import { User } from './user.entity';
 import { RoleStatus } from '../role/role.entity';
 import { MenuStatus, MenuType } from '../menu/menu.entity';
-import { permissionService } from '../auth/permission.service';
+import { permissionService } from '../auth/auth.service';
 import { createLogger } from '@/utils/logger';
 
 const logger = createLogger('user:seed');

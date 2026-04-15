@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { pageParamsSchema } from '@/modules/common/types';
+import { pageParamsSchema } from '@/common/types';
 
 export const createDepartmentSchema = z.object({
     name: z.string().min(1, '部门名称不能为空').max(100, '部门名称最多100个字符'),

@@ -1,7 +1,7 @@
 import { createMiddleware } from 'hono/factory';
-import { throwAppError } from '@/modules/common/http';
-import { AuthError } from './auth.error';
-import { permissionService } from './permission.service';
+import { throwAppError } from '@/common/http';
+import { AuthError } from '@/modules/system/auth/auth.error';
+import { permissionService } from '@/modules/system/auth/auth.service';
 import { AppEnv } from '@/core/hono.env';
 
 /**

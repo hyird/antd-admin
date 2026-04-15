@@ -6,7 +6,7 @@ import { existsSync, readFileSync } from 'fs';
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
-import { AppError, R } from '@/modules/common/http';
+import { AppError, R } from '@/common/http';
 import { AppEnv } from '@/core/hono.env';
 import { repo } from '@/config/data';
 import { logger } from '@/utils/logger';

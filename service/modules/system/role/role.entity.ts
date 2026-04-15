@@ -1,5 +1,5 @@
 import { Entity, Column, ManyToMany, JoinTable } from 'typeorm';
-import { BaseEntity } from '@/modules/common/types';
+import { BaseEntity } from '@/common/types';
 import { Menu } from '@/modules/system/menu/menu.entity';
 import { User } from '@/modules/system/user/user.entity';
 import type { RoleStatus } from './role.types';

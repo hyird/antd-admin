@@ -1,13 +1,10 @@
 import { Hono } from 'hono';
-import { authMiddleware } from '@/modules/system/auth/auth.middleware';
-import {
-    requireAnyPermission,
-    requirePermission,
-} from '@/modules/system/auth/permission.middleware';
+import { authMiddleware } from '@/middleware/auth';
+import { requireAnyPermission, requirePermission } from '@/middleware/permission';
 import { userService } from './user.service';
-import { R } from '@/modules/common/http';
-import { parseBody, parseParams, parseQuery } from '@/modules/common/request';
-import { idParamSchema } from '@/modules/common/types';
+import { R } from '@/common/http';
+import { parseBody, parseParams, parseQuery } from '@/common/request';
+import { idParamSchema } from '@/common/types';
 import type { CreateUserDto, UpdateUserDto, UserStatus } from './user.types';
 import { AppEnv } from '@/core/hono.env';
 import { createUserSchema, updateUserSchema, userQuerySchema } from './user.schema';

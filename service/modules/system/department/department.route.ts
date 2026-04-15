@@ -1,13 +1,10 @@
 import { Hono } from 'hono';
-import { authMiddleware } from '@/modules/system/auth/auth.middleware';
-import {
-    requirePermission,
-    requireAnyPermission,
-} from '@/modules/system/auth/permission.middleware';
+import { authMiddleware } from '@/middleware/auth';
+import { requirePermission, requireAnyPermission } from '@/middleware/permission';
 import { departmentService } from './department.service';
-import { R } from '@/modules/common/http';
-import { parseBody, parseParams, parseQuery } from '@/modules/common/request';
-import { idParamSchema } from '@/modules/common/types';
+import { R } from '@/common/http';
+import { parseBody, parseParams, parseQuery } from '@/common/request';
+import { idParamSchema } from '@/common/types';
 import type { CreateDepartmentDto, UpdateDepartmentDto } from './department.types';
 import type { DepartmentStatus } from './department.entity';
 import { AppEnv } from '@/core/hono.env';

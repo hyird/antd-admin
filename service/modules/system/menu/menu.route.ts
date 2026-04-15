@@ -1,14 +1,11 @@
 import { Hono } from 'hono';
-import { authMiddleware } from '@/modules/system/auth/auth.middleware';
-import {
-    requirePermission,
-    requireAnyPermission,
-} from '@/modules/system/auth/permission.middleware';
+import { authMiddleware } from '@/middleware/auth';
+import { requirePermission, requireAnyPermission } from '@/middleware/permission';
 import { menuService } from './menu.service';
-import { permissionService } from '@/modules/system/auth/permission.service';
-import { R } from '@/modules/common/http';
-import { parseBody, parseParams, parseQuery } from '@/modules/common/request';
-import { idParamSchema } from '@/modules/common/types';
+import { permissionService } from '@/modules/system/auth/auth.service';
+import { R } from '@/common/http';
+import { parseBody, parseParams, parseQuery } from '@/common/request';
+import { idParamSchema } from '@/common/types';
 import type {
     CreateMenuDto,
     UpdateMenuDto,

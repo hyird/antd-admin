@@ -1,5 +1,5 @@
 // system/menu/menu.error.ts
-import type { AppErrorDef } from '@/modules/common/http';
+import type { AppErrorDef } from '@/common/http';
 
 export const MenuError = {
     MENU_NOT_FOUND: {

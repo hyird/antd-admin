@@ -6,10 +6,7 @@ import { User } from '@/modules/system/user/user.entity';
 import { Role } from '@/modules/system/role/role.entity';
 import { Menu } from '@/modules/system/menu/menu.entity';
 import { Department } from '@/modules/system/department/department.entity';
-import { Device } from '@/modules/data/device.entity';
-import { Variable } from '@/modules/data/variable.entity';
-import { VariableHistory } from '@/modules/data/variable-history.entity';
-import { VariableRealtime } from '@/modules/data/variable-realtime.entity';
+import { Device, Variable, VariableHistory, VariableRealtime } from '@/modules/data/data.entity';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const shouldSynchronize =

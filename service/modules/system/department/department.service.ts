@@ -1,5 +1,5 @@
 import { repo } from '@/config/data';
-import { throwAppError } from '@/modules/common/http';
+import { throwAppError } from '@/common/http';
 import { DepartmentError } from './department.error';
 import type {
     DepartmentItem,

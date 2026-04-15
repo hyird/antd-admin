@@ -1,7 +1,7 @@
 import { Entity, Column, Index, ManyToMany, ManyToOne, JoinTable } from 'typeorm';
 import { Role } from '@/modules/system/role/role.entity';
 import { Department } from '@/modules/system/department/department.entity';
-import { BaseEntity } from '@/modules/common/types';
+import { BaseEntity } from '@/common/types';
 import type { UserStatus } from './user.types';
 
 export type { UserStatus };

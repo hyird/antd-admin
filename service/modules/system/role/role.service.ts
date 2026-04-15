@@ -1,13 +1,13 @@
 import { repo } from '@/config/data';
 import { In } from 'typeorm';
-import { throwAppError } from '@/modules/common/http';
+import { throwAppError } from '@/common/http';
 import { RoleError } from './role.error';
 import {
     normalizePagination,
     paginate,
     applyKeywordSearch,
     type QueryResult,
-} from '@/modules/common/types';
+} from '@/common/types';
 import type { RoleQuery, RoleItem, RoleDetail, CreateRoleDto, UpdateRoleDto } from './role.types';
 import type { RoleStatus } from './role.entity';
 import { Role } from './role.entity';

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { pageParamsSchema } from '@/modules/common/types';
+import { pageParamsSchema } from '@/common/types';
 
 export const createUserSchema = z.object({
     username: z.string().min(2, '用户名至少2个字符').max(50, '用户名最多50个字符'),

@@ -1,4 +1,4 @@
-import type { PageParams } from '@/modules/common/types';
+import type { PageParams } from '@/common/types';
 
 export type UserStatus = 'enabled' | 'disabled';
 
