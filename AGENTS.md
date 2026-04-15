@@ -1,181 +1,189 @@
 # AGENTS.md
 
-## 项目概述
+## 项目概览
 
-Monorepo，前后端分离但统一维护在同仓库：
+前后端分离的 admin 脚手架，`web/` 为前端，`service/` 为后端。
 
-| 模块       | 技术栈                                                         | 入口                |
-| ---------- | -------------------------------------------------------------- | ------------------- |
-| `web/`     | React 19 + Vite + React Router + TanStack Query + Ant Design 6 | `web/main.tsx`      |
-| `service/` | Bun + Hono + TypeORM + MySQL                                   | `service/server.ts` |
+- **运行时**: Bun（不是 npm/yarn/pnpm）
+- **前端**: React 19, Vite（root 在 `./web`）, Ant Design 6, Tailwind CSS 4, TanStack Query, Zustand
+- **后端**: Hono, TypeORM, MariaDB, JWT + bcrypt 认证
+- **构建产物**: `dist/web/`（前端）, `dist/server.js`（后端）
 
-- 根目录唯一 `package.json`（**不要创建 `web/package.json` 或 `service/package.json`**）
-- TypeScript 配置统一在根目录（`tsconfig.json`）
-- Vite 构建输出到 `dist/web`，后端构建产物为 `dist/server.js`
-
-## 开发命令
+## 开发者命令
 
 ```bash
-bun run dev         # 同时启动后端(1102)和前端(5173)
-bun run dev:web     # 仅前端
-bun run dev:service # 仅后端
-bun run build       # 构建两者
-bun run lint        # 类型检查 (tsc --noEmit)
-bun run format      # 格式化所有文件
-bun run format:check  # 检查格式化状态
+bun run dev          # 并发启动 service (1102) 和 web (5173)
+bun run dev:web      # 仅前端 (Vite dev server, 5173)
+bun run dev:service  # 仅后端 (bun --watch, 1102)
+bun run build        # 构建全部：web → dist/web, service → dist/server.js
+bun run build:web    # Vite build → dist/web
+bun run build:service # Bun build service/server.ts → dist/server.js
+bun run start        # NODE_ENV=production bun dist/server.js
+bun run lint         # tsc --noEmit（仅类型检查，无 linter）
+bun run format       # prettier --write .
+bun run format:check # prettier --check .
 ```
 
-**首次 setup**：
+## 环境配置
 
-1. `bun install`
-2. `cp .env.example .env` — 修改数据库和 JWT 配置
-3. `bun run dev`
+- 首次运行前复制 `.env.example` → `.env`
+- 后端从项目根目录读取 `.env`（通过 `service/core/env.ts`）
+- Vite 通过 `envDir` 从项目根目录读取 env
+- `DB_SYNCHRONIZE=true` 在开发模式下自动创建/迁移 DB 表（TypeORM）
+- 服务启动时总是执行 `repo.initialize()` + `userService.seedAdmin()`
 
-**端口约定**：后端默认 `1102`，Vite 开发服务器代理 `/api` 到 `127.0.0.1:1102`。
-
-**不要提交**：`dist/`、`web/dist/`、`tsconfig.web.tsbuildinfo`
-
-**构建说明**：前端当前有意保持单文件产物；`vite build` 出现 chunk size warning 视为预期，不需要主动建议拆包、修改 `chunkSizeWarningLimit` 或调整构建策略，除非用户明确提出。
-
-## 路径别名
-
-`@/*` 在 tsconfig 中映射为 `["web/*", "service/*"]`。前端代码中 `@/` 等价于 `web/` 根路径。
-
-## API 与数据类型约定
-
-### 请求/响应
-
-- **API payload**：snake_case
-- **分页结构**：`{ list: T[], total: number, page: number, pageSize: number, totalPages?: number }`
-- **响应封装**：`{ code: 0|number, message: string, data?: T }`
-- **错误码**：非 0 为错误
-
-### TypeScript 命名
-
-| 类型                      | 用途        | 示例            |
-| ------------------------- | ----------- | --------------- |
-| `Item`                    | 列表项/详情 | `UserItem`      |
-| `Query`                   | 查询参数    | `UserQuery`     |
-| `CreateDto` / `UpdateDto` | 写入参数    | `CreateUserDto` |
-| `Option`                  | 选择器选项  | `UserOption`    |
-| `TreeItem`                | 树形数据    | -               |
-
-### 数据库字段命名
-
-- snake_case（与 API 一致）
-- 不额外添加 camelCase 别名，除非有明确迁移方案
-
-## 前端架构
-
-### 目录结构
+## 目录组织
 
 ```
-web/
-  components/     # 共享 UI 组件
-  config/         # App 配置（app.ts, routes 等）
-  hooks/          # 可复用 hooks（useMutation, useDynamicRoutes, useInitAuth 等）
-  layouts/        # AdminLayout 等页面外壳
-  pages/          # 路由页面（采用页面级组织，按模块分组）
-    home/         # 首页
-    system/       # 系统管理模块（user, role, department, menu）
-  providers/      # TanstackQuery、Message 等顶层 provider
-  routes/         # 路由配置与守卫
-  store/          # Zustand 状态管理（authStore, tabsStore）
-  styles/         # 全局样式
-  utils/          # http（axios封装）、tree、query、icon 等工具
-  public/         # 静态资源
+web/                          # 前端（Vite root）
+├── components/               # 公共组件（FormModal, PageContainer, StatusTag, Breadcrumb, PageTabs, DynamicIcon, ErrorBoundary）
+├── pages/                    # 页面（按模块分组）
+│   ├── login/                # 登录页
+│   └── system/               # 系统管理模块
+│       ├── user/             # 用户管理
+│       ├── role/             # 角色管理
+│       ├── menu/             # 菜单管理
+│       └── department/       # 部门管理
+│   ├── home/                 # 首页
+│   └── index.ts              # 页面导出汇总
+├── hooks/                    # 自定义 Hooks（usePermission, useMutation, useInitAuth, useDynamicRoutes, useDebounceFn）
+├── store/                    # Zustand 状态（authStore, tabsStore）
+├── providers/                # React Providers（TanstackQuery, Message）
+├── utils/                    # 工具函数（http, query, tree, types, animations, icon）
+├── routes/                   # 路由配置
+├── layouts/                  # 布局组件（AdminLayout）
+├── config/                   # 应用配置（app.ts）
+├── styles/                   # 全局样式
+└── main.tsx                  # 前端入口
+
+service/                      # 后端
+├── modules/                  # 业务模块
+│   ├── system/               # 系统模块
+│   │   ├── auth/             # 认证（auth.route, auth.service, auth.middleware, permission.middleware, permission.service）
+│   │   ├── user/             # 用户（user.entity, user.service, user.route, user.schema, user.types, user.error）
+│   │   ├── role/             # 角色
+│   │   ├── menu/             # 菜单
+│   │   └── department/       # 部门
+│   ├── common/               # 公共模块（http, request, types）
+│   └── data/                 # 数据实体（device, variable, variable-history, variable-realtime）
+├── core/                     # 核心配置（env.ts, hono.env.ts）
+├── config/                   # 数据源配置（data.ts — AppDataSource, RepositoryManager）
+├── utils/                    # 工具函数（logger, jwt, bcrypt, tree）
+└── server.ts                 # 后端入口
+
+dist/
+├── web/                      # 前端构建产物
+└── server.js                 # 后端构建产物
 ```
 
-- 前端类型优先页面内就近组织；当前没有独立的 `web/types/` 目录。
+## 模块文件规范
 
-### 页面组织模式（重要）
+每个业务模块遵循固定的文件结构：
 
-每个功能模块（如 user）采用就近组织，**不在 `web/services/` 集中管理**：
+### 后端（service/modules/<module>/）
 
+| 文件           | 职责                                |
+| -------------- | ----------------------------------- |
+| `*.entity.ts`  | TypeORM 实体，定义数据库表结构      |
+| `*.service.ts` | 业务逻辑，数据库操作                |
+| `*.route.ts`   | Hono 路由处理器，参数校验，权限校验 |
+| `*.schema.ts`  | Zod 验证 schema                     |
+| `*.types.ts`   | TypeScript 类型定义、DTO 接口       |
+| `*.error.ts`   | 业务错误码定义                      |
+
+### 前端（web/pages/<module>/）
+
+| 文件           | 职责                                        |
+| -------------- | ------------------------------------------- |
+| `index.tsx`    | 页面组件（CRUD UI）                         |
+| `*.types.ts`   | 类型定义 + React Query queryKeys            |
+| `*.api.ts`     | API 请求（axios 封装）                      |
+| `*.service.ts` | React Query Hooks（useQuery / useMutation） |
+| `*.schema.ts`  | Zod 验证 schema（表单验证）                 |
+
+## 开发规范
+
+### 命名约定
+
+- **数据库表名**: `sys_<name>`（如 `sys_user`, `sys_role`）
+- **API 路径**: 复数名词（如 `/api/users`）
+- **权限码**: `system:<entity>:<action>` 格式
+
+    ```
+    system:user:query   查询
+    system:user:add     新增
+    system:user:edit    编辑
+    system:user:delete  删除
+    ```
+
+- **React Query Keys**: 通过 `createQueryKeys` 创建，格式 `['users', 'list', params]`
+
+### API 设计
+
+- GET `/api/<resource>` — 分页列表
+- GET `/api/<resource>/options` — 选项列表（选择器用）
+- GET `/api/<resource>/:id` — 详情
+- POST `/api/<resource>` — 新增
+- PUT `/api/<resource>/:id` — 编辑
+- DELETE `/api/<resource>/:id` — 删除
+
+响应格式统一使用 `R.page()`（分页）、`R.ok()`（单条）、`R.created()` / `R.updated()` / `R.deleted()`（操作结果）。
+
+### 状态类型命名
+
+```typescript
+UserStatus = 'enabled' | 'disabled';
+UserQuery; // 查询参数
+UserItem; // 列表项/详情
+UserOption; // 选择器选项
+CreateUserDto; // 新增参数
+UpdateUserDto; // 更新参数
 ```
-pages/system/user/
-  index.tsx       # 页面主入口
-  user.types.ts   # 类型定义 + QueryKeys
-  user.api.ts     # API 调用函数
-  user.service.ts # TanStack Query hooks
-  user.schema.ts  # Zod 验证 schema
+
+### 前端类型封装
+
+使用 `namespace` 封装同一前缀的类型，便于模板使用：
+
+```typescript
+export namespace User {
+    export type Status = UserStatus;
+    export type Item = UserItem;
+    export type Query = UserQuery;
+    export type CreateDto = CreateUserDto;
+    export type UpdateDto = UpdateUserDto;
+}
 ```
 
-### 关键模式
+### 权限控制
 
-**路由**：Hash 路由（`createHashRouter`），动态菜单驱动，通过 `pages/index.ts` 的 `registerPage` 注册。
+- 后端路由使用 `requirePermission('system:user:query')` / `requireAnyPermission([...])` 中间件
+- 前端使用 `usePermissions()` Hook 的 `has('system:user:query')` 判断按钮显示
 
-**数据获取**：使用 `useMutationWithMessage`（自动 toast）和 `useSaveMutation`（create/update 合一）封装 mutation。
+## 架构要点
 
-**HTTP**：基于 axios，响应拦截器自动处理 token 刷新和错误提示。
+- **路径别名**: `@/` 同时映射 `./web/*` 和 `./service/*`（tsconfig + vite）
+- **Vite root**: `./web` — vite.config.ts, index.html, main.tsx 都在 `web/` 下
+- **后端入口**: `service/server.ts` — 注册所有 Hono 路由并服务静态 `dist/web`
+- **API 路由**: `/api/auth`, `/api/users`, `/api/roles`, `/api/menus`, `/api/departments`
+- **数据库**: MariaDB（非 MySQL），通过 mysql2 驱动；TypeORM 使用实验性装饰器（`emitDecoratorMetadata`）
+- **前端路由**: React Router 7（SSR 风格，后端用 `*` 捕获所有请求实现 SPA）
+- **数据源管理**: `service/config/data.ts` 提供 `AppDataSource` 和 `repo` 单例
+- **密码**: 后端存储 `password_hash`，使用 bcrypt；前端密码字段不能传空字符串
 
-## 后端架构
+## 代码风格
 
-### 目录结构
+- **Prettier**: 4 空格缩进，单引号，Tailwind 插件启用
+- **TypeScript**: 严格模式，`moduleResolution: bundler`
+- **CSS**: Tailwind CSS 4（通过 `@tailwindcss/vite`），Ant Design cssinjs
 
-```
-service/
-  config/         # data.ts（DataSource + RepositoryManager）
-  core/           # env.ts（dotenv 加载）、hono.env.ts（AppEnv 类型）
-  modules/        # 功能模块（common/, data/, system/）
-    common/       # http.ts（响应封装 R）、types.ts（BaseEntity、分页工具）
-    system/       # auth/, user/, role/, menu/, department/
-    data/         # 共享 TypeORM 实体层（当前为例外，不按完整业务模块结构组织）
-  utils/          # jwt、bcrypt、logger、tree 工具
-  server.ts       # 启动入口（Hono 实例 + 路由注册）
-```
+## 测试
 
-### 后端模块结构（每个功能模块）
+- 未配置测试框架（package.json 中无 test 脚本）
+- 通过 `bun run dev` 手动测试
 
-```
-modules/system/user/
-  user.entity.ts   # TypeORM 实体（继承 BaseEntity）
-  user.types.ts    # DTO、Status 类型
-  user.schema.ts  # Zod 验证 schema
-  user.service.ts # 业务逻辑
-  user.route.ts   # Hono 路由（权限中间件）
-  user.error.ts   # 业务错误定义
-```
+## 常见错误
 
-- 上述完整模块结构主要适用于 `service/modules/system/*`。
-- `service/modules/data/` 当前仅承载实体定义，待真实出现独立 API / 业务逻辑时再拆为完整模块。
-
-### 关键模式
-
-- **权限控制**：通过 `authMiddleware` + `requirePermission('system:user:query')` 中间件
-- **响应格式**：使用 `R.ok(c, data)` / `R.page(c, data)` / `R.created(c)` 等
-- **分页**：通过 `normalizePagination` + `paginate(qb, pagination, transform)` 工具
-- **种子数据**：`userService.seedAdmin()` 在启动时自动创建管理员账户
-
-## 强耦合区域（谨慎修改）
-
-- **菜单/认证/角色/用户/部门模块**：相互依赖，修改需检查联动影响
-- **WebSocket 事件名**与 React Query key 必须保持一致
-- **TypeORM 实体变更**需同步检查依赖的 route 和 service
-
-## 验证流程
-
-1. `bun run lint` — 类型检查必须通过
-2. `bun run build` — 如果改动影响前端或后端构建
-
-## 代码格式
-
-| 规则     | 配置                 |
-| -------- | -------------------- |
-| 单行长度 | 100                  |
-| 缩进     | 4 空格               |
-| 引号     | 单引号（JSX 双引号） |
-| 分号     | 必须                 |
-| 尾逗号   | ES5（多行）          |
-| 箭头函数 | 始终括号             |
-
-**Prettier 规则**见 `.prettierrc`，Tailwind class 排序自动处理。
-
-## 项目约定
-
-- 优先小而局部的改动，不轻易做结构性重写
-- 不要移动源码文件到 `web/` 或 `service/` 之外
-- 删除无调用方的死代码，而非继续增加兼容层
-- 修改共享点（query key、路由守卫、菜单权限、实体字段）前先检查联动影响
-
-详细架构文档见 [`README.md`](./README.md)。
+- 使用 `npm`/`yarn`/`pnpm` 而非 `bun`
+- 忘记复制 `.env.example` → `.env`（数据库连接会失败）
+- 在没有 `bun.lock` 的情况下运行 `bun run build`（先执行 `bun install`）
+- 在 `web/` 或 `service/` 以外目录编辑文件，期望 Vite 能识别（Vite root 是 `./web`）
