@@ -6,7 +6,7 @@ import { R } from '@/common/http';
 import { parseBody, parseParams, parseQuery } from '@/common/request';
 import { idParamSchema } from '@/common/types';
 import type { CreateUserDto, UpdateUserDto, UserStatus } from './user.types';
-import { AppEnv } from '@/core/hono.env';
+import type { AppEnv } from '@/core/hono.env';
 import { createUserSchema, updateUserSchema, userQuerySchema } from './user.schema';
 
 export const userRoute = new Hono<AppEnv>();

@@ -41,10 +41,11 @@ export function buildTree<T extends TreeNode>(
 
     // 构建父子关系
     items.forEach((item) => {
+        // biome-ignore lint/style/noNonNullAssertion: map.get is safe here as item was just inserted above
         const node = map.get(item.id)!;
         const parentId = item.parent_id;
         if (parentId && map.has(parentId)) {
-            map.get(parentId)!.children.push(node);
+            map.get(parentId)?.children.push(node);
         } else {
             roots.push(node);
         }

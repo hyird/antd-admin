@@ -10,9 +10,9 @@ import {
 } from '@/common/types';
 import type { UserQuery, UserItem, UserOption, CreateUserDto, UpdateUserDto } from './user.types';
 import { In, Not, type FindOptionsWhere } from 'typeorm';
-import { User } from './user.entity';
-import { RoleStatus } from '../role/role.entity';
-import { MenuStatus, MenuType } from '../menu/menu.entity';
+import type { User } from './user.entity';
+import type { RoleStatus } from '../role/role.entity';
+import type { MenuStatus, MenuType } from '../menu/menu.entity';
 import { permissionService } from '../auth/auth.service';
 import { createLogger } from '@/utils/logger';
 
@@ -675,7 +675,7 @@ export class UserService {
     }
     async listDeleted(params: UserQuery): Promise<QueryResult<UserItem>> {
         const pagination = normalizePagination(params);
-        let qb = repo.user
+        const qb = repo.user
             .createQueryBuilder('u')
             .withDeleted()
             .where('u.deleted_at IS NOT NULL')

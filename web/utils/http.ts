@@ -301,6 +301,7 @@ request.interceptors.response.use(
                 const success = await useAuthStore.getState().refreshAccessToken();
                 if (success) {
                     const newToken = useAuthStore.getState().token;
+                    // biome-ignore lint/style/noNonNullAssertion: refreshAccessToken returns true only when token is set
                     onTokenRefreshed(newToken!);
                     if (originalRequest.headers) {
                         originalRequest.headers.Authorization = `Bearer ${newToken}`;

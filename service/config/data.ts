@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import '@/core/env';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, type Repository } from 'typeorm';
 import { createLogger } from '@/utils/logger';
 import { User } from '@/modules/system/user/user.entity';
 import { Role } from '@/modules/system/role/role.entity';

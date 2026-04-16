@@ -131,16 +131,7 @@ export default function PageTabs() {
                 setActiveKey(path);
             }
         }
-    }, [
-        location.pathname,
-        pathTitleMap,
-        addTab,
-        navigate,
-        removeTab,
-        setActiveKey,
-        tabs,
-        validPagePaths,
-    ]);
+    }, [location.pathname, pathTitleMap, addTab, setActiveKey, tabs, validPagePaths, goHome]);
 
     const handleTabChange = (key: string) => {
         setActiveKey(key);
@@ -204,7 +195,7 @@ export default function PageTabs() {
                         const currentTab = tabs.find((t) => t.key === tabKey);
                         const newTabs = isHome
                             ? [HOME_TAB]
-                            : [HOME_TAB, currentTab!].filter(Boolean);
+                            : [HOME_TAB, ...(currentTab ? [currentTab] : [])];
                         syncTabsAndNavigate(newTabs, tabKey);
                     } else if (key === 'closeRight') {
                         const newTabs = tabs.slice(0, currentIndex + 1);

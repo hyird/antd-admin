@@ -10,7 +10,7 @@ import {
 } from '@/common/types';
 import type { RoleQuery, RoleItem, RoleDetail, CreateRoleDto, UpdateRoleDto } from './role.types';
 import type { RoleStatus } from './role.entity';
-import { Role } from './role.entity';
+import type { Role } from './role.entity';
 
 export class RoleService {
     private toRoleItem(r: Role): RoleItem {

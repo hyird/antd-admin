@@ -157,7 +157,7 @@ const titleStyle = {
     color: '#0f172a',
 };
 
-const subtitleStyle = {
+const _subtitleStyle = {
     marginBottom: 24,
     color: '#64748b',
 };

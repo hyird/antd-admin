@@ -8,7 +8,7 @@ import type {
     UpdateDepartmentDto,
 } from './department.types';
 import type { DepartmentStatus } from './department.entity';
-import { Department } from './department.entity';
+import type { Department } from './department.entity';
 import { Not } from 'typeorm';
 import { buildTree } from '@/utils/tree';
 

@@ -7,7 +7,7 @@ import { R } from '@/common/http';
 import { parseBody, parseParams, parseQuery } from '@/common/request';
 import { idParamSchema } from '@/common/types';
 import type { CreateRoleDto, UpdateRoleDto, RoleStatus } from './role.types';
-import { AppEnv } from '@/core/hono.env';
+import type { AppEnv } from '@/core/hono.env';
 import { createRoleSchema, roleQuerySchema, updateRoleSchema } from './role.schema';
 
 export const roleRoute = new Hono<AppEnv>();

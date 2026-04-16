@@ -448,7 +448,7 @@ const SystemMenuPage = () => {
             const existingCodes = new Set(
                 (parentPage.children || [])
                     .filter((c) => c.type === 'button' && c.permission_code)
-                    .map((c) => c.permission_code!)
+                    .map((c) => c.permission_code as string)
             );
 
             const toCreate = codes.filter((code) => !existingCodes.has(code));
@@ -499,7 +499,7 @@ const SystemMenuPage = () => {
         const existingCodes = new Set(
             (permTargetPage.children || [])
                 .filter((c) => c.type === 'button' && c.permission_code)
-                .map((c) => c.permission_code!)
+                .map((c) => c.permission_code as string)
         );
 
         return pageConfig.permissions.map((perm) => ({
@@ -906,16 +906,26 @@ const SystemMenuPage = () => {
                         </div>
                         <Space orientation="vertical" className="w-full">
                             {targetPagePermissions.map((perm) => (
-                                <div
+                                <label
                                     key={perm.code}
                                     className={`flex items-center rounded-md px-3 py-2 ${perm.exists ? 'cursor-not-allowed bg-gray-100 opacity-60' : 'cursor-pointer bg-gray-50'}`}
-                                    onClick={() => {
+                                    onClick={(_e) => {
                                         if (perm.exists) return;
                                         setPermSelectedCodes((prev) =>
                                             prev.includes(perm.code)
                                                 ? prev.filter((c) => c !== perm.code)
                                                 : [...prev, perm.code]
                                         );
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (perm.exists) return;
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            setPermSelectedCodes((prev) =>
+                                                prev.includes(perm.code)
+                                                    ? prev.filter((c) => c !== perm.code)
+                                                    : [...prev, perm.code]
+                                            );
+                                        }
                                     }}
                                 >
                                     <input
@@ -936,7 +946,7 @@ const SystemMenuPage = () => {
                                         </div>
                                         <div className="text-xs text-gray-400">{perm.code}</div>
                                     </div>
-                                </div>
+                                </label>
                             ))}
                         </Space>
                     </div>

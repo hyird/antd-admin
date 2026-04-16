@@ -7,7 +7,7 @@ import { parseBody, parseParams, parseQuery } from '@/common/request';
 import { idParamSchema } from '@/common/types';
 import type { CreateDepartmentDto, UpdateDepartmentDto } from './department.types';
 import type { DepartmentStatus } from './department.entity';
-import { AppEnv } from '@/core/hono.env';
+import type { AppEnv } from '@/core/hono.env';
 import {
     createDepartmentSchema,
     departmentQuerySchema,

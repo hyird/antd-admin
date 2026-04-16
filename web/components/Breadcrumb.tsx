@@ -119,14 +119,16 @@ export default function AppBreadcrumb() {
         }
 
         if (item.full_path && item.type === 'page') {
+            const path = item.full_path;
             return (
-                <span
+                <button
+                    type="button"
                     className="inline-flex cursor-pointer items-center gap-1 hover:text-blue-500"
-                    onClick={() => navigate(item.full_path!)}
+                    onClick={() => navigate(path)}
                 >
                     {iconName && <DynamicIcon name={iconName} />}
                     {item.name}
-                </span>
+                </button>
             );
         }
 

@@ -7,7 +7,7 @@ import type { TreeSelectProps } from 'antd';
 import { useMemo } from 'react';
 import { useSaveMutation } from '@/hooks/useMutation';
 import type { Department } from './department.types';
-import { create, getDetail, getList, getTree, remove, update } from './department.api';
+import { create, getDetail, getList, getTree, update } from './department.api';
 import { departmentQueryKeys } from './department.types';
 
 export { create, getDetail, getList, getTree, remove, update } from './department.api';

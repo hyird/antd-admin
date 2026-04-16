@@ -1,13 +1,17 @@
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import '@/core/env';
-import { JwtPayload } from '@/modules/system/auth/auth.types';
+import type { JwtPayload } from '@/modules/system/auth/auth.types';
 
 const JWT_EXPIRES_IN: SignOptions['expiresIn'] =
     (process.env.JWT_EXPIRES_IN as SignOptions['expiresIn']) || '1d';
 const JWT_REFRESH_EXPIRES_IN: SignOptions['expiresIn'] =
     (process.env.JWT_REFRESH_EXPIRES_IN as SignOptions['expiresIn']) || '7d';
 
-const JWT_SECRET = process.env.JWT_SECRET!;
+const JWT_SECRET =
+    process.env.JWT_SECRET ??
+    (() => {
+        throw new Error('JWT_SECRET environment variable is required');
+    })();
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || JWT_SECRET;
 
 export function signAccessToken(payload: JwtPayload): string {

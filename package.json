@@ -11,9 +11,10 @@
         "build:web": "vite build",
         "build:service": "bun build ./service/server.ts --target=bun --format=esm --minify --outdir=./dist",
         "start": "NODE_ENV=production bun dist/server.js",
-        "lint": "tsc --noEmit",
-        "format": "prettier --write .",
-        "format:check": "prettier --check ."
+        "lint": "biome lint .",
+        "typecheck": "tsc --noEmit",
+        "format": "biome format --write .",
+        "format:check": "biome format check ."
     },
     "dependencies": {
         "@ant-design/cssinjs": "^2.1.2",
@@ -47,9 +48,8 @@
         "@types/react": "^19.2.14",
         "@types/react-dom": "^19.2.3",
         "@vitejs/plugin-react": "^6.0.1",
+        "@biomejs/biome": "latest",
         "concurrently": "^9.2.1",
-        "prettier": "^3.8.3",
-        "prettier-plugin-tailwindcss": "^0.7.2",
         "typescript": "^6.0.2",
         "vite": "^8.0.8",
         "vite-plugin-css-injected-by-js": "^4.0.1"

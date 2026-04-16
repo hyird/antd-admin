@@ -7,7 +7,7 @@ import type { TreeSelectProps } from 'antd';
 import { useMemo } from 'react';
 import { useSaveMutation } from '@/hooks/useMutation';
 import type { Menu } from './menu.types';
-import { batchCreateButtons, create, getDetail, getList, getTree, remove, reorder, update } from './menu.api';
+import { create, getDetail, getList, getTree, update } from './menu.api';
 import { menuQueryKeys } from './menu.types';
 
 export { batchCreateButtons, create, getDetail, getList, getTree, remove, reorder, update } from './menu.api';

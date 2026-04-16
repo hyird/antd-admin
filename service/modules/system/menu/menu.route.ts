@@ -13,7 +13,7 @@ import type {
     BatchCreateMenuButtonsDto,
 } from './menu.types';
 import type { MenuStatus } from './menu.entity';
-import { AppEnv } from '@/core/hono.env';
+import type { AppEnv } from '@/core/hono.env';
 import {
     batchCreateMenuButtonsSchema,
     createMenuSchema,

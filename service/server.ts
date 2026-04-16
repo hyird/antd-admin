@@ -1,13 +1,13 @@
 import 'reflect-metadata';
 import '@/core/env';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { existsSync, readFileSync } from 'fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { AppError, R } from '@/common/http';
-import { AppEnv } from '@/core/hono.env';
+import type { AppEnv } from '@/core/hono.env';
 import { repo } from '@/config/data';
 import { logger } from '@/utils/logger';
 import { authRoute } from '@/modules/system/auth/auth.route';

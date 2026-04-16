@@ -3,7 +3,6 @@ import jwt from 'jsonwebtoken';
 import { verifyAccessToken } from '@/utils/jwt';
 import { throwAppError } from '@/common/http';
 import { AuthError } from '@/modules/system/auth/auth.error';
-import { AppEnv } from '@/core/hono.env';
 
 /**
  * JWT 认证中间件
@@ -11,7 +10,7 @@ import { AppEnv } from '@/core/hono.env';
 export const authMiddleware = createMiddleware(async (c, next) => {
     const authHeader = c.req.header('authorization');
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader?.startsWith('Bearer ')) {
         throwAppError(AuthError.UNAUTHORIZED);
     }
 

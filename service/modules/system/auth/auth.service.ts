@@ -1,5 +1,5 @@
 import { repo, AppDataSource } from '@/config/data';
-import { Menu } from '@/modules/system/menu/menu.entity';
+import type { Menu } from '@/modules/system/menu/menu.entity';
 import type { LoginRequest, LoginResult, RefreshResult } from './auth.types';
 import { comparePassword } from '@/utils/bcrypt';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '@/utils/jwt';

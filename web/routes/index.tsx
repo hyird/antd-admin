@@ -99,6 +99,7 @@ function getLazyComponent(name: string): ComponentType<unknown> | null {
     if (!lazyCache.has(name)) {
         lazyCache.set(name, lazy(loader));
     }
+    // biome-ignore lint/style/noNonNullAssertion: lazyCache.has check above guarantees value exists
     return lazyCache.get(name)!;
 }
 
@@ -151,7 +152,7 @@ export function AppRoutes() {
                                             element: <HomePage />,
                                         },
                                         ...pageMenus.map((menu) => ({
-                                            path: menu.path!.trim().replace(/^\//, ''),
+                                            path: menu.path?.trim().replace(/^\//, ''),
                                             element: getRouteComponent(menu),
                                         })),
                                     ],

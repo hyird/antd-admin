@@ -1,7 +1,7 @@
 /**
  * 通用类型定义
  */
-import { SelectQueryBuilder } from 'typeorm';
+import type { SelectQueryBuilder } from 'typeorm';
 import {
     PrimaryGeneratedColumn,
     CreateDateColumn,
