@@ -3,7 +3,7 @@ import { authMiddleware } from '@/middleware/auth';
 import { requirePermission, requireAnyPermission } from '@/middleware/permission';
 import { departmentService } from './department.service';
 import { R } from '@/common/http';
-import { parseBody, parseParams, parseQuery } from '@/common/request';
+import { getQuery, parseBody, parseParams, parseQuery } from '@/common/request';
 import { idParamSchema } from '@/common/types';
 import type { CreateDepartmentDto, UpdateDepartmentDto } from './department.types';
 import type { DepartmentStatus } from './department.entity';
@@ -21,8 +21,8 @@ departmentRoute.use('*', authMiddleware);
 // 查询部门列表 - 需要 system:dept:query 权限
 departmentRoute.get('/', requirePermission('system:dept:query'), async (c) => {
     const query = parseQuery(departmentQuerySchema, {
-        keyword: c.req.query('keyword'),
-        status: c.req.query('status') as DepartmentStatus | undefined,
+        keyword: getQuery(c, 'keyword'),
+        status: getQuery(c, 'status') as DepartmentStatus | undefined,
     });
     const data = await departmentService.listAll(query.keyword);
     return R.ok(c, data);
@@ -35,7 +35,7 @@ departmentRoute.get(
     requireAnyPermission(['system:dept:query', 'system:user:add', 'system:user:edit']),
     async (c) => {
         const query = parseQuery(departmentQuerySchema, {
-            status: c.req.query('status') as DepartmentStatus | undefined,
+            status: getQuery(c, 'status') as DepartmentStatus | undefined,
         });
         const status = query.status;
         const data = await departmentService.getTree(status);

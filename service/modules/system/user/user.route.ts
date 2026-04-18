@@ -3,7 +3,7 @@ import { authMiddleware } from '@/middleware/auth';
 import { requireAnyPermission, requirePermission } from '@/middleware/permission';
 import { userService } from './user.service';
 import { R } from '@/common/http';
-import { parseBody, parseParams, parseQuery } from '@/common/request';
+import { getQuery, getQueryNumber, parseBody, parseParams, parseQuery } from '@/common/request';
 import { idParamSchema } from '@/common/types';
 import type { CreateUserDto, UpdateUserDto, UserStatus } from './user.types';
 import type { AppEnv } from '@/core/hono.env';
@@ -16,13 +16,11 @@ userRoute.use('*', authMiddleware);
 // 查询用户列表 - 需要 system:user:query 权限
 userRoute.get('/', requirePermission('system:user:query'), async (c) => {
     const query = parseQuery(userQuerySchema, {
-        page: c.req.query('page'),
-        pageSize: c.req.query('pageSize') ?? c.req.query('page_size'),
-        keyword: c.req.query('keyword'),
-        status: c.req.query('status') as UserStatus | undefined,
-        department_id: c.req.query('department_id')
-            ? Number(c.req.query('department_id'))
-            : undefined,
+        page: getQuery(c, 'page'),
+        pageSize: getQuery(c, 'pageSize', { aliases: ['page_size'] }),
+        keyword: getQuery(c, 'keyword'),
+        status: getQuery(c, 'status') as UserStatus | undefined,
+        department_id: getQueryNumber(c, 'department_id'),
     });
     const data = await userService.list(query);
     return R.page(c, data);
@@ -40,7 +38,7 @@ userRoute.get(
         'system:dept:edit',
     ]),
     async (c) => {
-        const keyword = c.req.query('keyword');
+        const keyword = getQuery(c, 'keyword');
         const data = await userService.listOptions(keyword);
         return R.ok(c, data);
     }

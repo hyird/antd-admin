@@ -4,7 +4,7 @@ import { requirePermission, requireAnyPermission } from '@/middleware/permission
 import { roleService } from './role.service';
 import { permissionService } from '@/modules/system/auth/auth.service';
 import { R } from '@/common/http';
-import { parseBody, parseParams, parseQuery } from '@/common/request';
+import { getQuery, parseBody, parseParams, parseQuery } from '@/common/request';
 import { idParamSchema } from '@/common/types';
 import type { CreateRoleDto, UpdateRoleDto, RoleStatus } from './role.types';
 import type { AppEnv } from '@/core/hono.env';
@@ -17,10 +17,10 @@ roleRoute.use('*', authMiddleware);
 // 查询角色列表 - 需要 system:role:query 权限
 roleRoute.get('/', requirePermission('system:role:query'), async (c) => {
     const query = parseQuery(roleQuerySchema, {
-        page: c.req.query('page'),
-        pageSize: c.req.query('pageSize') ?? c.req.query('page_size'),
-        keyword: c.req.query('keyword'),
-        status: c.req.query('status') as RoleStatus | undefined,
+        page: getQuery(c, 'page'),
+        pageSize: getQuery(c, 'pageSize', { aliases: ['page_size'] }),
+        keyword: getQuery(c, 'keyword'),
+        status: getQuery(c, 'status') as RoleStatus | undefined,
     });
     const data = await roleService.list(query);
     return R.page(c, data);

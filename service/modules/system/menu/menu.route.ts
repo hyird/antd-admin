@@ -4,7 +4,7 @@ import { requirePermission, requireAnyPermission } from '@/middleware/permission
 import { menuService } from './menu.service';
 import { permissionService } from '@/modules/system/auth/auth.service';
 import { R } from '@/common/http';
-import { parseBody, parseParams, parseQuery } from '@/common/request';
+import { getQuery, parseBody, parseParams, parseQuery } from '@/common/request';
 import { idParamSchema } from '@/common/types';
 import type {
     CreateMenuDto,
@@ -29,8 +29,8 @@ menuRoute.use('*', authMiddleware);
 // 查询菜单列表 - 需要 system:menu:query 权限
 menuRoute.get('/', requirePermission('system:menu:query'), async (c) => {
     const query = parseQuery(menuQuerySchema, {
-        keyword: c.req.query('keyword'),
-        status: c.req.query('status') as MenuStatus | undefined,
+        keyword: getQuery(c, 'keyword'),
+        status: getQuery(c, 'status') as MenuStatus | undefined,
     });
     const data = await menuService.listAll(query.keyword);
     return R.ok(c, data);
@@ -43,7 +43,7 @@ menuRoute.get(
     requireAnyPermission(['system:menu:query', 'system:role:perm']),
     async (c) => {
         const query = parseQuery(menuQuerySchema, {
-            status: c.req.query('status') as MenuStatus | undefined,
+            status: getQuery(c, 'status') as MenuStatus | undefined,
         });
         const status = query.status;
         const data = await menuService.getTree(status);
