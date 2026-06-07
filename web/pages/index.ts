@@ -184,7 +184,7 @@ registerPage({
     icon: 'ApartmentOutlined',
     module: '系统管理',
     description: '组织架构的树形管理',
-    loader: () => import('./system/department'),
+    loader: () => import('./system/dept'),
     permissions: [
         { code: 'system:dept:query', name: '查询部门', action: 'query' },
         { code: 'system:dept:add', name: '新增部门', action: 'add' },

@@ -42,8 +42,8 @@ export interface UserItem {
     nickname?: string;
     phone?: string;
     email?: string;
-    department_id?: number | null;
-    department_name?: string;
+    dept_id?: number | null;
+    dept_name?: string;
     status: UserStatus;
     roles: UserRole[];
     created_at?: string;
@@ -54,7 +54,7 @@ export interface UserItem {
 
 export interface UserQuery extends PageParams {
     status?: UserStatus;
-    department_id?: number;
+    dept_id?: number;
 }
 
 // ============ DTO 类型 ============
@@ -65,7 +65,7 @@ export interface CreateUserDto {
     nickname?: string;
     phone?: string;
     email?: string;
-    department_id?: number | null;
+    dept_id?: number | null;
     status?: UserStatus;
     role_ids?: number[];
 }
@@ -74,7 +74,7 @@ export interface UpdateUserDto {
     nickname?: string;
     phone?: string;
     email?: string;
-    department_id?: number | null;
+    dept_id?: number | null;
     status?: UserStatus;
     password?: string;
     role_ids?: number[];

@@ -1,5 +1,8 @@
 build
+build-vcpkg
+vcpkg_installed
 node_modules
 dist
 .env
+.codegraph
 tsconfig.web.tsbuildinfo

@@ -43,7 +43,7 @@ import { PageContainer } from '@/components/PageContainer';
 import { StatusTag } from '@/components/StatusTag';
 import { useDebounceFn } from '@/hooks/useDebounceFn';
 import { usePermissions } from '@/hooks/usePermission';
-import { useDepartmentTreeSelect } from '../department/department.service';
+import { useDeptTreeSelect } from '../dept/dept.service';
 import { useRoleOptions } from '../role/role.service';
 import { useUserDelete, useUserList, useUserSave } from './user.service';
 import type { Role } from '../role/role.types';
@@ -58,7 +58,7 @@ interface UserFormValues {
     nickname?: string;
     phone?: string;
     email?: string;
-    department_id?: number | null;
+    dept_id?: number | null;
     status: User.Status;
     role_ids?: number[];
 }
@@ -93,7 +93,7 @@ const SystemUserPage = () => {
         { enabled: canQuery }
     );
 
-    const { treeData: departmentTreeData, departmentMap } = useDepartmentTreeSelect('enabled');
+    const { treeData: deptTreeData, deptMap } = useDeptTreeSelect('enabled');
 
     const { data: roleOptionsData } = useRoleOptions({
         enabled: canAdd || canEdit,
@@ -123,7 +123,7 @@ const SystemUserPage = () => {
             nickname: record.nickname ?? undefined,
             phone: record.phone ?? undefined,
             email: record.email ?? undefined,
-            department_id: record.department_id ?? undefined,
+            dept_id: record.dept_id ?? undefined,
             status: record.status,
             role_ids: record.roles.map((r) => r.id),
         });
@@ -176,8 +176,8 @@ const SystemUserPage = () => {
         { title: '邮箱', dataIndex: 'email', ellipsis: true },
         {
             title: '部门',
-            dataIndex: 'department_id',
-            render: (id: number | null) => (id ? departmentMap.get(id)?.name || '-' : '-'),
+            dataIndex: 'dept_id',
+            render: (id: number | null) => (id ? deptMap.get(id)?.name || '-' : '-'),
         },
         {
             title: '角色',
@@ -336,10 +336,10 @@ const SystemUserPage = () => {
                         <Input placeholder="电子邮箱" />
                     </Form.Item>
 
-                    <Form.Item label="部门" name="department_id">
+                    <Form.Item label="部门" name="dept_id">
                         <TreeSelect
                             allowClear
-                            treeData={departmentTreeData}
+                            treeData={deptTreeData}
                             placeholder="选择所属部门"
                             treeDefaultExpandAll
                         />

@@ -2,20 +2,20 @@
  * 部门管理
  */
 
-export { departmentKeys, departmentQueryKeys } from './department.types';
+export { deptKeys, deptQueryKeys } from './dept.types';
 export {
-    useDepartmentSave,
-    useDepartmentDetail,
-    useDepartmentList,
-    useDepartmentTree,
-    useDepartmentTreeSelect,
+    useDeptSave,
+    useDeptDetail,
+    useDeptList,
+    useDeptTree,
+    useDeptTreeSelect,
     getList,
     getTree,
     getDetail,
     create,
     update,
     remove,
-} from './department.service';
+} from './dept.service';
 
 import { PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -39,36 +39,36 @@ import { PageContainer } from '@/components/PageContainer';
 import { StatusTag } from '@/components/StatusTag';
 import { useDebounceFn } from '@/hooks/useDebounceFn';
 import { usePermissions } from '@/hooks/usePermission';
-import { create, getTree, remove, update } from './department.api';
-import { departmentQueryKeys } from './';
+import { create, getTree, remove, update } from './dept.api';
+import { deptQueryKeys } from './';
 import { useUserOptions } from '../user/user.service';
-import type { Department } from './department.types';
+import type { Dept } from './dept.types';
 import type { User } from '../user/user.types';
 
 const { Search } = Input;
 
-interface DepartmentFormValues {
+interface DeptFormValues {
     id?: number;
     name: string;
     code?: string;
     parent_id?: number | null;
     sort_order?: number;
     leader_id?: number | null;
-    status: Department.Status;
+    status: Dept.Status;
 }
 
-function filterDepartmentTree(tree: Department.TreeItem[], keyword: string): Department.TreeItem[] {
+function filterDeptTree(tree: Dept.TreeItem[], keyword: string): Dept.TreeItem[] {
     const kw = keyword.trim().toLowerCase();
     if (!kw) return tree;
 
-    const filter = (nodes: Department.TreeItem[]): Department.TreeItem[] => {
-        const result: Department.TreeItem[] = [];
+    const filter = (nodes: Dept.TreeItem[]): Dept.TreeItem[] => {
+        const result: Dept.TreeItem[] = [];
         nodes.forEach((n) => {
             const selfMatch =
                 n.name.toLowerCase().includes(kw) || (n.code || '').toLowerCase().includes(kw);
             const children = n.children ? filter(n.children) : [];
             if (selfMatch || children.length > 0) {
-                const node: Department.TreeItem = { ...n };
+                const node: Dept.TreeItem = { ...n };
                 if (children.length > 0) {
                     node.children = children;
                 } else {
@@ -82,11 +82,11 @@ function filterDepartmentTree(tree: Department.TreeItem[], keyword: string): Dep
     return filter(tree);
 }
 
-const SystemDepartmentPage = () => {
+const SystemDeptPage = () => {
     const [keyword, setKeyword] = useState('');
     const [modalVisible, setModalVisible] = useState(false);
-    const [editing, setEditing] = useState<Department.TreeItem | null>(null);
-    const [form] = Form.useForm<DepartmentFormValues>();
+    const [editing, setEditing] = useState<Dept.TreeItem | null>(null);
+    const [form] = Form.useForm<DeptFormValues>();
     const queryClient = useQueryClient();
     const { message, modal } = App.useApp();
 
@@ -100,8 +100,8 @@ const SystemDepartmentPage = () => {
 
     const { run: debouncedSearch } = useDebounceFn(doSearch, 300);
 
-    const { data: rawDepartmentTree = [], isLoading } = useQuery({
-        queryKey: departmentQueryKeys.tree(),
+    const { data: rawDeptTree = [], isLoading } = useQuery({
+        queryKey: deptQueryKeys.tree(),
         queryFn: () => getTree(),
         enabled: canQuery,
     });
@@ -123,13 +123,10 @@ const SystemDepartmentPage = () => {
         return map;
     }, [userList]);
 
-    const departmentTree = useMemo(
-        () => filterDepartmentTree(rawDepartmentTree, keyword),
-        [rawDepartmentTree, keyword]
-    );
+    const deptTree = useMemo(() => filterDeptTree(rawDeptTree, keyword), [rawDeptTree, keyword]);
 
     const getParentTreeData = (excludeId?: number): TreeSelectProps['treeData'] => {
-        const loop = (nodes: Department.TreeItem[]): TreeSelectProps['treeData'] =>
+        const loop = (nodes: Dept.TreeItem[]): TreeSelectProps['treeData'] =>
             nodes
                 .filter((n) => n.id !== excludeId)
                 .map((n) => ({
@@ -137,13 +134,13 @@ const SystemDepartmentPage = () => {
                     value: n.id,
                     children: n.children ? loop(n.children) : undefined,
                 }));
-        return loop(rawDepartmentTree);
+        return loop(rawDeptTree);
     };
 
     const saveMutation = useMutation({
-        mutationFn: async (values: DepartmentFormValues) => {
+        mutationFn: async (values: DeptFormValues) => {
             if (values.id) {
-                const payload: Department.UpdateDto = {
+                const payload: Dept.UpdateDto = {
                     name: values.name,
                     code: values.code,
                     parent_id: values.parent_id === undefined ? null : values.parent_id,
@@ -153,7 +150,7 @@ const SystemDepartmentPage = () => {
                 };
                 await update(values.id, payload);
             } else {
-                const payload: Department.CreateDto = {
+                const payload: Dept.CreateDto = {
                     name: values.name,
                     code: values.code,
                     parent_id: values.parent_id === undefined ? null : values.parent_id,
@@ -168,7 +165,7 @@ const SystemDepartmentPage = () => {
             message.success('保存成功');
             setModalVisible(false);
             setEditing(null);
-            queryClient.invalidateQueries({ queryKey: departmentQueryKeys.all });
+            queryClient.invalidateQueries({ queryKey: deptQueryKeys.all });
         },
     });
 
@@ -176,7 +173,7 @@ const SystemDepartmentPage = () => {
         mutationFn: remove,
         onSuccess: () => {
             message.success('删除成功');
-            queryClient.invalidateQueries({ queryKey: departmentQueryKeys.all });
+            queryClient.invalidateQueries({ queryKey: deptQueryKeys.all });
         },
     });
 
@@ -191,7 +188,7 @@ const SystemDepartmentPage = () => {
         setModalVisible(true);
     };
 
-    const openCreateChildModal = (parent: Department.TreeItem) => {
+    const openCreateChildModal = (parent: Dept.TreeItem) => {
         setEditing(null);
         form.resetFields();
         form.setFieldsValue({
@@ -202,7 +199,7 @@ const SystemDepartmentPage = () => {
         setModalVisible(true);
     };
 
-    const openEditModal = (record: Department.TreeItem) => {
+    const openEditModal = (record: Dept.TreeItem) => {
         setEditing(record);
         form.setFieldsValue({
             id: record.id,
@@ -216,7 +213,7 @@ const SystemDepartmentPage = () => {
         setModalVisible(true);
     };
 
-    const onDelete = (record: Department.TreeItem) => {
+    const onDelete = (record: Dept.TreeItem) => {
         modal.confirm({
             title: `确认删除部门「${record.name}」吗？`,
             content: '若存在子部门或用户，请先处理后再删除。',
@@ -226,7 +223,7 @@ const SystemDepartmentPage = () => {
         });
     };
 
-    const onFinish = (values: DepartmentFormValues) => {
+    const onFinish = (values: DeptFormValues) => {
         saveMutation.mutate(values);
     };
 
@@ -242,7 +239,7 @@ const SystemDepartmentPage = () => {
         );
     }
 
-    const columns: ColumnsType<Department.TreeItem> = [
+    const columns: ColumnsType<Dept.TreeItem> = [
         {
             title: '部门名称',
             dataIndex: 'name',
@@ -277,7 +274,7 @@ const SystemDepartmentPage = () => {
         {
             title: '状态',
             dataIndex: 'status',
-            render: (v: Department.Status) => <StatusTag status={v} />,
+            render: (v: Dept.Status) => <StatusTag status={v} />,
         },
         {
             title: '操作',
@@ -333,10 +330,10 @@ const SystemDepartmentPage = () => {
                 </div>
             }
         >
-            <Table<Department.TreeItem>
+            <Table<Dept.TreeItem>
                 rowKey="id"
                 columns={columns}
-                dataSource={departmentTree}
+                dataSource={deptTree}
                 loading={isLoading}
                 pagination={false}
                 size="middle"
@@ -366,7 +363,7 @@ const SystemDepartmentPage = () => {
                 destroyOnHidden
                 width={560}
             >
-                <Form<DepartmentFormValues> form={form} layout="vertical" onFinish={onFinish}>
+                <Form<DeptFormValues> form={form} layout="vertical" onFinish={onFinish}>
                     <Form.Item name="id" hidden>
                         <Input />
                     </Form.Item>
@@ -418,4 +415,4 @@ const SystemDepartmentPage = () => {
     );
 };
 
-export default SystemDepartmentPage;
+export default SystemDeptPage;

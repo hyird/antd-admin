@@ -2,41 +2,41 @@
  * 部门管理 API
  */
 
-import type { Department } from './department.types';
+import type { Dept } from './dept.types';
 import { appendQueryParams } from '@/utils/query';
 import request from '@/utils/http';
 
 /** API 端点 */
 const ENDPOINTS = {
-    BASE: '/api/departments',
-    DETAIL: (id: number) => `/api/departments/${id}`,
-    TREE: '/api/departments/tree',
+    BASE: '/api/depts',
+    DETAIL: (id: number) => `/api/depts/${id}`,
+    TREE: '/api/depts/tree',
 } as const;
 
 /** 获取部门列表 */
-export function getList(params?: Department.Query) {
-    return request.get<Department.Item[]>(appendQueryParams(ENDPOINTS.BASE, params));
+export function getList(params?: Dept.Query) {
+    return request.get<Dept.Item[]>(appendQueryParams(ENDPOINTS.BASE, params));
 }
 
 /** 获取部门树 */
-export function getTree(status?: Department.Status) {
-    return request.get<Department.TreeItem[]>(
+export function getTree(status?: Dept.Status) {
+    return request.get<Dept.TreeItem[]>(
         appendQueryParams(ENDPOINTS.TREE, status ? { status } : undefined)
     );
 }
 
 /** 获取部门详情 */
 export function getDetail(id: number) {
-    return request.get<Department.Item>(ENDPOINTS.DETAIL(id));
+    return request.get<Dept.Item>(ENDPOINTS.DETAIL(id));
 }
 
 /** 创建部门 */
-export function create(data: Department.CreateDto) {
+export function create(data: Dept.CreateDto) {
     return request.post<void>(ENDPOINTS.BASE, data);
 }
 
 /** 更新部门 */
-export function update(id: number, data: Department.UpdateDto) {
+export function update(id: number, data: Dept.UpdateDto) {
     return request.put<void>(ENDPOINTS.DETAIL(id), data);
 }
 

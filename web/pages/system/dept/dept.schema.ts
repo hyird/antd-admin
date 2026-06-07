@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { pageParamsSchema } from '@/utils/types';
 
-export const createDepartmentSchema = z.object({
+export const createDeptSchema = z.object({
     name: z.string().min(1, '部门名称不能为空').max(100, '部门名称最多100个字符'),
     code: z.string().max(50, '部门编码最多50个字符').optional(),
     parent_id: z.number().int().positive().optional().nullable(),
@@ -10,7 +10,7 @@ export const createDepartmentSchema = z.object({
     status: z.enum(['enabled', 'disabled']).optional(),
 });
 
-export const updateDepartmentSchema = z.object({
+export const updateDeptSchema = z.object({
     name: z.string().min(1, '部门名称不能为空').max(100, '部门名称最多100个字符').optional(),
     code: z.string().max(50, '部门编码最多50个字符').optional(),
     parent_id: z.number().int().positive().optional().nullable(),
@@ -19,10 +19,10 @@ export const updateDepartmentSchema = z.object({
     status: z.enum(['enabled', 'disabled']).optional(),
 });
 
-export const departmentQuerySchema = pageParamsSchema.extend({
+export const deptQuerySchema = pageParamsSchema.extend({
     status: z.enum(['enabled', 'disabled']).optional(),
 });
 
-export type CreateDepartmentInput = z.infer<typeof createDepartmentSchema>;
-export type UpdateDepartmentInput = z.infer<typeof updateDepartmentSchema>;
-export type DepartmentQueryInput = z.infer<typeof departmentQuerySchema>;
+export type CreateDeptInput = z.infer<typeof createDeptSchema>;
+export type UpdateDeptInput = z.infer<typeof updateDeptSchema>;
+export type DeptQueryInput = z.infer<typeof deptQuerySchema>;
