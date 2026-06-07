@@ -2,24 +2,24 @@
 
 ## 项目概览
 
-前端-only 的 admin 脚手架，源码位于 `web/`，运行时使用 Bun。
+前端-only 的 admin 脚手架，源码位于 `web/`，运行时使用 Node.js。
 
-- **运行时**: Bun（不是 npm/yarn/pnpm）
+- **运行时**: Node.js + npm
 - **前端**: React 19, Vite（root 在 `./web`）, Ant Design 6, Tailwind CSS 4, TanStack Query, Zustand
 - **构建产物**: `dist/web/`
 
 ## 开发者命令
 
 ```bash
-bun run dev          # Vite dev server (5173)
-bun run dev:web      # 同 bun run dev
-bun run build        # Vite build -> dist/web
-bun run build:web    # 同 bun run build
-bun run start        # vite preview
-bun run lint         # biome lint .
-bun run typecheck    # tsc --noEmit
-bun run format       # biome format --write .
-bun run format:check # biome format check .
+npm run dev          # Vite dev server (5173)
+npm run dev:web      # 同 npm run dev
+npm run build        # Vite build -> dist/web
+npm run build:web    # 同 npm run build
+npm run start        # vite preview
+npm run lint         # biome lint .
+npm run typecheck    # tsc --noEmit
+npm run format       # biome format --write .
+npm run format:check # biome format check .
 ```
 
 ## 环境配置
@@ -65,6 +65,6 @@ web/
 
 ## 注意事项
 
-- 不要使用 npm/yarn/pnpm，统一使用 Bun
+- 使用 npm 管理依赖和运行脚本
 - Vite root 是 `./web`
 - 本分支不包含后端实现；前端 API 仍通过 `web/pages/**/*.api.ts` 和 `web/utils/http.ts` 维护
