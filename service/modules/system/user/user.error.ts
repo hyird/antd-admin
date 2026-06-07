@@ -1,5 +1,5 @@
 // system/user/user.error.ts
-import type { AppErrorDef } from '@/common/http';
+import type { AppErrorDef } from '../../../common/http.js';
 
 export const UserError = {
     USERNAME_EXISTS: {

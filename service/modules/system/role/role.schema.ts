@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { pageParamsSchema } from '@/common/types';
+import { pageParamsSchema } from '../../../common/types.js';
 
 export const createRoleSchema = z.object({
     code: z.string().min(1, '角色编码不能为空').max(50, '角色编码最多50个字符'),

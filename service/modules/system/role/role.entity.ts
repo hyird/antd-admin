@@ -1,7 +1,7 @@
 import { Entity, Column, ManyToMany, JoinTable } from 'typeorm';
-import { BaseEntity } from '@/common/types';
-import { Menu } from '@/modules/system/menu/menu.entity';
-import { User } from '@/modules/system/user/user.entity';
+import { BaseEntity } from '../../../common/types.js';
+import { Menu } from '../menu/menu.entity.js';
+import { User } from '../user/user.entity.js';
 import type { RoleStatus } from './role.types';
 
 export type { RoleStatus };

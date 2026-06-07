@@ -1,20 +1,20 @@
-import { repo } from '@/config/data';
-import { hashPassword } from '@/utils/bcrypt';
-import { throwAppError } from '@/common/http';
+import { repo } from '../../../config/data.js';
+import { hashPassword } from '../../../utils/bcrypt.js';
+import { throwAppError } from '../../../common/http.js';
 import { UserError } from './user.error';
 import {
     normalizePagination,
     paginate,
     applyKeywordSearch,
     type QueryResult,
-} from '@/common/types';
+} from '../../../common/types.js';
 import type { UserQuery, UserItem, UserOption, CreateUserDto, UpdateUserDto } from './user.types';
 import { In, Not, type FindOptionsWhere } from 'typeorm';
 import type { User } from './user.entity';
 import type { RoleStatus } from '../role/role.entity';
 import type { MenuStatus, MenuType } from '../menu/menu.entity';
 import { permissionService } from '../auth/auth.service';
-import { createLogger } from '@/utils/logger';
+import { createLogger } from '../../../utils/logger.js';
 
 const logger = createLogger('user:seed');
 

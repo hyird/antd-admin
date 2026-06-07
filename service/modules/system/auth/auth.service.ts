@@ -1,9 +1,9 @@
-import { repo, AppDataSource } from '@/config/data';
-import type { Menu } from '@/modules/system/menu/menu.entity';
+import { repo, AppDataSource } from '../../../config/data.js';
+import type { Menu } from '../menu/menu.entity.js';
 import type { LoginRequest, LoginResult, RefreshResult } from './auth.types';
-import { comparePassword } from '@/utils/bcrypt';
-import { signAccessToken, signRefreshToken, verifyRefreshToken } from '@/utils/jwt';
-import { throwAppError } from '@/common/http';
+import { comparePassword } from '../../../utils/bcrypt.js';
+import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../../utils/jwt.js';
+import { throwAppError } from '../../../common/http.js';
 import { AuthError } from './auth.error';
 
 import { IsNull } from 'typeorm';

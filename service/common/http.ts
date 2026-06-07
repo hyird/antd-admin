@@ -4,7 +4,7 @@
 import type { Context } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { ZodError, type ZodSchema } from 'zod';
-import type { QueryResult } from './types';
+import type { QueryResult } from './types.js';
 
 export interface ApiResponse<T = unknown> {
     code: number | string;

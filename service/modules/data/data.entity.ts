@@ -7,7 +7,7 @@ import {
     PrimaryColumn,
     UpdateDateColumn,
 } from 'typeorm';
-import { BaseEntity } from '@/common/types';
+import { BaseEntity } from '../../common/types.js';
 
 /**
  * 设备状态枚举
@@ -27,7 +27,7 @@ export type VariableStatus = 0 | 1;
  *
  * @example
  * // 在其他模块中引用
- * import { Device } from '@/modules/data/data.entity';
+ * import { Device } from './data.entity.js';
  *
  * const deviceRepo = dataSource.getRepository(Device);
  * const devices = await deviceRepo.find();
@@ -96,7 +96,7 @@ export class Device extends BaseEntity {
  *
  * @example
  * // 在其他模块中引用
- * import { Variable } from '@/modules/data/data.entity';
+ * import { Variable } from './data.entity.js';
  *
  * const variableRepo = dataSource.getRepository(Variable);
  * const variables = await variableRepo.find();
@@ -160,7 +160,7 @@ export class Variable extends BaseEntity {
  *
  * @example
  * // 在其他模块中引用
- * import { VariableHistory } from '@/modules/data/data.entity';
+ * import { VariableHistory } from './data.entity.js';
  *
  * const historyRepo = dataSource.getRepository(VariableHistory);
  * const history = await historyRepo.find({ where: { code: 'xxx' } });
@@ -208,7 +208,7 @@ export class VariableHistory extends BaseEntity {
  *
  * @example
  * // 在其他模块中引用
- * import { VariableRealtime } from '@/modules/data/data.entity';
+ * import { VariableRealtime } from './data.entity.js';
  *
  * const realtimeRepo = dataSource.getRepository(VariableRealtime);
  * const latestValue = await realtimeRepo.findOne({ where: { code: 'xxx' } });

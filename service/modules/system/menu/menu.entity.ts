@@ -1,6 +1,6 @@
 import { Entity, Column, Index, ManyToMany } from 'typeorm';
-import { BaseEntity } from '@/common/types';
-import { Role } from '@/modules/system/role/role.entity';
+import { BaseEntity } from '../../../common/types.js';
+import { Role } from '../role/role.entity.js';
 import type { MenuType, MenuStatus } from './menu.types';
 
 export type { MenuType, MenuStatus };

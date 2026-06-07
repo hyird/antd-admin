@@ -1,0 +1,14 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "noEmit": false,
+        "outDir": "./dist",
+        "rootDir": "./service",
+        "declaration": false,
+        "sourceMap": false,
+        "jsx": "react-jsx",
+        "tsBuildInfoFile": "./dist/.tsbuildinfo"
+    },
+    "include": ["service/**/*.ts"],
+    "exclude": ["node_modules", "dist", "web"]
+}

@@ -1,12 +1,12 @@
 import 'reflect-metadata';
-import '@/core/env';
+import '../core/env.js';
 import { DataSource, type Repository } from 'typeorm';
-import { createLogger } from '@/utils/logger';
-import { User } from '@/modules/system/user/user.entity';
-import { Role } from '@/modules/system/role/role.entity';
-import { Menu } from '@/modules/system/menu/menu.entity';
-import { Department } from '@/modules/system/department/department.entity';
-import { Device, Variable, VariableHistory, VariableRealtime } from '@/modules/data/data.entity';
+import { createLogger } from '../utils/logger.js';
+import { User } from '../modules/system/user/user.entity.js';
+import { Role } from '../modules/system/role/role.entity.js';
+import { Menu } from '../modules/system/menu/menu.entity.js';
+import { Department } from '../modules/system/department/department.entity.js';
+import { Device, Variable, VariableHistory, VariableRealtime } from '../modules/data/data.entity.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const shouldSynchronize =

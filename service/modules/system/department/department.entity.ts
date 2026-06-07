@@ -1,6 +1,6 @@
 import { Entity, Column, OneToMany } from 'typeorm';
-import { BaseEntity } from '@/common/types';
-import { User } from '@/modules/system/user/user.entity';
+import { BaseEntity } from '../../../common/types.js';
+import { User } from '../user/user.entity.js';
 import type { DepartmentStatus } from './department.types';
 
 export type { DepartmentStatus };

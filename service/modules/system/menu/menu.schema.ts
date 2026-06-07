@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { pageParamsSchema } from '@/common/types';
+import { pageParamsSchema } from '../../../common/types.js';
 
 export const createMenuSchema = z.object({
     name: z.string().min(1, '菜单名称不能为空').max(100, '菜单名称最多100个字符'),

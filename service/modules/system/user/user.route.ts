@@ -1,12 +1,12 @@
 import { Hono } from 'hono';
-import { authMiddleware } from '@/middleware/auth';
-import { requireAnyPermission, requirePermission } from '@/middleware/permission';
+import { authMiddleware } from '../../../middleware/auth.js';
+import { requireAnyPermission, requirePermission } from '../../../middleware/permission.js';
 import { userService } from './user.service';
-import { R } from '@/common/http';
-import { getQuery, getQueryNumber, parseBody, parseParams, parseQuery } from '@/common/request';
-import { idParamSchema } from '@/common/types';
+import { R } from '../../../common/http.js';
+import { getQuery, getQueryNumber, parseBody, parseParams, parseQuery } from '../../../common/request.js';
+import { idParamSchema } from '../../../common/types.js';
 import type { CreateUserDto, UpdateUserDto, UserStatus } from './user.types';
-import type { AppEnv } from '@/core/hono.env';
+import type { AppEnv } from '../../../core/hono.env.js';
 import { createUserSchema, updateUserSchema, userQuerySchema } from './user.schema';
 
 export const userRoute = new Hono<AppEnv>();

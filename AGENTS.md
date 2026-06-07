@@ -4,7 +4,7 @@
 
 前后端分离的 admin 脚手架，`web/` 为前端，`service/` 为后端。
 
-- **运行时**: Bun（不是 npm/yarn/pnpm）
+- **运行时**: Node.js + npm
 - **前端**: React 19, Vite（root 在 `./web`）, Ant Design 6, Tailwind CSS 4, TanStack Query, Zustand
 - **后端**: Hono, TypeORM, MariaDB, JWT + bcrypt 认证
 - **构建产物**: `dist/web/`（前端）, `dist/server.js`（后端）
@@ -12,16 +12,17 @@
 ## 开发者命令
 
 ```bash
-bun run dev          # 并发启动 service (1102) 和 web (5173)
-bun run dev:web      # 仅前端 (Vite dev server, 5173)
-bun run dev:service  # 仅后端 (bun --watch, 1102)
-bun run build        # 构建全部：web → dist/web, service → dist/server.js
-bun run build:web    # Vite build → dist/web
-bun run build:service # Bun build service/server.ts → dist/server.js
-bun run start        # NODE_ENV=production bun dist/server.js
-bun run lint         # tsc --noEmit（仅类型检查，无 linter）
-bun run format       # prettier --write .
-bun run format:check # prettier --check .
+npm run dev          # 并发启动 service (1102) 和 web (5173)
+npm run dev:web      # 仅前端 (Vite dev server, 5173)
+npm run dev:service  # 仅后端 (tsx watch, 1102)
+npm run build        # 构建全部：web → dist/web, service → dist/server.js
+npm run build:web    # Vite build → dist/web
+npm run build:service # tsc 构建 service/server.ts → dist/server.js
+npm run start        # NODE_ENV=production node dist/server.js
+npm run lint         # biome lint .
+npm run typecheck    # tsc --noEmit
+npm run format       # biome format --write .
+npm run format:check # biome format check .
 ```
 
 ## 环境配置
@@ -161,7 +162,7 @@ export namespace User {
 
 ## 架构要点
 
-- **路径别名**: `@/` 同时映射 `./web/*` 和 `./service/*`（tsconfig + vite）
+- **路径别名**: `@/` 仅映射 `./web/*`（tsconfig + vite）；后端使用相对 ESM import
 - **Vite root**: `./web` — vite.config.ts, index.html, main.tsx 都在 `web/` 下
 - **后端入口**: `service/server.ts` — 注册所有 Hono 路由并服务静态 `dist/web`
 - **API 路由**: `/api/auth`, `/api/users`, `/api/roles`, `/api/menus`, `/api/departments`
@@ -179,11 +180,11 @@ export namespace User {
 ## 测试
 
 - 未配置测试框架（package.json 中无 test 脚本）
-- 通过 `bun run dev` 手动测试
+- 通过 `npm run dev` 手动测试
 
 ## 常见错误
 
-- 使用 `npm`/`yarn`/`pnpm` 而非 `bun`
+- 使用其他包管理器而非 npm
 - 忘记复制 `.env.example` → `.env`（数据库连接会失败）
-- 在没有 `bun.lock` 的情况下运行 `bun run build`（先执行 `bun install`）
+- 在没有 `package-lock.json` 的情况下运行 `npm run build`（先执行 `npm install`）
 - 在 `web/` 或 `service/` 以外目录编辑文件，期望 Vite 能识别（Vite root 是 `./web`）

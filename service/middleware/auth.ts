@@ -1,8 +1,8 @@
 import { createMiddleware } from 'hono/factory';
 import jwt from 'jsonwebtoken';
-import { verifyAccessToken } from '@/utils/jwt';
-import { throwAppError } from '@/common/http';
-import { AuthError } from '@/modules/system/auth/auth.error';
+import { verifyAccessToken } from '../utils/jwt.js';
+import { throwAppError } from '../common/http.js';
+import { AuthError } from '../modules/system/auth/auth.error.js';
 
 /**
  * JWT 认证中间件

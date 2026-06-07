@@ -1,13 +1,13 @@
 import { Hono } from 'hono';
-import { authMiddleware } from '@/middleware/auth';
-import { requirePermission, requireAnyPermission } from '@/middleware/permission';
+import { authMiddleware } from '../../../middleware/auth.js';
+import { requirePermission, requireAnyPermission } from '../../../middleware/permission.js';
 import { roleService } from './role.service';
-import { permissionService } from '@/modules/system/auth/auth.service';
-import { R } from '@/common/http';
-import { getQuery, parseBody, parseParams, parseQuery } from '@/common/request';
-import { idParamSchema } from '@/common/types';
+import { permissionService } from '../auth/auth.service.js';
+import { R } from '../../../common/http.js';
+import { getQuery, parseBody, parseParams, parseQuery } from '../../../common/request.js';
+import { idParamSchema } from '../../../common/types.js';
 import type { CreateRoleDto, UpdateRoleDto, RoleStatus } from './role.types';
-import type { AppEnv } from '@/core/hono.env';
+import type { AppEnv } from '../../../core/hono.env.js';
 import { createRoleSchema, roleQuerySchema, updateRoleSchema } from './role.schema';
 
 export const roleRoute = new Hono<AppEnv>();

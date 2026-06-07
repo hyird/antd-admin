@@ -1,8 +1,8 @@
 import { createMiddleware } from 'hono/factory';
-import { throwAppError } from '@/common/http';
-import { AuthError } from '@/modules/system/auth/auth.error';
-import { permissionService } from '@/modules/system/auth/auth.service';
-import type { AppEnv } from '@/core/hono.env';
+import { throwAppError } from '../common/http.js';
+import { AuthError } from '../modules/system/auth/auth.error.js';
+import { permissionService } from '../modules/system/auth/auth.service.js';
+import type { AppEnv } from '../core/hono.env.js';
 
 /**
  * 要求单个权限

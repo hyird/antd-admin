@@ -1,5 +1,5 @@
 // system/auth/auth.error.ts
-import type { AppErrorDef } from '@/common/http';
+import type { AppErrorDef } from '../../../common/http.js';
 
 export const AuthError = {
     USER_NOT_FOUND: {

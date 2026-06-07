@@ -1,6 +1,6 @@
 import jwt, { type SignOptions } from 'jsonwebtoken';
-import '@/core/env';
-import type { JwtPayload } from '@/modules/system/auth/auth.types';
+import '../core/env.js';
+import type { JwtPayload } from '../modules/system/auth/auth.types.js';
 
 const JWT_EXPIRES_IN: SignOptions['expiresIn'] =
     (process.env.JWT_EXPIRES_IN as SignOptions['expiresIn']) || '1d';

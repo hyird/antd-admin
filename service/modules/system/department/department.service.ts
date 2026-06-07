@@ -1,5 +1,5 @@
-import { repo } from '@/config/data';
-import { throwAppError } from '@/common/http';
+import { repo } from '../../../config/data.js';
+import { throwAppError } from '../../../common/http.js';
 import { DepartmentError } from './department.error';
 import type {
     DepartmentItem,
@@ -10,7 +10,7 @@ import type {
 import type { DepartmentStatus } from './department.entity';
 import type { Department } from './department.entity';
 import { Not } from 'typeorm';
-import { buildTree } from '@/utils/tree';
+import { buildTree } from '../../../utils/tree.js';
 
 export class DepartmentService {
     private toFlatItem(d: Department): DepartmentItem {

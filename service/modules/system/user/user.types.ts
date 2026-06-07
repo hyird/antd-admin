@@ -1,4 +1,4 @@
-import type { PageParams } from '@/common/types';
+import type { PageParams } from '../../../common/types.js';
 
 export type UserStatus = 'enabled' | 'disabled';
 

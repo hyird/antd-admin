@@ -1,7 +1,7 @@
-import { repo } from '@/config/data';
-import { throwAppError } from '@/common/http';
+import { repo } from '../../../config/data.js';
+import { throwAppError } from '../../../common/http.js';
 import { MenuError } from './menu.error';
-import { buildMenuTree } from '@/utils/tree';
+import { buildMenuTree } from '../../../utils/tree.js';
 import type {
     MenuItem,
     MenuTreeItem,

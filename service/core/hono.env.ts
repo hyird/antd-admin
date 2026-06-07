@@ -1,4 +1,4 @@
-import type { JwtPayload } from '@/modules/system/auth/auth.types';
+import type { JwtPayload } from '../modules/system/auth/auth.types.js';
 
 export interface AppEnv {
     Variables: {
