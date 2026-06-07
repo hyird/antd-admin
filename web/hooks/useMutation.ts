@@ -56,8 +56,8 @@ export function useMutationWithMessage<TData = void, TVariables = void>(
 }
 
 interface SaveMutationOptions<TData, TCreateData, TUpdateData> {
-    createFn: (data: TCreateData) => Promise<TData | void>;
-    updateFn: (id: number, data: TUpdateData) => Promise<TData | void>;
+    createFn: (data: TCreateData) => Promise<TData> | Promise<void>;
+    updateFn: (id: number, data: TUpdateData) => Promise<TData> | Promise<void>;
     toUpdatePayload: (data: TData) => TUpdateData;
     createMessage?: string;
     updateMessage?: string;
