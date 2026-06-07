@@ -73,41 +73,16 @@ if(MSVC AND VCPKG_TARGET_TRIPLET MATCHES "static")
 endif()
 
 set(CYRA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(CYRA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(CYRA_ENABLE_MEMORY_STATS OFF CACHE BOOL "" FORCE)
 set(CYRA_ENABLE_STD_REGEX_RULES OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(
     cyra
     GIT_REPOSITORY https://github.com/hyird/cyra.git
-    GIT_TAG v0.1.4
+    GIT_TAG v0.1.6
 )
 FetchContent_MakeAvailable(cyra)
-
-set(CYRA_DB_CPP "${cyra_SOURCE_DIR}/src/db/Db.cpp")
-if(EXISTS "${CYRA_DB_CPP}")
-    file(READ "${CYRA_DB_CPP}" CYRA_DB_CPP_SOURCE)
-    string(REPLACE "(void)socket.release(ec);" "(void)socket.release();" CYRA_DB_CPP_SOURCE "${CYRA_DB_CPP_SOURCE}")
-    string(REPLACE "(void)descriptor.release(ec);" "(void)descriptor.release();" CYRA_DB_CPP_SOURCE "${CYRA_DB_CPP_SOURCE}")
-    string(REPLACE "(void)socket.release(ignored);" "(void)socket.release();" CYRA_DB_CPP_SOURCE "${CYRA_DB_CPP_SOURCE}")
-    string(REPLACE "(void)descriptor.release(ignored);" "(void)descriptor.release();" CYRA_DB_CPP_SOURCE "${CYRA_DB_CPP_SOURCE}")
-    string(REPLACE "Task<QueryResult> disabledQueryResult(" "[[maybe_unused]] Task<QueryResult> disabledQueryResult(" CYRA_DB_CPP_SOURCE "${CYRA_DB_CPP_SOURCE}")
-    string(REPLACE "[[maybe_unused]] [[maybe_unused]]" "[[maybe_unused]]" CYRA_DB_CPP_SOURCE "${CYRA_DB_CPP_SOURCE}")
-    file(WRITE "${CYRA_DB_CPP}" "${CYRA_DB_CPP_SOURCE}")
-endif()
-
-foreach(CYRA_EXAMPLE_TARGET
-        hello_controller
-        minimal_controller
-        routing_and_middleware
-        request_response_models
-        context_helpers
-        static_files
-        dotenv_and_config
-        database_example)
-    if(TARGET ${CYRA_EXAMPLE_TARGET})
-        set_target_properties(${CYRA_EXAMPLE_TARGET} PROPERTIES EXCLUDE_FROM_ALL TRUE)
-    endif()
-endforeach()
 
 # 后端是 header-only：只有 service/server.cpp 一个翻译单元，业务模块通过 .h 内联实现。
 add_executable(antd_admin_service service/server.cpp)

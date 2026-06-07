@@ -5,7 +5,7 @@
 前后端分离的 admin 脚手架。前端基于 React + Vite，后端用 **C++23 + cyra** 重写并通过 **vcpkg + CMake** 构建，目录组织与 main 分支保持一致。
 
 - **前端运行时**: Node.js + npm；React 19 / Vite / Ant Design 6 / Tailwind 4 / TanStack Query / Zustand
-- **后端运行时**: C++23 / cyra v0.1.4 / asio / mimalloc / MariaDB / OpenSSL / ZLIB
+- **后端运行时**: C++23 / cyra v0.1.6 / asio / mimalloc / MariaDB / OpenSSL / ZLIB
 - **构建产物**: `dist/web/`（前端）；`build/server`（后端可执行文件）
 
 ## 开发者命令
@@ -113,5 +113,5 @@ vcpkg.json                    # 依赖清单（asio + mimalloc + libmariadb + op
 
 - **找不到 cyra**：CMake 通过 FetchContent 拉取 `hyird/cyra`，确认网络或本地缓存可用。
 - **JWT_SECRET 未设置**：后端启动后任何登录请求会 500，请在 `.env` 中设置。
-- **OpenSSL 未找到**：Cyra v0.1.4 的 TLS/JWT 和当前密码 PBKDF2 都依赖 OpenSSL，确认 vcpkg 依赖已安装。
+- **OpenSSL 未找到**：Cyra 的 TLS/JWT 和当前密码 PBKDF2 都依赖 OpenSSL，确认 vcpkg 依赖已安装。
 - **建表**：无需手动执行 SQL；启动时会执行 `service/config/schema.h` 中编译进二进制的 Cyra migrations，并记录到 `sys_schema_migrations`。
