@@ -564,12 +564,26 @@ const SystemMenuPage = () => {
     };
 
     const onDelete = (record: Menu.TreeItem) => {
+        const fullRecord = fullMenuMap[record.id] || record;
+        const permissionCount =
+            fullRecord.type === 'page'
+                ? (fullRecord.children || []).filter((item) => item.type === 'button').length
+                : 0;
+        const content =
+            fullRecord.type === 'page'
+                ? permissionCount > 0
+                    ? `将同时删除下方 ${permissionCount} 个权限，并清理角色权限关联。`
+                    : '将删除该页面，并清理角色权限关联。'
+                : fullRecord.type === 'button'
+                  ? '将删除该权限，并清理角色权限关联。'
+                  : '若存在子菜单或页面，请先删除子项。';
+
         modal.confirm({
-            title: `确认删除「${record.name}」吗？`,
-            content: '若存在子菜单，请先删除子菜单。',
+            title: `确认删除「${fullRecord.name}」吗？`,
+            content,
             okText: '确定删除',
             cancelText: '取消',
-            onOk: () => deleteMutation.mutate(record.id),
+            onOk: () => deleteMutation.mutate(fullRecord.id),
         });
     };
 

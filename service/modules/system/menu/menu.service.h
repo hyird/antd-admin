@@ -196,19 +196,42 @@ public:
     cyra::Task<void> remove(cyra::Context& c, std::int64_t id) {
         auto db = c.db();
         const auto rs = co_await db.query(
-            "SELECT id FROM sys_menu WHERE id = ? AND deleted_at IS NULL LIMIT 1",
+            "SELECT id, type FROM sys_menu WHERE id = ? AND deleted_at IS NULL LIMIT 1",
             {cyra::DbValue{id}});
         if (rs.rows().empty()) service::common::throwAppError(MenuError::MENU_NOT_FOUND);
 
-        const auto childRs = co_await db.query(
-            "SELECT COUNT(*) FROM sys_menu WHERE parent_id = ? AND deleted_at IS NULL",
+        const std::string type(rs.rows().front()[1].text());
+        const auto blockingChildren = co_await db.query(
+            type == "page"
+                ? "SELECT COUNT(*) FROM sys_menu "
+                  "WHERE parent_id = ? AND deleted_at IS NULL AND type != 'button'"
+                : "SELECT COUNT(*) FROM sys_menu WHERE parent_id = ? AND deleted_at IS NULL",
             {cyra::DbValue{id}});
-        if (std::stoll(std::string(childRs.rows().front()[0].text())) > 0) {
+        if (std::stoll(std::string(blockingChildren.rows().front()[0].text())) > 0) {
             service::common::throwAppError(MenuError::MENU_HAS_CHILDREN);
         }
 
-        (void)co_await db.execute("UPDATE sys_menu SET deleted_at = NOW() WHERE id = ?",
-                                {cyra::DbValue{id}});
+        auto tx = co_await db.beginTransaction();
+        if (type == "page") {
+            (void)co_await tx.execute(
+                "DELETE FROM sys_role_menu "
+                "WHERE menu_id = ? OR menu_id IN ("
+                "    SELECT id FROM sys_menu WHERE parent_id = ? AND type = 'button' "
+                "      AND deleted_at IS NULL"
+                ")",
+                {cyra::DbValue{id}, cyra::DbValue{id}});
+            (void)co_await tx.execute(
+                "UPDATE sys_menu SET deleted_at = NOW(), updated_at = NOW() "
+                "WHERE id = ? OR (parent_id = ? AND type = 'button' AND deleted_at IS NULL)",
+                {cyra::DbValue{id}, cyra::DbValue{id}});
+        } else {
+            (void)co_await tx.execute("DELETE FROM sys_role_menu WHERE menu_id = ?",
+                                      {cyra::DbValue{id}});
+            (void)co_await tx.execute(
+                "UPDATE sys_menu SET deleted_at = NOW(), updated_at = NOW() WHERE id = ?",
+                {cyra::DbValue{id}});
+        }
+        co_await tx.commit();
         service::middleware::permissionService().clearAllCache();
         co_return;
     }
