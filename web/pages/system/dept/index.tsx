@@ -25,22 +25,27 @@ import {
     Form,
     Input,
     InputNumber,
+    Pagination,
     Result,
     Select,
     Space,
     Table,
+    Tree,
     TreeSelect,
+    type TreeDataNode,
     type TreeSelectProps,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FormModal } from '@/components/FormModal';
 import { PageContainer } from '@/components/PageContainer';
 import { StatusTag } from '@/components/StatusTag';
 import { useDebounceFn } from '@/hooks/useDebounceFn';
 import { usePermissions } from '@/hooks/usePermission';
+import { treeToMap } from '@/utils/tree';
 import { create, getTree, remove, update } from './dept.api';
-import { deptQueryKeys } from './';
+import { useDeptList } from './dept.service';
+import { deptQueryKeys } from './dept.types';
 import { useUserOptions } from '../user/user.service';
 import type { Dept } from './dept.types';
 import type { User } from '../user/user.types';
@@ -82,8 +87,18 @@ function filterDeptTree(tree: Dept.TreeItem[], keyword: string): Dept.TreeItem[]
     return filter(tree);
 }
 
+function deptTreeToTreeData(tree: Dept.TreeItem[]): TreeDataNode[] {
+    return tree.map((item) => ({
+        key: item.id,
+        title: item.name,
+        children: item.children?.length ? deptTreeToTreeData(item.children) : undefined,
+    }));
+}
+
 const SystemDeptPage = () => {
     const [keyword, setKeyword] = useState('');
+    const [selectedDeptId, setSelectedDeptId] = useState<number | null>(null);
+    const [pagination, setPagination] = useState({ page: 1, pageSize: 10 });
     const [modalVisible, setModalVisible] = useState(false);
     const [editing, setEditing] = useState<Dept.TreeItem | null>(null);
     const [form] = Form.useForm<DeptFormValues>();
@@ -96,7 +111,10 @@ const SystemDeptPage = () => {
     const canEdit = has('system:dept:edit');
     const canDelete = has('system:dept:delete');
 
-    const doSearch = (value: string) => setKeyword(value);
+    const doSearch = (value: string) => {
+        setKeyword(value);
+        setPagination((current) => ({ ...current, page: 1 }));
+    };
 
     const { run: debouncedSearch } = useDebounceFn(doSearch, 300);
 
@@ -105,6 +123,16 @@ const SystemDeptPage = () => {
         queryFn: () => getTree(),
         enabled: canQuery,
     });
+
+    const { data: deptPage, isLoading: loadingDepts } = useDeptList(
+        {
+            page: pagination.page,
+            pageSize: pagination.pageSize,
+            keyword: keyword || undefined,
+            parent_id: selectedDeptId ?? 0,
+        },
+        { enabled: canQuery }
+    );
 
     const { data: usersData } = useUserOptions({
         enabled: canQuery,
@@ -124,6 +152,28 @@ const SystemDeptPage = () => {
     }, [userList]);
 
     const deptTree = useMemo(() => filterDeptTree(rawDeptTree, keyword), [rawDeptTree, keyword]);
+    const deptMap = useMemo(() => treeToMap(rawDeptTree), [rawDeptTree]);
+    const deptTreeData = useMemo<TreeDataNode[]>(
+        () => [
+            {
+                key: 'all',
+                title: '顶级部门',
+                children: deptTreeToTreeData(deptTree),
+            },
+        ],
+        [deptTree]
+    );
+
+    useEffect(() => {
+        if (selectedDeptId && !deptMap.has(selectedDeptId)) {
+            setSelectedDeptId(null);
+            setPagination((current) => ({ ...current, page: 1 }));
+        }
+    }, [deptMap, selectedDeptId]);
+
+    const handlePageChange = (page: number, pageSize: number) => {
+        setPagination({ page, pageSize });
+    };
 
     const getParentTreeData = (excludeId?: number): TreeSelectProps['treeData'] => {
         const loop = (nodes: Dept.TreeItem[]): TreeSelectProps['treeData'] =>
@@ -177,18 +227,18 @@ const SystemDeptPage = () => {
         },
     });
 
-    const openCreateModal = () => {
+    const openCreateModal = (parentId: number | null = null) => {
         setEditing(null);
         form.resetFields();
         form.setFieldsValue({
             status: 'enabled',
             sort_order: 0,
-            parent_id: null,
+            parent_id: parentId,
         });
         setModalVisible(true);
     };
 
-    const openCreateChildModal = (parent: Dept.TreeItem) => {
+    const openCreateChildModal = (parent: Dept.Item) => {
         setEditing(null);
         form.resetFields();
         form.setFieldsValue({
@@ -199,7 +249,7 @@ const SystemDeptPage = () => {
         setModalVisible(true);
     };
 
-    const openEditModal = (record: Dept.TreeItem) => {
+    const openEditModal = (record: Dept.Item) => {
         setEditing(record);
         form.setFieldsValue({
             id: record.id,
@@ -213,7 +263,7 @@ const SystemDeptPage = () => {
         setModalVisible(true);
     };
 
-    const onDelete = (record: Dept.TreeItem) => {
+    const onDelete = (record: Dept.Item) => {
         modal.confirm({
             title: `确认删除部门「${record.name}」吗？`,
             content: '若存在子部门或用户，请先处理后再删除。',
@@ -239,10 +289,15 @@ const SystemDeptPage = () => {
         );
     }
 
-    const columns: ColumnsType<Dept.TreeItem> = [
+    const columns: ColumnsType<Dept.Item> = [
         {
             title: '部门名称',
             dataIndex: 'name',
+        },
+        {
+            title: '上级部门',
+            dataIndex: 'parent_id',
+            render: (v: number | null) => (v ? deptMap.get(v)?.name || '-' : '-'),
         },
         {
             title: '部门编码',
@@ -314,15 +369,8 @@ const SystemDeptPage = () => {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3 className="m-0 text-base font-medium">部门管理</h3>
                     <Space wrap>
-                        <Search
-                            allowClear
-                            placeholder="部门名称 / 编码"
-                            onChange={(e) => debouncedSearch(e.target.value)}
-                            onSearch={doSearch}
-                            className="w-60"
-                        />
                         {canAdd && (
-                            <Button type="primary" onClick={openCreateModal}>
+                            <Button type="primary" onClick={() => openCreateModal(selectedDeptId)}>
                                 新建部门
                             </Button>
                         )}
@@ -330,21 +378,58 @@ const SystemDeptPage = () => {
                 </div>
             }
         >
-            <Table<Dept.TreeItem>
-                rowKey="id"
-                columns={columns}
-                dataSource={deptTree}
-                loading={isLoading}
-                pagination={false}
-                size="middle"
-                expandable={{
-                    defaultExpandAllRows: true,
-                    rowExpandable: (record) =>
-                        Array.isArray(record.children) && record.children.length > 0,
-                }}
-                scroll={{ x: 'max-content' }}
-                sticky
-            />
+            <div className="flex h-full min-h-0 flex-col gap-3 lg:flex-row">
+                <aside className="flex min-h-[260px] w-full shrink-0 flex-col rounded-md border border-gray-100 bg-white lg:w-72">
+                    <div className="border-b border-gray-100 px-3 py-2 font-medium">部门树</div>
+                    <div className="border-b border-gray-100 p-3">
+                        <Search
+                            allowClear
+                            placeholder="部门名称 / 编码"
+                            onChange={(e) => debouncedSearch(e.target.value)}
+                            onSearch={doSearch}
+                        />
+                    </div>
+                    <div className="min-h-0 flex-1 overflow-auto p-2">
+                        <Tree
+                            key={`${keyword}-${rawDeptTree.length}`}
+                            blockNode
+                            defaultExpandAll
+                            selectedKeys={[selectedDeptId ?? 'all']}
+                            treeData={deptTreeData}
+                            onSelect={(keys) => {
+                                const key = keys[0];
+                                setSelectedDeptId(typeof key === 'number' ? key : null);
+                                setPagination((current) => ({ ...current, page: 1 }));
+                            }}
+                        />
+                    </div>
+                </aside>
+
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                    <div className="min-h-0 flex-1 overflow-hidden">
+                        <Table<Dept.Item>
+                            rowKey="id"
+                            columns={columns}
+                            dataSource={deptPage?.list || []}
+                            loading={loadingDepts || isLoading}
+                            pagination={false}
+                            size="middle"
+                            scroll={{ x: 'max-content', y: 'calc(100vh - 285px)' }}
+                            sticky
+                        />
+                    </div>
+                    <div className="flex shrink-0 justify-end border-t border-gray-100 bg-white px-3 py-2">
+                        <Pagination
+                            current={pagination.page}
+                            pageSize={pagination.pageSize}
+                            total={deptPage?.total || 0}
+                            showSizeChanger
+                            showTotal={(total, range) => `${range[0]}-${range[1]} / 共 ${total} 条`}
+                            onChange={handlePageChange}
+                        />
+                    </div>
+                </div>
+            </div>
 
             <FormModal
                 open={modalVisible}

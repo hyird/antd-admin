@@ -6,15 +6,18 @@ import { type UseQueryOptions, useQuery } from '@tanstack/react-query';
 import type { TreeSelectProps } from 'antd';
 import { useMemo } from 'react';
 import { useSaveMutation } from '@/hooks/useMutation';
+import type { PaginatedResult } from '@/utils/types';
 import type { Dept } from './dept.types';
 import { create, getDetail, getList, getTree, update } from './dept.api';
 import { deptQueryKeys } from './dept.types';
 
 export { create, getDetail, getList, getTree, remove, update } from './dept.api';
 
+type DeptListResult = PaginatedResult<Dept.Item>;
+
 export function useDeptList(
     params?: Dept.Query,
-    options?: Omit<UseQueryOptions<Dept.Item[]>, 'queryKey' | 'queryFn'>
+    options?: Omit<UseQueryOptions<DeptListResult>, 'queryKey' | 'queryFn'>
 ) {
     return useQuery({
         queryKey: deptQueryKeys.list(params),

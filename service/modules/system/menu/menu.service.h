@@ -37,21 +37,59 @@ public:
         return buildTree(c, rowsToRecords(rows));
     }
 
-    cyra::Task<cyra::List<MenuDto>> listAll(cyra::Context& c, std::optional<std::string> keyword) {
+    cyra::Task<MenuPageDataDto> list(cyra::Context& c, const MenuQuery& q) {
+        const auto p = service::common::normalizePagination(q);
         auto db = c.db();
-        std::string sql =
-            "SELECT id, name, path, icon, parent_id, `order`, type, component, status, "
-            "       permission_code, is_default FROM sys_menu WHERE deleted_at IS NULL";
+
+        std::string where = " FROM sys_menu m WHERE m.deleted_at IS NULL";
         std::vector<cyra::DbValue> params;
-        if (keyword && !keyword->empty()) {
-            sql += " AND (name LIKE ? OR path LIKE ?)";
-            const std::string like = "%" + *keyword + "%";
-            params.emplace_back(like);
-            params.emplace_back(like);
+        if (p.keyword) {
+            where +=
+                " AND (m.name LIKE ? OR m.path LIKE ? OR m.component LIKE ? OR "
+                "m.permission_code LIKE ?)";
+            const std::string like = "%" + *p.keyword + "%";
+            for (int i = 0; i < 4; ++i) params.emplace_back(like);
         }
-        sql += " ORDER BY `order` ASC, id ASC";
+        if (q.status) {
+            where += " AND m.status = ?";
+            params.emplace_back(*q.status);
+        }
+        if (q.parent_id) {
+            if (*q.parent_id <= 0) {
+                where += " AND m.parent_id IS NULL";
+            } else {
+                where += " AND m.parent_id = ?";
+                params.emplace_back(*q.parent_id);
+            }
+        }
+
+        const auto countRs = co_await db.query("SELECT COUNT(*)" + where, params);
+        const std::int64_t total = countRs.rows().empty()
+                                       ? 0
+                                       : std::stoll(std::string(countRs.rows().front()[0].text()));
+
+        std::string sql =
+            "SELECT m.id, m.name, m.path, m.icon, m.parent_id, m.`order`, m.type, m.component, "
+            "       m.status, m.permission_code, m.is_default" +
+            where + " ORDER BY m.`order` ASC, m.id ASC";
+        if (p.paginated) {
+            sql += " LIMIT " + std::to_string(p.page_size) + " OFFSET " + std::to_string(p.skip);
+        }
         const auto rs = co_await db.query(sql, params);
-        co_return buildFlatList(c, rowsToRecords(rs.rows()));
+
+        MenuPageDataDto result(c);
+        result.total(static_cast<cyra::Int64>(total))
+            .page(static_cast<cyra::Int64>(p.page))
+            .pageSize(static_cast<cyra::Int64>(p.page_size))
+            .totalPages(static_cast<cyra::Int64>(
+                p.paginated && p.page_size > 0 ? (total + p.page_size - 1) / p.page_size : 1));
+
+        auto& list = result.list().ensure();
+        for (const auto& row : rs.rows()) {
+            auto& item = list.emplace(c);
+            fillMenuDto(item, rowToRecord(row));
+        }
+        co_return result;
     }
 
     cyra::Task<cyra::List<MenuDto>> getTree(cyra::Context& c, std::optional<std::string> status) {

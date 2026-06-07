@@ -2,6 +2,7 @@
  * 菜单管理类型定义
  */
 
+import type { PageParams } from '@/utils/types';
 import { createQueryKeys } from '@/utils/query';
 
 // ============ QueryKeys ============
@@ -41,8 +42,8 @@ export interface MenuTreeItem extends MenuItem {
 
 // ============ 查询参数 ============
 
-export interface MenuQuery {
-    keyword?: string;
+export interface MenuQuery extends PageParams {
+    parent_id?: number | null;
     status?: MenuStatus;
 }
 

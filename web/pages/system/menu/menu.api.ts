@@ -3,6 +3,7 @@
  */
 
 import type { Menu } from './menu.types';
+import type { PaginatedResult } from '@/utils/types';
 import { appendQueryParams } from '@/utils/query';
 import request from '@/utils/http';
 
@@ -16,7 +17,7 @@ const ENDPOINTS = {
 
 /** 获取菜单列表 */
 export function getList(params?: Menu.Query) {
-    return request.get<Menu.Item[]>(appendQueryParams(ENDPOINTS.BASE, params));
+    return request.get<PaginatedResult<Menu.Item>>(appendQueryParams(ENDPOINTS.BASE, params));
 }
 
 /** 获取菜单树 */

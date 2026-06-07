@@ -29,9 +29,11 @@ public:
 private:
     cyra::Task<cyra::HttpResponse> list(cyra::Context& c) {
         co_await service::middleware::requirePermission(c, "system:dept:query");
-        co_return c.json(service::common::ok<DeptListResponse>(
-            c,
-            co_await deptService().listAll(c, service::common::getQuery(c, "keyword"))));
+        DeptQuery q;
+        static_cast<service::common::PageParams&>(q) = service::common::parsePageParams(c);
+        q.status = service::common::getQuery(c, "status");
+        q.parent_id = service::common::getQueryInt(c, "parent_id");
+        co_return c.json(service::common::ok<DeptPageResponse>(c, co_await deptService().list(c, q)));
     }
 
     cyra::Task<cyra::HttpResponse> tree(cyra::Context& c) {

@@ -28,13 +28,15 @@ import {
     Input,
     InputNumber,
     Modal,
+    Pagination,
     Result,
     Select,
     Space,
-    Switch,
     Table,
     Tag,
+    Tree,
     TreeSelect,
+    type TreeDataNode,
     type TreeSelectProps,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -58,7 +60,8 @@ import { useDebounceFn } from '@/hooks/useDebounceFn';
 import { usePermissions } from '@/hooks/usePermission';
 import { loginKeys } from '@/pages/login/login.service';
 import { batchCreateButtons, create, getTree, remove, reorder, update } from './menu.api';
-import { menuQueryKeys } from './';
+import { useMenuList } from './menu.service';
+import { menuQueryKeys } from './menu.types';
 import type { Menu } from './menu.types';
 import { MenuTypeMap } from './menu.types';
 import { filterMenuTree, flattenTree, getDescendantIds, getPathSegment } from '../../../utils/tree';
@@ -82,6 +85,19 @@ interface MenuFormValues {
 function typeTag(type: Menu.Type) {
     const config = MenuTypeMap[type];
     return <Tag color={config.color}>{config.text}</Tag>;
+}
+
+function menuTreeToTreeData(tree: Menu.TreeItem[]): TreeDataNode[] {
+    return tree.map((item) => ({
+        key: item.id,
+        title: (
+            <span className="inline-flex min-w-0 items-center gap-1">
+                <span className="truncate">{item.name}</span>
+                {typeTag(item.type)}
+            </span>
+        ),
+        children: item.children?.length ? menuTreeToTreeData(item.children) : undefined,
+    }));
 }
 
 function getSortItems(record: Menu.TreeItem | null) {
@@ -147,7 +163,8 @@ function filterOutButtons(nodes: Menu.TreeItem[], path = new Set<number>()): Men
 
 const SystemMenuPage = () => {
     const [keyword, setKeyword] = useState('');
-    const [hideButtons, setHideButtons] = useState(true);
+    const [selectedMenuId, setSelectedMenuId] = useState<number | null>(null);
+    const [pagination, setPagination] = useState({ page: 1, pageSize: 10 });
     const [modalVisible, setModalVisible] = useState(false);
     const [editing, setEditing] = useState<Menu.TreeItem | null>(null);
     const [form] = Form.useForm<MenuFormValues>();
@@ -167,7 +184,10 @@ const SystemMenuPage = () => {
     const canEdit = has('system:menu:edit');
     const canDelete = has('system:menu:delete');
 
-    const doSearch = (value: string) => setKeyword(value);
+    const doSearch = (value: string) => {
+        setKeyword(value);
+        setPagination((current) => ({ ...current, page: 1 }));
+    };
 
     const { run: debouncedSearch } = useDebounceFn(doSearch, 300);
 
@@ -176,6 +196,16 @@ const SystemMenuPage = () => {
         queryFn: () => getTree(),
         enabled: canQuery,
     });
+
+    const { data: menuPage, isLoading: loadingMenus } = useMenuList(
+        {
+            page: pagination.page,
+            pageSize: pagination.pageSize,
+            keyword: keyword || undefined,
+            parent_id: selectedMenuId ?? 0,
+        },
+        { enabled: canQuery }
+    );
 
     const menuMap = useMemo(() => {
         const flattened = flattenTree(rawMenuTree);
@@ -204,13 +234,33 @@ const SystemMenuPage = () => {
         });
         return map;
     }, [fullMenuMap]);
+    const selectedMenu = selectedMenuId ? fullMenuMap[selectedMenuId] : undefined;
     const menuTree = useMemo(() => {
-        let tree = filterMenuTree(rawMenuTree, keyword);
-        if (hideButtons) {
-            tree = filterOutButtons(tree);
+        return filterOutButtons(filterMenuTree(rawMenuTree, keyword));
+    }, [rawMenuTree, keyword]);
+    const menuTreeData = useMemo<TreeDataNode[]>(
+        () => [
+            {
+                key: 'all',
+                title: '顶级菜单',
+                children: menuTreeToTreeData(menuTree),
+            },
+        ],
+        [menuTree]
+    );
+
+    useEffect(() => {
+        if (!selectedMenuId) return;
+        const item = fullMenuMap[selectedMenuId];
+        if (!item || item.type === 'button') {
+            setSelectedMenuId(null);
+            setPagination((current) => ({ ...current, page: 1 }));
         }
-        return tree;
-    }, [rawMenuTree, keyword, hideButtons]);
+    }, [fullMenuMap, selectedMenuId]);
+
+    const handlePageChange = (page: number, pageSize: number) => {
+        setPagination({ page, pageSize });
+    };
 
     const rootSortItems = useMemo(() => {
         return [...rawMenuTree]
@@ -613,6 +663,11 @@ const SystemMenuPage = () => {
             dataIndex: 'name',
         },
         {
+            title: '上级菜单',
+            dataIndex: 'parent_id',
+            render: (v: number | null) => (v ? fullMenuMap[v]?.name || '-' : '-'),
+        },
+        {
             title: '类型',
             dataIndex: 'type',
             render: (t: Menu.Type) => typeTag(t),
@@ -696,30 +751,24 @@ const SystemMenuPage = () => {
         },
     ];
 
+    const createParentId = selectedMenu && selectedMenu.type !== 'button' ? selectedMenu.id : null;
+    const createDefaultType =
+        selectedMenu?.type === 'page' ? 'button' : selectedMenu?.type === 'menu' ? 'page' : 'menu';
+
     return (
         <PageContainer
             header={
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3 className="m-0 text-base font-medium">菜单管理</h3>
                     <Space wrap>
-                        <Search
-                            allowClear
-                            placeholder="按名称 / 路由搜索（树状过滤）"
-                            onChange={(e) => debouncedSearch(e.target.value)}
-                            onSearch={doSearch}
-                            className="w-full sm:w-[280px]"
-                        />
-                        <Switch
-                            checked={!hideButtons}
-                            onChange={(checked) => setHideButtons(!checked)}
-                            checkedChildren="显示权限"
-                            unCheckedChildren="隐藏权限"
-                        />
                         {canEdit && rootSortItems.length > 1 && (
                             <Button onClick={openRootSortModal}>顶层排序</Button>
                         )}
                         {canAdd && (
-                            <Button type="primary" onClick={() => openCreateModal()}>
+                            <Button
+                                type="primary"
+                                onClick={() => openCreateModal(createParentId, createDefaultType)}
+                            >
                                 新建菜单
                             </Button>
                         )}
@@ -727,21 +776,58 @@ const SystemMenuPage = () => {
                 </div>
             }
         >
-            <Table<Menu.TreeItem>
-                rowKey="id"
-                columns={normalColumns}
-                dataSource={menuTree}
-                loading={isLoading}
-                pagination={false}
-                size="middle"
-                scroll={{ x: 'max-content' }}
-                expandable={{
-                    defaultExpandAllRows: true,
-                    rowExpandable: (record) =>
-                        Array.isArray(record.children) && record.children.length > 0,
-                }}
-                sticky
-            />
+            <div className="flex h-full min-h-0 flex-col gap-3 lg:flex-row">
+                <aside className="flex min-h-[260px] w-full shrink-0 flex-col overflow-hidden rounded-md border border-gray-100 bg-white lg:h-full lg:w-80">
+                    <div className="border-b border-gray-100 px-3 py-2 font-medium">菜单树</div>
+                    <div className="border-b border-gray-100 p-3">
+                        <Search
+                            allowClear
+                            placeholder="名称 / 路由 / 权限"
+                            onChange={(e) => debouncedSearch(e.target.value)}
+                            onSearch={doSearch}
+                        />
+                    </div>
+                    <div className="min-h-0 flex-1 overflow-auto p-2">
+                        <Tree
+                            key={`${keyword}-${rawMenuTree.length}`}
+                            blockNode
+                            defaultExpandAll
+                            selectedKeys={[selectedMenuId ?? 'all']}
+                            treeData={menuTreeData}
+                            onSelect={(keys) => {
+                                const key = keys[0];
+                                setSelectedMenuId(typeof key === 'number' ? key : null);
+                                setPagination((current) => ({ ...current, page: 1 }));
+                            }}
+                        />
+                    </div>
+                </aside>
+
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                    <div className="min-h-0 flex-1 overflow-hidden">
+                        <Table<Menu.TreeItem>
+                            rowKey="id"
+                            columns={normalColumns}
+                            dataSource={menuPage?.list || []}
+                            loading={loadingMenus || isLoading}
+                            pagination={false}
+                            size="middle"
+                            scroll={{ x: 'max-content', y: 'calc(100vh - 285px)' }}
+                            sticky
+                        />
+                    </div>
+                    <div className="flex shrink-0 justify-end border-t border-gray-100 bg-white px-3 py-2">
+                        <Pagination
+                            current={pagination.page}
+                            pageSize={pagination.pageSize}
+                            total={menuPage?.total || 0}
+                            showSizeChanger
+                            showTotal={(total, range) => `${range[0]}-${range[1]} / 共 ${total} 条`}
+                            onChange={handlePageChange}
+                        />
+                    </div>
+                </div>
+            </div>
 
             <FormModal
                 open={modalVisible}

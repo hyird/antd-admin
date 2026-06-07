@@ -1,8 +1,19 @@
 #pragma once
 
+#include <cstdint>
+#include <optional>
+#include <string>
+
 #include <cyra/http/Model.h>
 
+#include "service/common/types.h"
+
 namespace service::modules::system::dept {
+
+struct DeptQuery : service::common::PageParams {
+    std::optional<std::string> status;
+    std::optional<std::int64_t> parent_id;
+};
 
 CYRA_MODEL(CreateDeptBody,
     CYRA_FIELD(name, cyra::String,
@@ -39,6 +50,20 @@ CYRA_MODEL(DeptListResponse,
     CYRA_FIELD(code, cyra::Int64),
     CYRA_FIELD(message, cyra::String),
     CYRA_FIELD(data, cyra::List<DeptDto>)
+);
+
+CYRA_MODEL(DeptPageDataDto,
+    CYRA_FIELD(list, cyra::List<DeptDto>),
+    CYRA_FIELD(total, cyra::Int64),
+    CYRA_FIELD(page, cyra::Int64),
+    CYRA_FIELD_NAME("pageSize", pageSize, cyra::Int64),
+    CYRA_FIELD_NAME("totalPages", totalPages, cyra::Int64)
+);
+
+CYRA_MODEL(DeptPageResponse,
+    CYRA_FIELD(code, cyra::Int64),
+    CYRA_FIELD(message, cyra::String),
+    CYRA_FIELD(data, DeptPageDataDto)
 );
 
 CYRA_MODEL(DeptDetailResponse,

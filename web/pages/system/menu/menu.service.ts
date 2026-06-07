@@ -6,6 +6,7 @@ import { type UseQueryOptions, useQuery } from '@tanstack/react-query';
 import type { TreeSelectProps } from 'antd';
 import { useMemo } from 'react';
 import { useSaveMutation } from '@/hooks/useMutation';
+import type { PaginatedResult } from '@/utils/types';
 import type { Menu } from './menu.types';
 import { create, getDetail, getList, getTree, update } from './menu.api';
 import { menuQueryKeys } from './menu.types';
@@ -21,9 +22,11 @@ export {
     update,
 } from './menu.api';
 
+type MenuListResult = PaginatedResult<Menu.Item>;
+
 export function useMenuList(
     params?: Menu.Query,
-    options?: Omit<UseQueryOptions<Menu.Item[]>, 'queryKey' | 'queryFn'>
+    options?: Omit<UseQueryOptions<MenuListResult>, 'queryKey' | 'queryFn'>
 ) {
     return useQuery({
         queryKey: menuQueryKeys.list(params),

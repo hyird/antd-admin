@@ -2,6 +2,7 @@
  * 部门管理类型定义
  */
 
+import type { PageParams } from '@/utils/types';
 import { createQueryKeys } from '@/utils/query';
 
 // ============ QueryKeys ============
@@ -36,8 +37,8 @@ export interface DeptTreeItem extends DeptItem {
 
 // ============ 查询参数 ============
 
-export interface DeptQuery {
-    keyword?: string;
+export interface DeptQuery extends PageParams {
+    parent_id?: number | null;
     status?: DeptStatus;
 }
 

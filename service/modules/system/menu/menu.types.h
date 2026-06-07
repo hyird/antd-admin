@@ -1,8 +1,19 @@
 #pragma once
 
+#include <cstdint>
+#include <optional>
+#include <string>
+
 #include <cyra/http/Model.h>
 
+#include "service/common/types.h"
+
 namespace service::modules::system::menu {
+
+struct MenuQuery : service::common::PageParams {
+    std::optional<std::string> status;
+    std::optional<std::int64_t> parent_id;
+};
 
 CYRA_MODEL(CreateMenuBody,
     CYRA_FIELD(name, cyra::String,
@@ -80,6 +91,20 @@ CYRA_MODEL(MenuListResponse,
     CYRA_FIELD(code, cyra::Int64),
     CYRA_FIELD(message, cyra::String),
     CYRA_FIELD(data, cyra::List<MenuDto>)
+);
+
+CYRA_MODEL(MenuPageDataDto,
+    CYRA_FIELD(list, cyra::List<MenuDto>),
+    CYRA_FIELD(total, cyra::Int64),
+    CYRA_FIELD(page, cyra::Int64),
+    CYRA_FIELD_NAME("pageSize", pageSize, cyra::Int64),
+    CYRA_FIELD_NAME("totalPages", totalPages, cyra::Int64)
+);
+
+CYRA_MODEL(MenuPageResponse,
+    CYRA_FIELD(code, cyra::Int64),
+    CYRA_FIELD(message, cyra::String),
+    CYRA_FIELD(data, MenuPageDataDto)
 );
 
 CYRA_MODEL(MenuDetailResponse,

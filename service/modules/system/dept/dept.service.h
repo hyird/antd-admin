@@ -26,22 +26,57 @@ public:
         return svc;
     }
 
-    cyra::Task<cyra::List<DeptDto>> listAll(cyra::Context& c,
-                                                  std::optional<std::string> keyword) {
+    cyra::Task<DeptPageDataDto> list(cyra::Context& c, const DeptQuery& q) {
+        const auto p = service::common::normalizePagination(q);
         auto db = c.db();
-        std::string sql =
-            "SELECT id, name, code, parent_id, `order`, leader_id, status FROM sys_dept "
-            "WHERE deleted_at IS NULL";
+
+        std::string where = " FROM sys_dept d WHERE d.deleted_at IS NULL";
         std::vector<cyra::DbValue> params;
-        if (keyword && !keyword->empty()) {
-            sql += " AND (name LIKE ? OR code LIKE ?)";
-            const std::string like = "%" + *keyword + "%";
+        if (p.keyword) {
+            where += " AND (d.name LIKE ? OR d.code LIKE ?)";
+            const std::string like = "%" + *p.keyword + "%";
             params.emplace_back(like);
             params.emplace_back(like);
         }
-        sql += " ORDER BY `order` ASC, id ASC";
+        if (q.status) {
+            where += " AND d.status = ?";
+            params.emplace_back(*q.status);
+        }
+        if (q.parent_id) {
+            if (*q.parent_id <= 0) {
+                where += " AND d.parent_id IS NULL";
+            } else {
+                where += " AND d.parent_id = ?";
+                params.emplace_back(*q.parent_id);
+            }
+        }
+
+        const auto countRs = co_await db.query("SELECT COUNT(*)" + where, params);
+        const std::int64_t total = countRs.rows().empty()
+                                       ? 0
+                                       : std::stoll(std::string(countRs.rows().front()[0].text()));
+
+        std::string sql =
+            "SELECT d.id, d.name, d.code, d.parent_id, d.`order`, d.leader_id, d.status" + where +
+            " ORDER BY d.`order` ASC, d.id ASC";
+        if (p.paginated) {
+            sql += " LIMIT " + std::to_string(p.page_size) + " OFFSET " + std::to_string(p.skip);
+        }
         const auto rs = co_await db.query(sql, params);
-        co_return buildFlatList(c, rowsToRecords(rs.rows()));
+
+        DeptPageDataDto result(c);
+        result.total(static_cast<cyra::Int64>(total))
+            .page(static_cast<cyra::Int64>(p.page))
+            .pageSize(static_cast<cyra::Int64>(p.page_size))
+            .totalPages(static_cast<cyra::Int64>(
+                p.paginated && p.page_size > 0 ? (total + p.page_size - 1) / p.page_size : 1));
+
+        auto& list = result.list().ensure();
+        for (const auto& row : rs.rows()) {
+            auto& item = list.emplace(c);
+            fillDeptDto(item, rowToRecord(row));
+        }
+        co_return result;
     }
 
     cyra::Task<cyra::List<DeptDto>> getTree(cyra::Context& c,

@@ -3,6 +3,7 @@
  */
 
 import type { Dept } from './dept.types';
+import type { PaginatedResult } from '@/utils/types';
 import { appendQueryParams } from '@/utils/query';
 import request from '@/utils/http';
 
@@ -15,7 +16,7 @@ const ENDPOINTS = {
 
 /** 获取部门列表 */
 export function getList(params?: Dept.Query) {
-    return request.get<Dept.Item[]>(appendQueryParams(ENDPOINTS.BASE, params));
+    return request.get<PaginatedResult<Dept.Item>>(appendQueryParams(ENDPOINTS.BASE, params));
 }
 
 /** 获取部门树 */
