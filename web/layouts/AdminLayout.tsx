@@ -21,7 +21,7 @@ import { renderMenuIcon } from '@/utils/icon';
 import { fastTransition, slideUpVariants } from '@/utils/animations';
 
 const { Header, Sider, Content } = Layout;
-const USER_MENU_WIDTH = 192;
+const USER_MENU_WIDTH = 140;
 const Breadcrumb = lazy(() => import('@/components/Breadcrumb'));
 const PageTabs = lazy(() => import('@/components/PageTabs'));
 
@@ -237,7 +237,7 @@ export default function AdminLayout() {
                                 >
                                     <Space className="min-w-0">
                                         <UserOutlined />
-                                        <span className="max-w-28 truncate">{user?.username}</span>
+                                        <span className="max-w-20 truncate">{user?.username}</span>
                                     </Space>
                                 </Button>
                             </Dropdown>

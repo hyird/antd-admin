@@ -10,7 +10,16 @@ import type { Menu } from './menu.types';
 import { create, getDetail, getList, getTree, update } from './menu.api';
 import { menuQueryKeys } from './menu.types';
 
-export { batchCreateButtons, create, getDetail, getList, getTree, remove, reorder, update } from './menu.api';
+export {
+    batchCreateButtons,
+    create,
+    getDetail,
+    getList,
+    getTree,
+    remove,
+    reorder,
+    update,
+} from './menu.api';
 
 export function useMenuList(
     params?: Menu.Query,

@@ -1,0 +1,8 @@
+{
+    "cmake.configureEnvironment": {
+        "PATH": "${env:HOME}/.nvm/versions/node/v24.16.0/bin:${env:PATH}"
+    },
+    "cmake.buildEnvironment": {
+        "PATH": "${env:HOME}/.nvm/versions/node/v24.16.0/bin:${env:PATH}"
+    }
+}

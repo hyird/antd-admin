@@ -189,12 +189,12 @@ public:
 private:
     struct DeptRecord {
         std::int64_t id{0};
-        std::string name;
-        std::optional<std::string> code;
+        std::string_view name;
+        std::optional<std::string_view> code;
         std::optional<std::int64_t> parent_id;
         std::int64_t sort_order{0};
         std::optional<std::int64_t> leader_id;
-        std::string status;
+        std::string_view status;
     };
 
     DeptService() = default;
@@ -228,12 +228,12 @@ private:
     static DeptRecord rowToRecord(const Row& row) {
         DeptRecord item;
         item.id = std::stoll(std::string(row[0].text()));
-        item.name = std::string(row[1].text());
-        if (!row[2].isNull()) item.code = std::string(row[2].text());
+        item.name = row[1].text();
+        if (!row[2].isNull()) item.code = row[2].text();
         if (!row[3].isNull()) item.parent_id = std::stoll(std::string(row[3].text()));
         item.sort_order = std::stoll(std::string(row[4].text()));
         if (!row[5].isNull()) item.leader_id = std::stoll(std::string(row[5].text()));
-        item.status = std::string(row[6].text());
+        item.status = row[6].text();
         return item;
     }
 
@@ -247,10 +247,10 @@ private:
 
     static void fillDeptDto(DeptDto& item, const DeptRecord& record) {
         item.id(static_cast<cyra::Int64>(record.id))
-            .name(record.name)
-            .sortOrder(static_cast<cyra::Int64>(record.sort_order))
-            .status(record.status);
-        if (record.code) item.code(*record.code);
+            .sortOrder(static_cast<cyra::Int64>(record.sort_order));
+        item.name().assignView(record.name);
+        item.status().assignView(record.status);
+        if (record.code) item.code().assignView(*record.code);
         if (record.parent_id) item.parentId(static_cast<cyra::Int64>(*record.parent_id));
         if (record.leader_id) item.leaderId(static_cast<cyra::Int64>(*record.leader_id));
     }
@@ -275,7 +275,7 @@ private:
 
         const auto it = children.find(record.id);
         if (it == children.end()) return;
-        auto& childList = item.childrenEnsure();
+        auto& childList = item.children().ensure();
         for (const auto* child : it->second) {
             appendNode(c, childList, *child, children);
         }

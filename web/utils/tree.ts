@@ -318,11 +318,7 @@ export function buildMenuTree(menus: Menu.Item[], filterButton = true): Menu.Tre
     const tree = buildTree(items, { sortBy: 'order' }) as Menu.TreeItem[];
 
     // 计算完整路径
-    const computeFullPath = (
-        nodes: Menu.TreeItem[],
-        parentPath = '',
-        path = new Set<number>()
-    ) => {
+    const computeFullPath = (nodes: Menu.TreeItem[], parentPath = '', path = new Set<number>()) => {
         for (const node of nodes) {
             if (path.has(node.id)) continue;
             const nextPath = new Set(path);

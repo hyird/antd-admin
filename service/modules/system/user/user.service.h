@@ -68,7 +68,7 @@ public:
             .totalPages(static_cast<cyra::Int64>(
                 p.paginated && p.page_size > 0 ? (total + p.page_size - 1) / p.page_size : 1));
 
-        auto& list = result.listEnsure();
+        auto& list = result.list().ensure();
         for (const auto& row : rs.rows()) {
             auto& item = list.emplace(c);
             const auto userId = fillUserItem(item, row);
@@ -93,11 +93,11 @@ public:
         cyra::List<UserOptionDto> out(c.resource());
         for (const auto& row : rs.rows()) {
             auto& item = out.emplace(c);
-            item.id(static_cast<cyra::Int64>(std::stoll(std::string(row[0].text()))))
-                .username(row[1].text());
-            if (!row[2].isNull()) item.nickname(row[2].text());
-            if (!row[3].isNull()) item.phone(row[3].text());
-            if (!row[4].isNull()) item.email(row[4].text());
+            item.id(static_cast<cyra::Int64>(std::stoll(std::string(row[0].text()))));
+            item.username().assignView(row[1].text());
+            if (!row[2].isNull()) item.nickname().assignView(row[2].text());
+            if (!row[3].isNull()) item.phone().assignView(row[3].text());
+            if (!row[4].isNull()) item.email().assignView(row[4].text());
         }
         co_return out;
     }
@@ -229,16 +229,16 @@ private:
     template <typename Row>
     static std::int64_t fillUserItem(UserItemDto& item, const Row& row) {
         const std::int64_t userId = std::stoll(std::string(row[0].text()));
-        item.id(static_cast<cyra::Int64>(userId))
-            .username(row[1].text())
-            .status(row[6].text());
-        if (!row[2].isNull()) item.nickname(row[2].text());
-        if (!row[3].isNull()) item.phone(row[3].text());
-        if (!row[4].isNull()) item.email(row[4].text());
+        item.id(static_cast<cyra::Int64>(userId));
+        item.username().assignView(row[1].text());
+        item.status().assignView(row[6].text());
+        if (!row[2].isNull()) item.nickname().assignView(row[2].text());
+        if (!row[3].isNull()) item.phone().assignView(row[3].text());
+        if (!row[4].isNull()) item.email().assignView(row[4].text());
         if (!row[5].isNull()) {
             item.deptId(static_cast<cyra::Int64>(std::stoll(std::string(row[5].text()))));
         }
-        if (!row[7].isNull()) item.deptName(row[7].text());
+        if (!row[7].isNull()) item.deptName().assignView(row[7].text());
         return userId;
     }
 
@@ -249,12 +249,12 @@ private:
             "INNER JOIN sys_user_role ur ON r.id = ur.role_id "
             "WHERE ur.user_id = ? AND r.deleted_at IS NULL",
             {cyra::DbValue{userId}});
-        auto& roleList = item.rolesEnsure();
+        auto& roleList = item.roles().ensure();
         for (const auto& rrow : roles.rows()) {
             auto& role = roleList.emplace(c);
-            role.id(static_cast<cyra::Int64>(std::stoll(std::string(rrow[0].text()))))
-                .name(rrow[1].text())
-                .code(rrow[2].text());
+            role.id(static_cast<cyra::Int64>(std::stoll(std::string(rrow[0].text()))));
+            role.name().assignView(rrow[1].text());
+            role.code().assignView(rrow[2].text());
         }
         co_return;
     }

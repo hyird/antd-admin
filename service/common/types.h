@@ -11,7 +11,7 @@
 
 namespace service::common {
 
-inline constexpr std::string_view kSuperAdminRoleCode{"1"};
+inline constexpr std::string_view kSuperAdminRoleCode{"superadmin"};
 
 struct PageParams {
     std::optional<std::int64_t> page;

@@ -21,7 +21,9 @@ export function getList(params?: Menu.Query) {
 
 /** 获取菜单树 */
 export function getTree(status?: Menu.Status) {
-    return request.get<Menu.TreeItem[]>(appendQueryParams(ENDPOINTS.TREE, status ? { status } : undefined));
+    return request.get<Menu.TreeItem[]>(
+        appendQueryParams(ENDPOINTS.TREE, status ? { status } : undefined)
+    );
 }
 
 /** 获取菜单详情 */

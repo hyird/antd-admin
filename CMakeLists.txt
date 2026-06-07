@@ -76,6 +76,8 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.env")
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/.env" "${CMAKE_BINARY_DIR}/.env" COPYONLY)
 endif()
 
+option(ANTD_ADMIN_BUILD_WEB "Build the frontend as part of the service build" ON)
+
 set(CYRA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(CYRA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(CYRA_ENABLE_MEMORY_STATS OFF CACHE BOOL "" FORCE)
@@ -84,9 +86,26 @@ set(CYRA_ENABLE_STD_REGEX_RULES OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
     cyra
     GIT_REPOSITORY https://github.com/hyird/cyra.git
-    GIT_TAG v0.1.11
+    GIT_TAG v0.1.14
 )
 FetchContent_MakeAvailable(cyra)
+
+if(ANTD_ADMIN_BUILD_WEB)
+    find_program(NPM_EXECUTABLE NAMES npm npm.cmd)
+
+    if(NOT NPM_EXECUTABLE)
+        message(FATAL_ERROR "npm is required to build the frontend")
+    endif()
+
+    message(STATUS "Using npm: ${NPM_EXECUTABLE}")
+
+    add_custom_target(antd_admin_web ALL
+        COMMAND "${NPM_EXECUTABLE}" run build
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        COMMENT "Building frontend"
+        VERBATIM
+    )
+endif()
 
 # 后端是 header-only：只有 service/server.cpp 一个翻译单元，业务模块通过 .h 内联实现。
 add_executable(antd_admin_service service/server.cpp)
@@ -97,6 +116,10 @@ target_link_libraries(antd_admin_service
     PRIVATE
         cyra::cyra
 )
+
+if(ANTD_ADMIN_BUILD_WEB)
+    add_dependencies(antd_admin_service antd_admin_web)
+endif()
 
 if(MSVC)
     target_compile_options(antd_admin_service PRIVATE /W4 /permissive- /Zc:preprocessor)

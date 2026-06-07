@@ -1,8 +1,8 @@
 @layer theme, base, antd, components, utilities;
-@import 'antd/dist/reset.css' layer(antd);
+@import "antd/dist/reset.css" layer(antd);
 
-@import 'tailwindcss/theme' layer(theme);
-@import 'tailwindcss/utilities' layer(utilities);
+@import "tailwindcss/theme" layer(theme);
+@import "tailwindcss/utilities" layer(utilities);
 
 /* xterm 滚动条：避免 overflow-y:scroll 导致 FitAddon resize 循环闪烁
    放在 @layer 外以覆盖 xterm.css 的无 layer 样式 */
@@ -99,7 +99,7 @@
 
         .ant-tabs-tab::before,
         .ant-tabs-tab::after {
-            content: '';
+            content: "";
             position: absolute;
             bottom: 0;
             width: 8px;

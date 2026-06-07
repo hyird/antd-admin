@@ -265,15 +265,15 @@ public:
 private:
     struct MenuRecord {
         std::int64_t id{0};
-        std::string name;
-        std::optional<std::string> path;
-        std::optional<std::string> icon;
+        std::string_view name;
+        std::optional<std::string_view> path;
+        std::optional<std::string_view> icon;
         std::optional<std::int64_t> parent_id;
         std::int64_t sort_order{0};
-        std::string type;
-        std::optional<std::string> component;
-        std::string status;
-        std::optional<std::string> permission_code;
+        std::string_view type;
+        std::optional<std::string_view> component;
+        std::string_view status;
+        std::optional<std::string_view> permission_code;
         bool is_default{false};
     };
 
@@ -318,15 +318,15 @@ private:
     static MenuRecord rowToRecord(const Row& row) {
         MenuRecord item;
         item.id = std::stoll(std::string(row[0].text()));
-        item.name = std::string(row[1].text());
-        if (!row[2].isNull()) item.path = std::string(row[2].text());
-        if (!row[3].isNull()) item.icon = std::string(row[3].text());
+        item.name = row[1].text();
+        if (!row[2].isNull()) item.path = row[2].text();
+        if (!row[3].isNull()) item.icon = row[3].text();
         if (!row[4].isNull()) item.parent_id = std::stoll(std::string(row[4].text()));
         item.sort_order = std::stoll(std::string(row[5].text()));
-        item.type = std::string(row[6].text());
-        if (!row[7].isNull()) item.component = std::string(row[7].text());
-        item.status = std::string(row[8].text());
-        if (!row[9].isNull()) item.permission_code = std::string(row[9].text());
+        item.type = row[6].text();
+        if (!row[7].isNull()) item.component = row[7].text();
+        item.status = row[8].text();
+        if (!row[9].isNull()) item.permission_code = row[9].text();
         item.is_default = std::string(row[10].text()) == "1";
         return item;
     }
@@ -341,18 +341,19 @@ private:
 
     static void fillMenuDto(MenuDto& item, const MenuRecord& record) {
         item.id(static_cast<cyra::Int64>(record.id))
-            .name(record.name)
             .sortOrder(static_cast<cyra::Int64>(record.sort_order))
-            .type(record.type)
-            .status(record.status)
             .isDefault(cyra::Bool{record.is_default});
+        item.name().assignView(record.name);
+        item.type().assignView(record.type);
+        item.status().assignView(record.status);
         if (record.path) {
-            item.path(*record.path).fullPath(*record.path);
+            item.path().assignView(*record.path);
+            item.fullPath().assignView(*record.path);
         }
-        if (record.icon) item.icon(*record.icon);
+        if (record.icon) item.icon().assignView(*record.icon);
         if (record.parent_id) item.parentId(static_cast<cyra::Int64>(*record.parent_id));
-        if (record.component) item.component(*record.component);
-        if (record.permission_code) item.permissionCode(*record.permission_code);
+        if (record.component) item.component().assignView(*record.component);
+        if (record.permission_code) item.permissionCode().assignView(*record.permission_code);
     }
 
     static cyra::List<MenuDto> buildFlatList(cyra::Context& c, const std::vector<MenuRecord>& records) {
@@ -376,7 +377,7 @@ private:
 
         const auto it = children.find(record.id);
         if (it == children.end()) return;
-        auto& childList = item.childrenEnsure();
+        auto& childList = item.children().ensure();
         for (const auto* child : it->second) {
             appendNode(c, childList, *child, children, path);
         }

@@ -206,11 +206,9 @@ private:
             auto& role = info.roles.emplace_back(c);
             role.id(static_cast<cyra::Int64>(std::stoll(std::string(row[0].text()))));
 
-            const auto name = row[1].text();
-            role.name(name);
-
             const auto code = row[2].text();
-            role.code(code);
+            role.name().assignView(row[1].text());
+            role.code().assignView(code);
             if (code == service::common::kSuperAdminRoleCode) info.is_superadmin = true;
         }
         co_return;

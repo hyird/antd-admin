@@ -60,15 +60,19 @@ public:
             .totalPages(static_cast<cyra::Int64>(
                 p.paginated && p.page_size > 0 ? (total + p.page_size - 1) / p.page_size : 1));
 
-        auto& list = result.listEnsure();
+        auto& list = result.list().ensure();
         for (const auto& row : rs.rows()) {
             auto& item = list.emplace(c);
             const auto id = std::stoll(std::string(row[0].text()));
-            item.id(static_cast<cyra::Int64>(id))
-                .name(row[1].text())
-                .code(row[2].text())
-                .status(row[3].text());
-            setMenuIds(c, item, co_await getRoleMenuIds(c, id));
+            const auto code = row[2].text();
+            item.id(static_cast<cyra::Int64>(id));
+            item.name().assignView(row[1].text());
+            item.code().assignView(code);
+            item.status().assignView(row[3].text());
+            const auto menuIds = code == service::common::kSuperAdminRoleCode
+                                     ? co_await getAllMenuIds(c)
+                                     : co_await getRoleMenuIds(c, id);
+            setMenuIds(c, item, menuIds);
         }
         co_return result;
     }
@@ -82,26 +86,33 @@ public:
 
         const auto& row = rs.rows().front();
         RoleDetailDto out(c);
-        out.id(static_cast<cyra::Int64>(std::stoll(std::string(row[0].text()))))
-            .name(row[1].text())
-            .code(row[2].text())
-            .status(row[3].text());
+        out.id(static_cast<cyra::Int64>(std::stoll(std::string(row[0].text()))));
+        out.name().assignView(row[1].text());
+        out.code().assignView(row[2].text());
+        out.status().assignView(row[3].text());
 
         cyra::Array<cyra::Int64> menuIds(c.allocator<cyra::Int64>());
         cyra::Array<RoleMenuDto> menus(c.allocator<RoleMenuDto>());
-        const auto mrs = co_await db.query(
-            "SELECT m.id, m.name, m.type, m.parent_id FROM sys_menu m "
-            "INNER JOIN sys_role_menu rm ON m.id = rm.menu_id "
-            "WHERE rm.role_id = ? AND m.deleted_at IS NULL",
-            {cyra::DbValue{id}});
+        const bool isSuperadmin = row[2].text() == service::common::kSuperAdminRoleCode;
+        const auto mrs = isSuperadmin
+                             ? co_await db.query(
+                                   "SELECT m.id, m.name, m.type, m.parent_id FROM sys_menu m "
+                                   "WHERE m.deleted_at IS NULL "
+                                   "ORDER BY m.`order` ASC, m.id ASC")
+                             : co_await db.query(
+                                   "SELECT m.id, m.name, m.type, m.parent_id FROM sys_menu m "
+                                   "INNER JOIN sys_role_menu rm ON m.id = rm.menu_id "
+                                   "WHERE rm.role_id = ? AND m.deleted_at IS NULL "
+                                   "ORDER BY m.`order` ASC, m.id ASC",
+                                   {cyra::DbValue{id}});
         for (const auto& mrow : mrs.rows()) {
             const auto mid = std::stoll(std::string(mrow[0].text()));
             menuIds.emplace_back(static_cast<cyra::Int64>(mid));
 
             RoleMenuDto menu(c);
-            menu.id(static_cast<cyra::Int64>(mid))
-                .name(mrow[1].text())
-                .type(mrow[2].text());
+            menu.id(static_cast<cyra::Int64>(mid));
+            menu.name().assignView(mrow[1].text());
+            menu.type().assignView(mrow[2].text());
             if (!mrow[3].isNull()) {
                 menu.parentId(static_cast<cyra::Int64>(std::stoll(std::string(mrow[3].text()))));
             }
@@ -119,9 +130,9 @@ public:
         cyra::List<RoleOptionDto> out(c.resource());
         for (const auto& row : rs.rows()) {
             auto& item = out.emplace(c);
-            item.id(static_cast<cyra::Int64>(std::stoll(std::string(row[0].text()))))
-                .name(row[1].text())
-                .code(row[2].text());
+            item.id(static_cast<cyra::Int64>(std::stoll(std::string(row[0].text()))));
+            item.name().assignView(row[1].text());
+            item.code().assignView(row[2].text());
         }
         co_return out;
     }
@@ -142,7 +153,9 @@ public:
             {cyra::DbValue{name}, cyra::DbValue{code}, cyra::DbValue{status}});
         const std::int64_t roleId = static_cast<std::int64_t>(rs.lastInsertId());
 
-        co_await syncRoleMenus(c, roleId, body.menuIds());
+        if (code != service::common::kSuperAdminRoleCode) {
+            co_await syncRoleMenus(c, roleId, body.menuIds());
+        }
         service::middleware::permissionService().clearAllCache();
         co_return;
     }
@@ -186,8 +199,9 @@ public:
                                     params);
         }
 
+        const std::string effectiveCode = code.value_or(currentCode);
         if (body.menuIds()) {
-            if (currentCode == service::common::kSuperAdminRoleCode) {
+            if (effectiveCode == service::common::kSuperAdminRoleCode) {
                 (void)co_await db.execute("DELETE FROM sys_role_menu WHERE role_id = ?",
                                           {cyra::DbValue{id}});
             } else {
@@ -234,6 +248,18 @@ public:
 
 private:
     RoleService() = default;
+
+    cyra::Task<std::vector<std::int64_t>> getAllMenuIds(cyra::Context& c) {
+        auto db = c.db();
+        const auto rs = co_await db.query(
+            "SELECT id FROM sys_menu WHERE deleted_at IS NULL ORDER BY `order` ASC, id ASC");
+        std::vector<std::int64_t> ids;
+        ids.reserve(rs.rows().size());
+        for (const auto& row : rs.rows()) {
+            ids.push_back(std::stoll(std::string(row[0].text())));
+        }
+        co_return ids;
+    }
 
     static void setMenuIds(cyra::Context& c,
                            RoleItemDto& item,

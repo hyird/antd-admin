@@ -97,6 +97,11 @@ private:
                 snap.is_superadmin = true;
             }
         }
+        if (snap.is_superadmin) {
+            std::lock_guard<std::mutex> lock(mutex_);
+            cache_[userId] = snap;
+            co_return snap;
+        }
 
         const auto perms = co_await db.query(
             "SELECT DISTINCT m.permission_code FROM sys_menu m "

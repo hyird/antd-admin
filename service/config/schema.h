@@ -6,7 +6,7 @@
 
 namespace service::config {
 
-inline constexpr std::array<cyra::DbMigration, 19> kSchemaMigrations{{
+inline constexpr std::array<cyra::DbMigration, 17> kSchemaMigrations{{
     {
         "0001",
         R"sql(SET NAMES utf8mb4)sql",
@@ -185,20 +185,14 @@ inline constexpr std::array<cyra::DbMigration, 19> kSchemaMigrations{{
     },
     {
         "0012",
-        R"sql(UPDATE sys_role
-SET code = '1', updated_at = NOW()
-WHERE code = 'superadmin' AND deleted_at IS NULL)sql",
-    },
-    {
-        "0013",
         R"sql(INSERT INTO sys_role (name, code, status, created_at, updated_at)
-SELECT '超级管理员', '1', 'enabled', NOW(), NOW()
+SELECT '超级管理员', 'superadmin', 'enabled', NOW(), NOW()
 WHERE NOT EXISTS (
-    SELECT 1 FROM sys_role WHERE code = '1' AND deleted_at IS NULL
+    SELECT 1 FROM sys_role WHERE code = 'superadmin' AND deleted_at IS NULL
 ))sql",
     },
     {
-        "0014",
+        "0013",
         R"sql(INSERT INTO sys_user (username, password_hash, nickname, status, created_at, updated_at)
 SELECT 'admin',
        'pbkdf2_sha256$210000$616e74645f61646d696e5f7365656431$179aef64cb17bf706f7a58feba1ce0db759ee0a63dae18f3789a78a5d7a9614c',
@@ -211,15 +205,15 @@ WHERE NOT EXISTS (
 ))sql",
     },
     {
-        "0015",
+        "0014",
         R"sql(INSERT IGNORE INTO sys_user_role (user_id, role_id)
 SELECT u.id, r.id
 FROM sys_user u
-INNER JOIN sys_role r ON r.code = '1' AND r.deleted_at IS NULL
+INNER JOIN sys_role r ON r.code = 'superadmin' AND r.deleted_at IS NULL
 WHERE u.username = 'admin' AND u.deleted_at IS NULL)sql",
     },
     {
-        "0016",
+        "0015",
         R"sql(INSERT INTO sys_menu (name, path, icon, component, parent_id, `order`, type, status, permission_code, is_default, created_at, updated_at)
 SELECT '首页', '/home', 'HomeOutlined', 'Home', NULL, 0, 'page', 'enabled', NULL, 1, NOW(), NOW()
 WHERE NOT EXISTS (
@@ -232,7 +226,7 @@ WHERE NOT EXISTS (
 ))sql",
     },
     {
-        "0017",
+        "0016",
         R"sql(INSERT INTO sys_menu (name, path, icon, component, parent_id, `order`, type, status, permission_code, is_default, created_at, updated_at)
 SELECT '用户管理', '/system/user', 'UserOutlined', 'User',
        (SELECT id FROM sys_menu WHERE type = 'menu' AND name = '系统管理' AND deleted_at IS NULL ORDER BY id LIMIT 1),
@@ -263,7 +257,7 @@ WHERE NOT EXISTS (
 ))sql",
     },
     {
-        "0018",
+        "0017",
         R"sql(INSERT INTO sys_menu (name, path, icon, component, parent_id, `order`, type, status, permission_code, is_default, created_at, updated_at)
 SELECT '查看统计', NULL, NULL, NULL,
        (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'Home' AND deleted_at IS NULL ORDER BY id LIMIT 1),
@@ -354,12 +348,6 @@ SELECT '删除菜单', NULL, NULL, NULL,
        (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'Menu' AND deleted_at IS NULL ORDER BY id LIMIT 1),
        4, 'button', 'enabled', 'system:menu:delete', 0, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_code = 'system:menu:delete' AND deleted_at IS NULL))sql",
-    },
-    {
-        "0019",
-        R"sql(DELETE rm FROM sys_role_menu rm
-INNER JOIN sys_role r ON r.id = rm.role_id
-WHERE r.code = '1' AND r.deleted_at IS NULL)sql",
     },
 }};
 

@@ -15,7 +15,7 @@
 
 #include "service/common/http.h"
 #include "service/config/schema.h"
-#include "service/utils/logger.h"
+#include "service/middleware/logger.h"
 
 // 业务控制器（CYRA_CONTROLLER_GROUP 在静态阶段把路由表注册到 cyra::app()）。
 #include "service/modules/system/auth/auth.controller.h"
@@ -82,7 +82,7 @@ cyra::DbConfig dbConfigFromEnv(const cyra::Env& env) {
 }
 
 void logMigrationReport(const cyra::DbMigrationReport& report) {
-    service::utils::logInfo(
+    service::middleware::logInfo(
         "DB migrations applied=" + std::to_string(report.applied().size()) +
         ", skipped=" + std::to_string(report.skipped().size()));
 }
@@ -123,7 +123,7 @@ cyra::Task<cyra::HttpResponse> handleError(cyra::Context& c, cyra::HttpErrorInfo
     }
 
     if (info.statusCode >= 500) {
-        service::utils::logError(std::string("Unhandled error: ") + std::string(info.message));
+        service::middleware::logError(std::string("Unhandled error: ") + std::string(info.message));
     }
     co_return c.status(info.statusCode).json(
         service::common::error(
@@ -134,10 +134,11 @@ cyra::Task<cyra::HttpResponse> handleError(cyra::Context& c, cyra::HttpErrorInfo
 
 void configureHttpServer(cyra::App& app) {
     const auto settings = serverSettingsFromEnv(app.env());
-    app.setListenAddress(settings.host, settings.port)
+    app.use<service::middleware::LoggerMiddleware>()
+        .setListenAddress(settings.host, settings.port)
         .setThreadNum(settings.threads)
         .setErrorHandler(&handleError);
-    service::utils::logInfo("Server starting on " + settings.host + ":" + std::to_string(settings.port));
+    service::middleware::logInfo("Server starting on " + settings.host + ":" + std::to_string(settings.port));
 }
 
 }  // namespace
