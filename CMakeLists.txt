@@ -99,12 +99,20 @@ if(ANTD_ADMIN_BUILD_WEB)
 
     message(STATUS "Using npm: ${NPM_EXECUTABLE}")
 
-    add_custom_target(antd_admin_web ALL
-        COMMAND "${NPM_EXECUTABLE}" run build
-        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-        COMMENT "Building frontend"
-        VERBATIM
-    )
+    if(WIN32)
+        add_custom_target(antd_admin_web ALL
+            COMMAND cmd /c "chcp 65001 >nul 2>&1 && \"${NPM_EXECUTABLE}\" run build"
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            COMMENT "Building frontend"
+        )
+    else()
+        add_custom_target(antd_admin_web ALL
+            COMMAND "${NPM_EXECUTABLE}" run build
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            COMMENT "Building frontend"
+            VERBATIM
+        )
+    endif()
 endif()
 
 # 后端是 header-only：只有 service/server.cpp 一个翻译单元，业务模块通过 .h 内联实现。
@@ -122,14 +130,35 @@ if(ANTD_ADMIN_BUILD_WEB)
 endif()
 
 if(MSVC)
-    target_compile_options(antd_admin_service PRIVATE /W4 /permissive- /Zc:preprocessor)
+    target_compile_options(antd_admin_service PRIVATE /W4 /permissive- /Zc:preprocessor /utf-8 /wd4819)
 else()
     target_compile_options(antd_admin_service PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
+set(ANTD_ADMIN_RUNTIME_OUTPUT_DIR "${CMAKE_BINARY_DIR}")
+
 set_target_properties(antd_admin_service PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY "${ANTD_ADMIN_RUNTIME_OUTPUT_DIR}"
     OUTPUT_NAME "server"
 )
+
+if(CMAKE_CONFIGURATION_TYPES)
+    foreach(OUTPUT_CONFIG IN LISTS CMAKE_CONFIGURATION_TYPES)
+        string(TOUPPER "${OUTPUT_CONFIG}" OUTPUT_CONFIG_UPPER)
+        set_target_properties(antd_admin_service PROPERTIES
+            "RUNTIME_OUTPUT_DIRECTORY_${OUTPUT_CONFIG_UPPER}" "${ANTD_ADMIN_RUNTIME_OUTPUT_DIR}"
+        )
+    endforeach()
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.env")
+    add_custom_command(TARGET antd_admin_service POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/.env"
+            "$<TARGET_FILE_DIR:antd_admin_service>/.env"
+        COMMENT "Copying .env to runtime directory"
+        VERBATIM
+    )
+endif()
 
 install(TARGETS antd_admin_service RUNTIME DESTINATION bin)
