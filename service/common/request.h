@@ -53,14 +53,14 @@ inline PageParams parsePageParams(cyra::Context& c) {
 inline std::int64_t parseIdParam(cyra::Context& c) {
     const auto raw = c.param("id");
     if (raw.empty()) {
-        throwAppError("VALIDATION_ERROR", "缺少 id 参数", 400);
+        throwAppError(kValidationErrorCode, "缺少 id 参数", 400);
     }
     std::int64_t value = 0;
     const auto* first = raw.data();
     const auto* last = first + raw.size();
     auto [ptr, ec] = std::from_chars(first, last, value);
     if (ec != std::errc{} || ptr != last || value <= 0) {
-        throwAppError("VALIDATION_ERROR", "id 必须是正整数", 400);
+        throwAppError(kValidationErrorCode, "id 必须是正整数", 400);
     }
     return value;
 }

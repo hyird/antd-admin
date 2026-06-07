@@ -17,7 +17,6 @@
 #include "service/modules/system/user/user.error.h"
 #include "service/modules/system/user/user.types.h"
 #include "service/utils/password.h"
-#include "service/utils/logger.h"
 
 namespace service::modules::system::user {
 
@@ -95,10 +94,10 @@ public:
         for (const auto& row : rs.rows()) {
             auto& item = out.emplace(c);
             item.id(static_cast<cyra::Int64>(std::stoll(std::string(row[0].text()))))
-                .username(std::string(row[1].text()));
-            if (!row[2].isNull()) item.nickname(std::string(row[2].text()));
-            if (!row[3].isNull()) item.phone(std::string(row[3].text()));
-            if (!row[4].isNull()) item.email(std::string(row[4].text()));
+                .username(row[1].text());
+            if (!row[2].isNull()) item.nickname(row[2].text());
+            if (!row[3].isNull()) item.phone(row[3].text());
+            if (!row[4].isNull()) item.email(row[4].text());
         }
         co_return out;
     }
@@ -224,43 +223,6 @@ public:
         co_return;
     }
 
-    cyra::Task<void> seedAdmin(cyra::Context& c) {
-        auto db = c.db();
-        service::utils::createLogger("user:seed").info("Starting admin initialization");
-
-        const auto roleRs = co_await db.query(
-            "SELECT id FROM sys_role WHERE code = 'superadmin' AND deleted_at IS NULL LIMIT 1");
-        std::int64_t roleId = 0;
-        if (roleRs.rows().empty()) {
-            const auto ins = co_await db.execute(
-                "INSERT INTO sys_role (name, code, status, created_at, updated_at) "
-                "VALUES ('超级管理员', 'superadmin', 'enabled', NOW(), NOW())");
-            roleId = static_cast<std::int64_t>(ins.lastInsertId());
-        } else {
-            roleId = std::stoll(std::string(roleRs.rows().front()[0].text()));
-        }
-
-        const auto userRs = co_await db.query(
-            "SELECT id FROM sys_user WHERE username = 'admin' AND deleted_at IS NULL LIMIT 1");
-        std::int64_t userId = 0;
-        if (userRs.rows().empty()) {
-            const auto hash = service::utils::hashPassword("123456");
-            const auto ins = co_await db.execute(
-                "INSERT INTO sys_user (username, password_hash, nickname, status, created_at, updated_at) "
-                "VALUES ('admin', ?, '超级管理员', 'enabled', NOW(), NOW())",
-                {cyra::DbValue{hash}});
-            userId = static_cast<std::int64_t>(ins.lastInsertId());
-        } else {
-            userId = std::stoll(std::string(userRs.rows().front()[0].text()));
-        }
-
-        (void)co_await db.execute("INSERT IGNORE INTO sys_user_role (user_id, role_id) VALUES (?, ?)",
-                                {cyra::DbValue{userId}, cyra::DbValue{roleId}});
-
-        service::utils::createLogger("user:seed").info("Admin initialization completed");
-        co_return;
-    }
-
 private:
     UserService() = default;
 
@@ -268,15 +230,15 @@ private:
     static std::int64_t fillUserItem(UserItemDto& item, const Row& row) {
         const std::int64_t userId = std::stoll(std::string(row[0].text()));
         item.id(static_cast<cyra::Int64>(userId))
-            .username(std::string(row[1].text()))
-            .status(std::string(row[6].text()));
-        if (!row[2].isNull()) item.nickname(std::string(row[2].text()));
-        if (!row[3].isNull()) item.phone(std::string(row[3].text()));
-        if (!row[4].isNull()) item.email(std::string(row[4].text()));
+            .username(row[1].text())
+            .status(row[6].text());
+        if (!row[2].isNull()) item.nickname(row[2].text());
+        if (!row[3].isNull()) item.phone(row[3].text());
+        if (!row[4].isNull()) item.email(row[4].text());
         if (!row[5].isNull()) {
             item.deptId(static_cast<cyra::Int64>(std::stoll(std::string(row[5].text()))));
         }
-        if (!row[7].isNull()) item.deptName(std::string(row[7].text()));
+        if (!row[7].isNull()) item.deptName(row[7].text());
         return userId;
     }
 
@@ -291,8 +253,8 @@ private:
         for (const auto& rrow : roles.rows()) {
             auto& role = roleList.emplace(c);
             role.id(static_cast<cyra::Int64>(std::stoll(std::string(rrow[0].text()))))
-                .name(std::string(rrow[1].text()))
-                .code(std::string(rrow[2].text()));
+                .name(rrow[1].text())
+                .code(rrow[2].text());
         }
         co_return;
     }

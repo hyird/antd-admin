@@ -18,21 +18,21 @@ namespace service::middleware {
 inline service::core::JwtPayload requireAuth(cyra::Context& c) {
     const auto authHeader = c.header("Authorization");
     if (authHeader.empty()) {
-        service::common::throwAppError("UNAUTHORIZED", "未登录", 401);
+        service::common::throwAppError(service::common::kAuthUnauthorizedErrorCode, "未登录", 401);
     }
     constexpr std::string_view bearer = "Bearer ";
     if (authHeader.size() <= bearer.size() || authHeader.substr(0, bearer.size()) != bearer) {
-        service::common::throwAppError("UNAUTHORIZED", "未登录", 401);
+        service::common::throwAppError(service::common::kAuthUnauthorizedErrorCode, "未登录", 401);
     }
     const std::string token(authHeader.substr(bearer.size()));
     try {
         return service::utils::verifyAccessToken(token);
     } catch (const service::utils::JwtExpiredError&) {
-        service::common::throwAppError("TOKEN_EXPIRED", "Token已过期", 401);
+        service::common::throwAppError(service::common::kAuthTokenExpiredErrorCode, "Token已过期", 401);
     } catch (const service::utils::JwtInvalidError&) {
-        service::common::throwAppError("TOKEN_INVALID", "Token无效", 401);
+        service::common::throwAppError(service::common::kAuthTokenInvalidErrorCode, "Token无效", 401);
     } catch (...) {
-        service::common::throwAppError("TOKEN_INVALID", "Token无效", 401);
+        service::common::throwAppError(service::common::kAuthTokenInvalidErrorCode, "Token无效", 401);
     }
 }
 

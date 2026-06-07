@@ -32,21 +32,21 @@ function redirectToLogin() {
 export type ApiErrorSource = 'response' | 'network' | 'timeout' | 'server' | 'auth-refresh';
 
 export interface ApiResponseEnvelope<T = unknown> {
-    code: number | string;
+    code: number;
     message: string;
     data?: T;
     status?: number;
 }
 
 export interface ApiErrorOptions {
-    code?: number | string;
+    code?: number;
     status?: number;
     data?: unknown;
     source?: ApiErrorSource;
 }
 
 export class ApiError extends Error {
-    code?: number | string;
+    code?: number;
     status?: number;
     data?: unknown;
     source: ApiErrorSource;
@@ -67,10 +67,7 @@ export function isApiResponseEnvelope(value: unknown): value is ApiResponseEnvel
     if (typeof value !== 'object' || value === null) return false;
 
     const record = value as Record<string, unknown>;
-    return (
-        (typeof record.code === 'number' || typeof record.code === 'string') &&
-        typeof record.message === 'string'
-    );
+    return typeof record.code === 'number' && typeof record.message === 'string';
 }
 
 export function getApiResponseMessage(value: unknown, fallback = '请求失败'): string {
@@ -80,7 +77,7 @@ export function getApiResponseMessage(value: unknown, fallback = '请求失败')
     return message || fallback;
 }
 
-export function getApiResponseCode(value: unknown): number | string | undefined {
+export function getApiResponseCode(value: unknown): number | undefined {
     return isApiResponseEnvelope(value) ? value.code : undefined;
 }
 
@@ -105,7 +102,7 @@ const request = axios.create({
 function buildApiError(
     message: string,
     options: {
-        code?: number | string;
+        code?: number;
         status?: number;
         data?: unknown;
         source?: ApiError['source'];
@@ -243,7 +240,7 @@ request.interceptors.response.use(
         const data = response.data as unknown;
         const isSilent = (response.config as RequestConfig | undefined)?._silent;
         const responseCode = isApiResponseEnvelope(data) ? data.code : undefined;
-        const isSuccessCode = responseCode === 0 || responseCode === '0';
+        const isSuccessCode = responseCode === 0;
 
         if (isApiResponseEnvelope(data) && !isSuccessCode) {
             const apiError = buildApiErrorFromResponse({

@@ -39,12 +39,25 @@ export function buildTree<T extends TreeNode>(
         map.set(item.id, { ...item, children: [] });
     });
 
+    const hasParentCycle = (item: T): boolean => {
+        const seen = new Set<number>([item.id]);
+        let parentId = item.parent_id;
+
+        while (parentId && map.has(parentId)) {
+            if (seen.has(parentId)) return true;
+            seen.add(parentId);
+            parentId = map.get(parentId)?.parent_id;
+        }
+
+        return false;
+    };
+
     // 构建父子关系
     items.forEach((item) => {
         // biome-ignore lint/style/noNonNullAssertion: map.get is safe here as item was just inserted above
         const node = map.get(item.id)!;
         const parentId = item.parent_id;
-        if (parentId && map.has(parentId)) {
+        if (parentId && map.has(parentId) && !hasParentCycle(item)) {
             map.get(parentId)?.children.push(node);
         } else {
             roots.push(node);
@@ -75,11 +88,17 @@ export function buildTree<T extends TreeNode>(
     const sortFn = compareFn ?? defaultCompareFn;
 
     // 递归排序并清理空 children
-    const sortTree = (nodes: (T & { children: T[] })[]): (T & { children?: T[] })[] => {
+    const sortTree = (
+        nodes: (T & { children: T[] })[],
+        path = new Set<number>()
+    ): (T & { children?: T[] })[] => {
         return nodes.sort(sortFn).map((n) => {
             const result: T & { children?: T[] } = { ...n };
-            if (n.children.length > 0) {
-                result.children = sortTree(n.children as (T & { children: T[] })[]);
+            const nextPath = new Set(path);
+            nextPath.add(n.id);
+            const children = n.children.filter((child) => !nextPath.has(child.id));
+            if (children.length > 0) {
+                result.children = sortTree(children as (T & { children: T[] })[], nextPath);
             } else if (removeEmptyChildren) {
                 delete result.children;
             } else {
@@ -99,12 +118,15 @@ export function buildTree<T extends TreeNode>(
 export function flattenTree<T extends TreeNode>(tree: T[]): T[] {
     const result: T[] = [];
 
-    const traverse = (nodes: T[]) => {
+    const traverse = (nodes: T[], path = new Set<number>()) => {
         nodes.forEach((node) => {
+            if (path.has(node.id)) return;
+            const nextPath = new Set(path);
+            nextPath.add(node.id);
             const { children, ...rest } = node as T & { children?: TreeNode[] };
             result.push(rest as T);
             if (children && children.length > 0) {
-                traverse(children as T[]);
+                traverse(children as T[], nextPath);
             }
         });
     };
@@ -120,11 +142,14 @@ export function flattenTree<T extends TreeNode>(tree: T[]): T[] {
 export function treeToMap<T extends TreeNode>(tree: T[]): Map<number, T> {
     const map = new Map<number, T>();
 
-    const traverse = (nodes: T[]) => {
+    const traverse = (nodes: T[], path = new Set<number>()) => {
         nodes.forEach((node) => {
+            if (path.has(node.id)) return;
+            const nextPath = new Set(path);
+            nextPath.add(node.id);
             map.set(node.id, node);
             if (node.children && node.children.length > 0) {
-                traverse(node.children as T[]);
+                traverse(node.children as T[], nextPath);
             }
         });
     };
@@ -147,10 +172,14 @@ export function filterTree<T extends TreeNode>(
     const kw = keyword.trim().toLowerCase();
     if (!kw) return tree;
 
-    const filter = (nodes: T[]): T[] => {
+    const filter = (nodes: T[], path = new Set<number>()): T[] => {
         const result: T[] = [];
 
         nodes.forEach((node) => {
+            if (path.has(node.id)) return;
+            const nextPath = new Set(path);
+            nextPath.add(node.id);
+
             // 检查当前节点是否匹配
             const selfMatch = matchFields.some((field) => {
                 const value = node[field];
@@ -158,7 +187,7 @@ export function filterTree<T extends TreeNode>(
             });
 
             // 递归过滤子节点
-            const children = node.children ? filter(node.children as T[]) : [];
+            const children = node.children ? filter(node.children as T[], nextPath) : [];
 
             // 如果自身匹配或有匹配的子节点，保留该节点
             if (selfMatch || children.length > 0) {
@@ -187,16 +216,24 @@ export function findInTree<T extends TreeNode>(
     tree: T[],
     predicate: (node: T) => boolean
 ): T | undefined {
-    for (const node of tree) {
-        if (predicate(node)) {
-            return node;
+    const find = (nodes: T[], path = new Set<number>()): T | undefined => {
+        for (const node of nodes) {
+            if (path.has(node.id)) continue;
+            const nextPath = new Set(path);
+            nextPath.add(node.id);
+
+            if (predicate(node)) {
+                return node;
+            }
+            if (node.children && node.children.length > 0) {
+                const found = find(node.children as T[], nextPath);
+                if (found) return found;
+            }
         }
-        if (node.children && node.children.length > 0) {
-            const found = findInTree(node.children as T[], predicate);
-            if (found) return found;
-        }
-    }
-    return undefined;
+        return undefined;
+    };
+
+    return find(tree);
 }
 
 /**
@@ -207,18 +244,21 @@ export function findInTree<T extends TreeNode>(
 export function getDescendantIds<T extends TreeNode>(tree: T[], nodeId: number): number[] {
     const ids: number[] = [];
 
-    const collectIds = (nodes: T[]) => {
+    const collectIds = (nodes: T[], path = new Set<number>()) => {
         nodes.forEach((node) => {
+            if (path.has(node.id)) return;
+            const nextPath = new Set(path);
+            nextPath.add(node.id);
             ids.push(node.id);
             if (node.children && node.children.length > 0) {
-                collectIds(node.children as T[]);
+                collectIds(node.children as T[], nextPath);
             }
         });
     };
 
     const node = findInTree(tree, (n) => n.id === nodeId);
     if (node?.children) {
-        collectIds(node.children as T[]);
+        collectIds(node.children as T[], new Set([node.id]));
     }
 
     return ids;
@@ -232,14 +272,18 @@ export function getDescendantIds<T extends TreeNode>(tree: T[], nodeId: number):
 export function getAncestorPath<T extends TreeNode>(tree: T[], nodeId: number): T[] {
     const path: T[] = [];
 
-    const find = (nodes: T[], ancestors: T[]): boolean => {
+    const find = (nodes: T[], ancestors: T[], visited = new Set<number>()): boolean => {
         for (const node of nodes) {
+            if (visited.has(node.id)) continue;
+            const nextVisited = new Set(visited);
+            nextVisited.add(node.id);
+
             if (node.id === nodeId) {
                 path.push(...ancestors);
                 return true;
             }
             if (node.children && node.children.length > 0) {
-                if (find(node.children as T[], [...ancestors, node])) {
+                if (find(node.children as T[], [...ancestors, node], nextVisited)) {
                     return true;
                 }
             }
@@ -274,8 +318,16 @@ export function buildMenuTree(menus: Menu.Item[], filterButton = true): Menu.Tre
     const tree = buildTree(items, { sortBy: 'order' }) as Menu.TreeItem[];
 
     // 计算完整路径
-    const computeFullPath = (nodes: Menu.TreeItem[], parentPath = '') => {
+    const computeFullPath = (
+        nodes: Menu.TreeItem[],
+        parentPath = '',
+        path = new Set<number>()
+    ) => {
         for (const node of nodes) {
+            if (path.has(node.id)) continue;
+            const nextPath = new Set(path);
+            nextPath.add(node.id);
+
             if (node.path) {
                 // 如果路径以 / 开头，使用绝对路径；否则拼接父路径
                 const fullPath = node.path.startsWith('/')
@@ -286,7 +338,7 @@ export function buildMenuTree(menus: Menu.Item[], filterButton = true): Menu.Tre
                 node.full_path = parentPath;
             }
             if (node.children) {
-                computeFullPath(node.children, node.full_path);
+                computeFullPath(node.children, node.full_path, nextPath);
             }
         }
     };

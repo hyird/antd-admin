@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useCurrentUser } from '@/pages/login';
+import { SUPERADMIN_ROLE_CODE } from '@/config/app';
 
 function usePermissionState() {
     const { data: user } = useCurrentUser();
@@ -7,7 +8,7 @@ function usePermissionState() {
     return useMemo(() => {
         if (!user) return { isSuperAdmin: false, codesSet: new Set<string>() };
 
-        const superAdmin = user.roles?.some((r) => r.code === 'superadmin') ?? false;
+        const superAdmin = user.roles?.some((r) => r.code === SUPERADMIN_ROLE_CODE) ?? false;
         const codes = new Set<string>();
         user.menus?.forEach((m) => {
             if (m.type === 'button' && m.permission_code) {

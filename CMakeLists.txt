@@ -72,6 +72,10 @@ if(MSVC AND VCPKG_TARGET_TRIPLET MATCHES "static")
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.env")
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/.env" "${CMAKE_BINARY_DIR}/.env" COPYONLY)
+endif()
+
 set(CYRA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(CYRA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(CYRA_ENABLE_MEMORY_STATS OFF CACHE BOOL "" FORCE)
@@ -80,7 +84,7 @@ set(CYRA_ENABLE_STD_REGEX_RULES OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
     cyra
     GIT_REPOSITORY https://github.com/hyird/cyra.git
-    GIT_TAG v0.1.6
+    GIT_TAG v0.1.11
 )
 FetchContent_MakeAvailable(cyra)
 
@@ -88,9 +92,6 @@ FetchContent_MakeAvailable(cyra)
 add_executable(antd_admin_service service/server.cpp)
 
 target_include_directories(antd_admin_service PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-
-file(TO_CMAKE_PATH "${CMAKE_CURRENT_SOURCE_DIR}" ANTD_ADMIN_SOURCE_DIR)
-target_compile_definitions(antd_admin_service PRIVATE ANTD_ADMIN_SOURCE_DIR="${ANTD_ADMIN_SOURCE_DIR}")
 
 target_link_libraries(antd_admin_service
     PRIVATE

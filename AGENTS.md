@@ -5,8 +5,8 @@
 前后端分离的 admin 脚手架。前端基于 React + Vite，后端用 **C++23 + cyra** 重写并通过 **vcpkg + CMake** 构建，目录组织与 main 分支保持一致。
 
 - **前端运行时**: Node.js + npm；React 19 / Vite / Ant Design 6 / Tailwind 4 / TanStack Query / Zustand
-- **后端运行时**: C++23 / cyra v0.1.6 / asio / mimalloc / MariaDB / OpenSSL / ZLIB
-- **构建产物**: `dist/web/`（前端）；`build/server`（后端可执行文件）
+- **后端运行时**: C++23 / cyra v0.1.11 / asio / mimalloc / MariaDB / OpenSSL / ZLIB
+- **构建产物**: `build/web/`（前端）；`build/server`（后端可执行文件）
 
 ## 开发者命令
 
@@ -14,7 +14,7 @@
 
 ```bash
 npm run dev          # Vite dev server (5173)
-npm run build        # Vite build -> dist/web
+npm run build        # Vite build -> build/web
 npm run lint         # biome lint .
 npm run typecheck    # tsc --noEmit
 ```
@@ -34,7 +34,7 @@ cmake --build build --config Release
 
 ## 环境配置
 
-复制 `.env.example` -> `.env`：
+复制 `.env.example` -> 项目根目录 `.env`；CMake 配置时会自动同步到可执行文件同目录的 `build/.env`，后端启动只读取该文件：
 
 | 变量                    | 说明                                  |
 | ----------------------- | ------------------------------------- |
@@ -62,7 +62,7 @@ service/                      # 后端（C++ header-only 风格）
 │   │   ├── menu/             # 菜单管理
 │   │   └── dept/             # 部门管理
 ├── common/                   # 通用：http.h（AppError / DTO 响应）、request.h、types.h
-├── config/                   # 数据源：data.h、schema.h（编译期 schema 迁移）
+├── config/                   # schema.h（编译期 schema 迁移）
 ├── utils/                    # 工具：logger.h、jwt.h、password.h
 ├── middleware/               # 中间件：auth.h（requireAuth）、permission.h（require*Permission）
 └── server.cpp                # 入口：注册控制器 + 启动 cyra::app()
@@ -99,7 +99,7 @@ vcpkg.json                    # 依赖清单（asio + mimalloc + libmariadb + op
   `{code, message}` JSON 壳，状态码沿用 `AppErrorDef.status`。
 - **DB**：启动时 `DbMigrator` 执行 schema 迁移；cyra `useDb(DbConfig)` 注入；查询用
   `c.db().query(sql, params)`，写入/DDL 用 `c.db().execute(sql, params)`；服务层为 raw SQL（cyra 当前未带 ORM）。
-- **静态资源**：若存在 `dist/web/` 则由 `StaticAssetsController` 提供 SPA fallback。
+- **静态资源**：若存在 `build/web/` 则通过 Cyra `setDocumentRoot()` 提供静态文件；SPA fallback 在全局 404 handler 中只处理非 API、非文件型路径。
 - **路径别名**：`#include "service/..."`（CMake target_include_directories 把仓库根加入 include path）。
 
 ## 命名约定
@@ -114,4 +114,4 @@ vcpkg.json                    # 依赖清单（asio + mimalloc + libmariadb + op
 - **找不到 cyra**：CMake 通过 FetchContent 拉取 `hyird/cyra`，确认网络或本地缓存可用。
 - **JWT_SECRET 未设置**：后端启动后任何登录请求会 500，请在 `.env` 中设置。
 - **OpenSSL 未找到**：Cyra 的 TLS/JWT 和当前密码 PBKDF2 都依赖 OpenSSL，确认 vcpkg 依赖已安装。
-- **建表**：无需手动执行 SQL；启动时会执行 `service/config/schema.h` 中编译进二进制的 Cyra migrations，并记录到 `sys_schema_migrations`。
+- **建表**：无需手动执行 SQL；启动时会执行 `service/config/schema.h` 中编译进二进制的 Cyra migrations，并记录到 Cyra 默认迁移表 `cyra_schema_migrations`（自增 `id` 主键 + 唯一 `migration_id`）；迁移 ID 使用四位补零格式（`0001`、`0002` ...）。

@@ -55,20 +55,23 @@ CYRA_MODEL(CurrentUserResponse,
 
 struct UserInfo {
     explicit UserInfo(std::pmr::memory_resource* resource = std::pmr::get_default_resource())
-        : roles(resource), menus(resource) {}
+        : username(resource), nickname(resource), status(resource), roles(resource), menus(resource) {}
 
     std::int64_t id{0};
-    std::string username;
-    std::string nickname;
-    std::string status;
+    std::pmr::string username;
+    std::pmr::string nickname;
+    std::pmr::string status;
     bool is_superadmin{false};
     cyra::Array<role::RoleOptionDto> roles;
     cyra::List<menu::MenuDto> menus;
 };
 
 struct LoginResult {
-    std::string token;
-    std::string refresh_token;
+    explicit LoginResult(std::pmr::memory_resource* resource = std::pmr::get_default_resource())
+        : token(resource), refresh_token(resource), user(resource) {}
+
+    std::pmr::string token;
+    std::pmr::string refresh_token;
     UserInfo user;
 };
 

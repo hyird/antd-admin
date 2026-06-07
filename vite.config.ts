@@ -51,7 +51,7 @@ export default defineConfig({
         port: 5173,
     },
     build: {
-        outDir: '../dist/web',
+        outDir: '../build/web',
         emptyOutDir: true,
         chunkSizeWarningLimit: 9999,
         rollupOptions: {

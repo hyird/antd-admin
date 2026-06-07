@@ -61,7 +61,7 @@ import { batchCreateButtons, create, getTree, remove, reorder, update } from './
 import { menuQueryKeys } from './';
 import type { Menu } from './menu.types';
 import { MenuTypeMap } from './menu.types';
-import { filterMenuTree, flattenTree, getPathSegment } from '../../../utils/tree';
+import { filterMenuTree, flattenTree, getDescendantIds, getPathSegment } from '../../../utils/tree';
 import { appIconMap, resolveMenuIconName } from '../../../utils/icon';
 
 const { Search } = Input;
@@ -126,17 +126,23 @@ function SortableChildItem({ item }: { item: Menu.TreeItem }) {
     );
 }
 
-function filterOutButtons(nodes: Menu.TreeItem[]): Menu.TreeItem[] {
+function filterOutButtons(nodes: Menu.TreeItem[], path = new Set<number>()): Menu.TreeItem[] {
     return nodes
         .filter((node) => node.type !== 'button')
         .map((node) => {
-            const filteredChildren = node.children ? filterOutButtons(node.children) : undefined;
+            if (path.has(node.id)) return null;
+            const nextPath = new Set(path);
+            nextPath.add(node.id);
+            const filteredChildren = node.children
+                ? filterOutButtons(node.children, nextPath)
+                : undefined;
             return {
                 ...node,
                 children:
                     filteredChildren && filteredChildren.length > 0 ? filteredChildren : undefined,
             };
-        });
+        })
+        .filter(Boolean) as Menu.TreeItem[];
 }
 
 const SystemMenuPage = () => {
@@ -178,10 +184,13 @@ const SystemMenuPage = () => {
 
     const fullMenuMap = useMemo(() => {
         const map: Record<number, Menu.TreeItem> = {};
-        const traverse = (nodes: Menu.TreeItem[]) => {
+        const traverse = (nodes: Menu.TreeItem[], path = new Set<number>()) => {
             nodes.forEach((node) => {
+                if (path.has(node.id)) return;
+                const nextPath = new Set(path);
+                nextPath.add(node.id);
                 map[node.id] = node;
-                if (node.children?.length) traverse(node.children);
+                if (node.children?.length) traverse(node.children, nextPath);
             });
         };
         traverse(rawMenuTree);
@@ -209,17 +218,32 @@ const SystemMenuPage = () => {
             .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || a.id - b.id);
     }, [rawMenuTree]);
 
+    const blockedParentIds = useMemo(() => {
+        if (!editing) return new Set<number>();
+        return new Set([editing.id, ...getDescendantIds(rawMenuTree, editing.id)]);
+    }, [editing, rawMenuTree]);
+
     const parentTreeData = useMemo((): TreeSelectProps['treeData'] => {
-        const loop = (nodes: Menu.TreeItem[]): TreeSelectProps['treeData'] =>
+        const loop = (
+            nodes: Menu.TreeItem[],
+            path = new Set<number>()
+        ): TreeSelectProps['treeData'] =>
             nodes
                 .filter((n) => n.type !== 'button')
-                .map((n) => ({
-                    title: `${n.name} (${n.type})`,
-                    value: n.id,
-                    children: n.children ? loop(n.children) : undefined,
-                }));
+                .map((n) => {
+                    if (path.has(n.id)) return null;
+                    const nextPath = new Set(path);
+                    nextPath.add(n.id);
+                    return {
+                        title: `${n.name} (${n.type})`,
+                        value: n.id,
+                        disabled: blockedParentIds.has(n.id),
+                        children: n.children ? loop(n.children, nextPath) : undefined,
+                    };
+                })
+                .filter(Boolean) as TreeSelectProps['treeData'];
         return loop(rawMenuTree);
-    }, [rawMenuTree]);
+    }, [rawMenuTree, blockedParentIds]);
 
     const watchParentId = Form.useWatch('parent_id', form) as number | null | undefined;
     const watchType = Form.useWatch('type', form) as Menu.Type | undefined;
@@ -550,6 +574,10 @@ const SystemMenuPage = () => {
     };
 
     const onFinish = (values: MenuFormValues) => {
+        if (values.parent_id && blockedParentIds.has(values.parent_id)) {
+            message.error('父级菜单不能选择自身或子菜单');
+            return;
+        }
         saveMutation.mutate(values);
     };
 

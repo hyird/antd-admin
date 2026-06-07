@@ -15,6 +15,7 @@
 #include <cyra/http/Context.h>
 
 #include "service/common/http.h"
+#include "service/common/types.h"
 #include "service/middleware/auth.h"
 
 namespace service::middleware {
@@ -92,7 +93,7 @@ private:
             {cyra::DbValue{userId}});
         for (const auto& row : roles.rows()) {
             if (row.size() < 2) continue;
-            if (row[1].text() == "enabled" && row[0].text() == "superadmin") {
+            if (row[1].text() == "enabled" && row[0].text() == service::common::kSuperAdminRoleCode) {
                 snap.is_superadmin = true;
             }
         }
@@ -126,25 +127,37 @@ inline PermissionService& permissionService() { return PermissionService::instan
 
 inline cyra::Task<void> requirePermission(cyra::Context& c, std::string_view code) {
     const auto& jwt = currentUser(c);
-    if (jwt.user_id <= 0) service::common::throwAppError("UNAUTHORIZED", "未登录", 401);
+    if (jwt.user_id <= 0) {
+        service::common::throwAppError(service::common::kAuthUnauthorizedErrorCode, "未登录", 401);
+    }
     const bool allowed = co_await permissionService().hasPermission(c, jwt.user_id, code);
-    if (!allowed) service::common::throwAppError("PERMISSION_DENIED", "无权限", 403);
+    if (!allowed) {
+        service::common::throwAppError(service::common::kAuthPermissionDeniedErrorCode, "无权限", 403);
+    }
 }
 
 inline cyra::Task<void> requireAnyPermission(cyra::Context& c,
                                              std::initializer_list<std::string_view> codes) {
     const auto& jwt = currentUser(c);
-    if (jwt.user_id <= 0) service::common::throwAppError("UNAUTHORIZED", "未登录", 401);
+    if (jwt.user_id <= 0) {
+        service::common::throwAppError(service::common::kAuthUnauthorizedErrorCode, "未登录", 401);
+    }
     const bool allowed = co_await permissionService().hasAnyPermission(c, jwt.user_id, codes);
-    if (!allowed) service::common::throwAppError("PERMISSION_DENIED", "无权限", 403);
+    if (!allowed) {
+        service::common::throwAppError(service::common::kAuthPermissionDeniedErrorCode, "无权限", 403);
+    }
 }
 
 inline cyra::Task<void> requireAllPermissions(cyra::Context& c,
                                               std::initializer_list<std::string_view> codes) {
     const auto& jwt = currentUser(c);
-    if (jwt.user_id <= 0) service::common::throwAppError("UNAUTHORIZED", "未登录", 401);
+    if (jwt.user_id <= 0) {
+        service::common::throwAppError(service::common::kAuthUnauthorizedErrorCode, "未登录", 401);
+    }
     const bool allowed = co_await permissionService().hasAllPermissions(c, jwt.user_id, codes);
-    if (!allowed) service::common::throwAppError("PERMISSION_DENIED", "无权限", 403);
+    if (!allowed) {
+        service::common::throwAppError(service::common::kAuthPermissionDeniedErrorCode, "无权限", 403);
+    }
 }
 
 }  // namespace service::middleware

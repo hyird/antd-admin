@@ -21,6 +21,7 @@ import { renderMenuIcon } from '@/utils/icon';
 import { fastTransition, slideUpVariants } from '@/utils/animations';
 
 const { Header, Sider, Content } = Layout;
+const USER_MENU_WIDTH = 192;
 const Breadcrumb = lazy(() => import('@/components/Breadcrumb'));
 const PageTabs = lazy(() => import('@/components/PageTabs'));
 
@@ -139,6 +140,7 @@ export default function AdminLayout() {
     };
 
     const userMenu: MenuProps = {
+        style: { width: USER_MENU_WIDTH },
         items: [
             {
                 key: 'logout',
@@ -223,11 +225,19 @@ export default function AdminLayout() {
                                 <UserOutlined />
                             </div>
                         ) : (
-                            <Dropdown menu={userMenu} placement="bottomRight" trigger={['click']}>
-                                <Button>
-                                    <Space>
+                            <Dropdown
+                                menu={userMenu}
+                                placement="bottomRight"
+                                styles={{ root: { width: USER_MENU_WIDTH } }}
+                                trigger={['click']}
+                            >
+                                <Button
+                                    className="!inline-flex !items-center !justify-center"
+                                    style={{ width: USER_MENU_WIDTH }}
+                                >
+                                    <Space className="min-w-0">
                                         <UserOutlined />
-                                        <span>{user?.username}</span>
+                                        <span className="max-w-28 truncate">{user?.username}</span>
                                     </Space>
                                 </Button>
                             </Dropdown>

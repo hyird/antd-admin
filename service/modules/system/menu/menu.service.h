@@ -28,6 +28,11 @@ public:
     }
 
     template <typename Rows>
+    static cyra::List<MenuDto> flatFromRows(cyra::Context& c, const Rows& rows) {
+        return buildFlatList(c, rowsToRecords(rows));
+    }
+
+    template <typename Rows>
     static cyra::List<MenuDto> treeFromRows(cyra::Context& c, const Rows& rows) {
         return buildTree(c, rowsToRecords(rows));
     }
@@ -144,6 +149,9 @@ public:
                 {cyra::DbValue{*newParentId}});
             if (prs.rows().empty()) service::common::throwAppError(MenuError::MENU_PARENT_NOT_FOUND);
             checkParentChildType(std::string(prs.rows().front()[0].text()), newType);
+            if (co_await isAncestorDescendant(c, id, *newParentId)) {
+                service::common::throwAppError(MenuError::MENU_PARENT_IS_CHILD);
+            }
         }
         if (body.isDefault() && static_cast<bool>(*body.isDefault()) && type && *type != "page") {
             service::common::throwAppError(MenuError::DEFAULT_MUST_BE_PAGE);
@@ -279,6 +287,33 @@ private:
         }
     }
 
+    cyra::Task<bool> isAncestorDescendant(cyra::Context& c,
+                                          std::int64_t ancestor,
+                                          std::int64_t candidate) {
+        auto db = c.db();
+        const auto rs = co_await db.query(
+            "SELECT id, parent_id FROM sys_menu WHERE deleted_at IS NULL");
+        std::unordered_map<std::int64_t, std::vector<std::int64_t>> children;
+        for (const auto& row : rs.rows()) {
+            if (row[1].isNull()) continue;
+            const std::int64_t id = std::stoll(std::string(row[0].text()));
+            const std::int64_t parent = std::stoll(std::string(row[1].text()));
+            children[parent].push_back(id);
+        }
+
+        std::unordered_set<std::int64_t> seen{ancestor};
+        std::vector<std::int64_t> stack{ancestor};
+        while (!stack.empty()) {
+            const auto current = stack.back();
+            stack.pop_back();
+            for (const auto child : children[current]) {
+                if (child == candidate) co_return true;
+                if (seen.insert(child).second) stack.push_back(child);
+            }
+        }
+        co_return false;
+    }
+
     template <typename Row>
     static MenuRecord rowToRecord(const Row& row) {
         MenuRecord item;
@@ -311,7 +346,9 @@ private:
             .type(record.type)
             .status(record.status)
             .isDefault(cyra::Bool{record.is_default});
-        if (record.path) item.path(*record.path).fullPath(*record.path);
+        if (record.path) {
+            item.path(*record.path).fullPath(*record.path);
+        }
         if (record.icon) item.icon(*record.icon);
         if (record.parent_id) item.parentId(static_cast<cyra::Int64>(*record.parent_id));
         if (record.component) item.component(*record.component);
@@ -330,7 +367,10 @@ private:
     static void appendNode(cyra::Context& c,
                            cyra::List<MenuDto>& out,
                            const MenuRecord& record,
-                           const std::unordered_map<std::int64_t, std::vector<const MenuRecord*>>& children) {
+                           const std::unordered_map<std::int64_t, std::vector<const MenuRecord*>>& children,
+                           std::unordered_set<std::int64_t> path = {}) {
+        if (!path.insert(record.id).second) return;
+
         auto& item = out.emplace(c);
         fillMenuDto(item, record);
 
@@ -338,20 +378,35 @@ private:
         if (it == children.end()) return;
         auto& childList = item.childrenEnsure();
         for (const auto* child : it->second) {
-            appendNode(c, childList, *child, children);
+            appendNode(c, childList, *child, children, path);
         }
+    }
+
+    static bool hasParentCycle(
+        const MenuRecord& record,
+        const std::unordered_map<std::int64_t, const MenuRecord*>& recordsById) {
+        std::unordered_set<std::int64_t> seen{record.id};
+        auto parentId = record.parent_id;
+        while (parentId) {
+            const auto parent = recordsById.find(*parentId);
+            if (parent == recordsById.end()) return false;
+            if (!seen.insert(*parentId).second) return true;
+            parentId = parent->second->parent_id;
+        }
+        return false;
     }
 
     static cyra::List<MenuDto> buildTree(cyra::Context& c, const std::vector<MenuRecord>& records) {
         cyra::List<MenuDto> out(c.resource());
-        std::unordered_set<std::int64_t> ids;
-        ids.reserve(records.size());
-        for (const auto& record : records) ids.insert(record.id);
+        std::unordered_map<std::int64_t, const MenuRecord*> recordsById;
+        recordsById.reserve(records.size());
+        for (const auto& record : records) recordsById[record.id] = &record;
 
         std::vector<const MenuRecord*> roots;
         std::unordered_map<std::int64_t, std::vector<const MenuRecord*>> children;
         for (const auto& record : records) {
-            if (record.parent_id && ids.contains(*record.parent_id)) {
+            if (record.parent_id && recordsById.contains(*record.parent_id) &&
+                !hasParentCycle(record, recordsById)) {
                 children[*record.parent_id].push_back(&record);
             } else {
                 roots.push_back(&record);

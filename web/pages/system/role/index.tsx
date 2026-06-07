@@ -44,6 +44,7 @@ import { useMemo, useState } from 'react';
 import { FormModal } from '@/components/FormModal';
 import { PageContainer } from '@/components/PageContainer';
 import { StatusTag } from '@/components/StatusTag';
+import { SUPERADMIN_ROLE_CODE } from '@/config/app';
 import { useDebounceFn } from '@/hooks/useDebounceFn';
 import { usePermissions } from '@/hooks/usePermission';
 import { useMenuTree } from '../menu/menu.service';
@@ -321,7 +322,7 @@ const SystemRolePage = () => {
             width: 240,
             fixed: 'right' as const,
             render: (_, record) => {
-                const isSuperadmin = record.code === 'superadmin';
+                const isSuperadmin = record.code === SUPERADMIN_ROLE_CODE;
                 return (
                     <Space>
                         {canPerm && (
@@ -435,14 +436,14 @@ const SystemRolePage = () => {
                         rules={[
                             { required: true, message: '请输入角色编码' },
                             {
-                                pattern: /^[a-zA-Z][a-zA-Z0-9_]*$/,
-                                message: '编码以字母开头，只能包含字母、数字、下划线',
+                                pattern: /^\d+$/,
+                                message: '编码只能使用数字',
                             },
                         ]}
                     >
                         <Input
-                            placeholder="例如：admin"
-                            disabled={editing?.code === 'superadmin'}
+                            placeholder="例如：1001"
+                            disabled={editing?.code === SUPERADMIN_ROLE_CODE}
                         />
                     </Form.Item>
                     <Form.Item label="状态" name="status" rules={[{ required: true }]}>

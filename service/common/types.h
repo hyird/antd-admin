@@ -5,10 +5,13 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 
 #include <cyra/http/Model.h>
 
 namespace service::common {
+
+inline constexpr std::string_view kSuperAdminRoleCode{"1"};
 
 struct PageParams {
     std::optional<std::int64_t> page;

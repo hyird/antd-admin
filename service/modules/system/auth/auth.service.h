@@ -12,6 +12,7 @@
 #include <cyra/http/Context.h>
 
 #include "service/common/http.h"
+#include "service/common/types.h"
 #include "service/middleware/permission.h"
 #include "service/modules/system/auth/auth.error.h"
 #include "service/modules/system/auth/auth.types.h"
@@ -96,7 +97,7 @@ public:
             const auto remaining = rateLimitService().remainingLockSeconds(username);
             const auto minutes = (remaining + 59) / 60;
             service::common::throwAppError(
-                "TOO_MANY_ATTEMPTS",
+                AuthError::TOO_MANY_ATTEMPTS.code,
                 "登录失败次数过多，请" + std::to_string(minutes) + "分钟后再试", 429);
         }
 
@@ -110,7 +111,7 @@ public:
             const int remaining = 5 - failureCount;
             if (remaining > 0) {
                 service::common::throwAppError(
-                    "PASSWORD_INCORRECT",
+                    AuthError::PASSWORD_INCORRECT.code,
                     "用户名或密码错误，还剩" + std::to_string(remaining) + "次尝试机会", 401);
             }
             service::common::throwAppError(AuthError::TOO_MANY_ATTEMPTS);
@@ -128,7 +129,7 @@ public:
             const int remaining = 5 - failureCount;
             if (remaining > 0) {
                 service::common::throwAppError(
-                    "PASSWORD_INCORRECT",
+                    AuthError::PASSWORD_INCORRECT.code,
                     "用户名或密码错误，还剩" + std::to_string(remaining) + "次尝试机会", 401);
             }
             service::common::throwAppError(AuthError::TOO_MANY_ATTEMPTS);
@@ -138,7 +139,7 @@ public:
         rateLimitService().clearFailure(username);
 
         const service::core::JwtPayload payload{userId, username, 0, 0};
-        LoginResult result;
+        LoginResult result(c.resource());
         result.token = service::utils::signAccessToken(payload);
         result.refresh_token = service::utils::signRefreshToken(payload);
         result.user = co_await buildUserInfo(c, userId, username, nickname, status);
@@ -169,7 +170,7 @@ public:
         if (status == "disabled") service::common::throwAppError(AuthError::USER_DISABLED);
 
         const service::core::JwtPayload next{userId, username, 0, 0};
-        LoginResult result;
+        LoginResult result(c.resource());
         result.token = service::utils::signAccessToken(next);
         result.refresh_token = service::utils::signRefreshToken(next);
         result.user = co_await buildUserInfo(c, userId, username, nickname, status);
@@ -202,18 +203,27 @@ private:
             "WHERE ur.user_id = ? AND r.deleted_at IS NULL",
             {cyra::DbValue{userId}});
         for (const auto& row : rs.rows()) {
-            const std::string code(row[2].text());
             auto& role = info.roles.emplace_back(c);
-            role.id(static_cast<cyra::Int64>(std::stoll(std::string(row[0].text()))))
-                .name(std::string(row[1].text()))
-                .code(code);
-            if (code == "superadmin") info.is_superadmin = true;
+            role.id(static_cast<cyra::Int64>(std::stoll(std::string(row[0].text()))));
+
+            const auto name = row[1].text();
+            role.name(name);
+
+            const auto code = row[2].text();
+            role.code(code);
+            if (code == service::common::kSuperAdminRoleCode) info.is_superadmin = true;
         }
         co_return;
     }
 
     cyra::Task<cyra::List<menu::MenuDto>> getAllMenus(cyra::Context& c) {
-        co_return co_await menu::menuService().getTree(c, std::string("enabled"));
+        auto db = c.db();
+        const auto rs = co_await db.query(
+            "SELECT id, name, path, icon, parent_id, `order`, type, component, status, "
+            "       permission_code, is_default FROM sys_menu "
+            "WHERE deleted_at IS NULL AND status = 'enabled' "
+            "ORDER BY `order` ASC, id ASC");
+        co_return menu::MenuService::flatFromRows(c, rs.rows());
     }
 
     cyra::Task<cyra::List<menu::MenuDto>> getUserRoleMenus(cyra::Context& c, std::int64_t userId) {
@@ -228,7 +238,7 @@ private:
             "  AND m.deleted_at IS NULL AND m.status = 'enabled' "
             "ORDER BY m.`order` ASC, m.id ASC",
             {cyra::DbValue{userId}});
-        co_return menu::MenuService::treeFromRows(c, rs.rows());
+        co_return menu::MenuService::flatFromRows(c, rs.rows());
     }
 
     cyra::Task<UserInfo> buildUserInfo(cyra::Context& c,

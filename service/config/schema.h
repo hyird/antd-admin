@@ -6,13 +6,13 @@
 
 namespace service::config {
 
-inline constexpr std::array<cyra::DbMigration, 11> kSchemaMigrations{{
+inline constexpr std::array<cyra::DbMigration, 19> kSchemaMigrations{{
     {
-        "schema_1",
+        "0001",
         R"sql(SET NAMES utf8mb4)sql",
     },
     {
-        "schema_2",
+        "0002",
         R"sql(CREATE TABLE IF NOT EXISTS sys_menu (
     id              INT NOT NULL AUTO_INCREMENT,
     name            VARCHAR(255) NOT NULL,
@@ -35,7 +35,7 @@ inline constexpr std::array<cyra::DbMigration, 11> kSchemaMigrations{{
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci)sql",
     },
     {
-        "schema_3",
+        "0003",
         R"sql(CREATE TABLE IF NOT EXISTS sys_role (
     id          INT NOT NULL AUTO_INCREMENT,
     code        VARCHAR(255) NOT NULL,
@@ -50,7 +50,7 @@ inline constexpr std::array<cyra::DbMigration, 11> kSchemaMigrations{{
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci)sql",
     },
     {
-        "schema_4",
+        "0004",
         R"sql(CREATE TABLE IF NOT EXISTS sys_role_menu (
     role_id INT NOT NULL,
     menu_id INT NOT NULL,
@@ -59,7 +59,7 @@ inline constexpr std::array<cyra::DbMigration, 11> kSchemaMigrations{{
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci)sql",
     },
     {
-        "schema_5",
+        "0005",
         R"sql(CREATE TABLE IF NOT EXISTS sys_dept (
     id          INT NOT NULL AUTO_INCREMENT,
     name        VARCHAR(255) NOT NULL,
@@ -75,7 +75,7 @@ inline constexpr std::array<cyra::DbMigration, 11> kSchemaMigrations{{
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci)sql",
     },
     {
-        "schema_6",
+        "0006",
         R"sql(CREATE TABLE IF NOT EXISTS sys_user (
     id            INT NOT NULL AUTO_INCREMENT,
     username      VARCHAR(255) NOT NULL,
@@ -95,7 +95,7 @@ inline constexpr std::array<cyra::DbMigration, 11> kSchemaMigrations{{
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci)sql",
     },
     {
-        "schema_7",
+        "0007",
         R"sql(CREATE TABLE IF NOT EXISTS sys_user_role (
     user_id INT NOT NULL,
     role_id INT NOT NULL,
@@ -104,7 +104,7 @@ inline constexpr std::array<cyra::DbMigration, 11> kSchemaMigrations{{
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci)sql",
     },
     {
-        "schema_8",
+        "0008",
         R"sql(CREATE TABLE IF NOT EXISTS sys_device (
     id              INT NOT NULL AUTO_INCREMENT,
     code            VARCHAR(100) NOT NULL,
@@ -125,7 +125,7 @@ inline constexpr std::array<cyra::DbMigration, 11> kSchemaMigrations{{
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci)sql",
     },
     {
-        "schema_9",
+        "0009",
         R"sql(CREATE TABLE IF NOT EXISTS sys_variable (
     id           INT NOT NULL AUTO_INCREMENT,
     device_id    INT NOT NULL,
@@ -148,7 +148,7 @@ inline constexpr std::array<cyra::DbMigration, 11> kSchemaMigrations{{
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci)sql",
     },
     {
-        "schema_10",
+        "0010",
         R"sql(CREATE TABLE IF NOT EXISTS sys_variable_history (
     id            INT NOT NULL AUTO_INCREMENT,
     device_id     INT NOT NULL,
@@ -168,7 +168,7 @@ inline constexpr std::array<cyra::DbMigration, 11> kSchemaMigrations{{
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci)sql",
     },
     {
-        "schema_11",
+        "0011",
         R"sql(CREATE TABLE IF NOT EXISTS sys_variable_realtime (
     code          VARCHAR(100) NOT NULL,
     device_id     INT NOT NULL,
@@ -182,6 +182,184 @@ inline constexpr std::array<cyra::DbMigration, 11> kSchemaMigrations{{
     INDEX idx_variable_realtime_device (device_id),
     INDEX idx_variable_realtime_time (collect_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci)sql",
+    },
+    {
+        "0012",
+        R"sql(UPDATE sys_role
+SET code = '1', updated_at = NOW()
+WHERE code = 'superadmin' AND deleted_at IS NULL)sql",
+    },
+    {
+        "0013",
+        R"sql(INSERT INTO sys_role (name, code, status, created_at, updated_at)
+SELECT '超级管理员', '1', 'enabled', NOW(), NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM sys_role WHERE code = '1' AND deleted_at IS NULL
+))sql",
+    },
+    {
+        "0014",
+        R"sql(INSERT INTO sys_user (username, password_hash, nickname, status, created_at, updated_at)
+SELECT 'admin',
+       'pbkdf2_sha256$210000$616e74645f61646d696e5f7365656431$179aef64cb17bf706f7a58feba1ce0db759ee0a63dae18f3789a78a5d7a9614c',
+       '超级管理员',
+       'enabled',
+       NOW(),
+       NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM sys_user WHERE username = 'admin' AND deleted_at IS NULL
+))sql",
+    },
+    {
+        "0015",
+        R"sql(INSERT IGNORE INTO sys_user_role (user_id, role_id)
+SELECT u.id, r.id
+FROM sys_user u
+INNER JOIN sys_role r ON r.code = '1' AND r.deleted_at IS NULL
+WHERE u.username = 'admin' AND u.deleted_at IS NULL)sql",
+    },
+    {
+        "0016",
+        R"sql(INSERT INTO sys_menu (name, path, icon, component, parent_id, `order`, type, status, permission_code, is_default, created_at, updated_at)
+SELECT '首页', '/home', 'HomeOutlined', 'Home', NULL, 0, 'page', 'enabled', NULL, 1, NOW(), NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM sys_menu WHERE type = 'page' AND component = 'Home' AND deleted_at IS NULL
+)
+UNION ALL
+SELECT '系统管理', NULL, 'SettingOutlined', NULL, NULL, 10, 'menu', 'enabled', NULL, 0, NOW(), NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM sys_menu WHERE type = 'menu' AND name = '系统管理' AND parent_id IS NULL AND deleted_at IS NULL
+))sql",
+    },
+    {
+        "0017",
+        R"sql(INSERT INTO sys_menu (name, path, icon, component, parent_id, `order`, type, status, permission_code, is_default, created_at, updated_at)
+SELECT '用户管理', '/system/user', 'UserOutlined', 'User',
+       (SELECT id FROM sys_menu WHERE type = 'menu' AND name = '系统管理' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       10, 'page', 'enabled', NULL, 0, NOW(), NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM sys_menu WHERE type = 'page' AND component = 'User' AND deleted_at IS NULL
+)
+UNION ALL
+SELECT '角色管理', '/system/role', 'SafetyCertificateOutlined', 'Role',
+       (SELECT id FROM sys_menu WHERE type = 'menu' AND name = '系统管理' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       20, 'page', 'enabled', NULL, 0, NOW(), NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM sys_menu WHERE type = 'page' AND component = 'Role' AND deleted_at IS NULL
+)
+UNION ALL
+SELECT '部门管理', '/system/dept', 'ApartmentOutlined', 'Dept',
+       (SELECT id FROM sys_menu WHERE type = 'menu' AND name = '系统管理' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       30, 'page', 'enabled', NULL, 0, NOW(), NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM sys_menu WHERE type = 'page' AND component = 'Dept' AND deleted_at IS NULL
+)
+UNION ALL
+SELECT '菜单管理', '/system/menu', 'MenuOutlined', 'Menu',
+       (SELECT id FROM sys_menu WHERE type = 'menu' AND name = '系统管理' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       40, 'page', 'enabled', NULL, 0, NOW(), NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM sys_menu WHERE type = 'page' AND component = 'Menu' AND deleted_at IS NULL
+))sql",
+    },
+    {
+        "0018",
+        R"sql(INSERT INTO sys_menu (name, path, icon, component, parent_id, `order`, type, status, permission_code, is_default, created_at, updated_at)
+SELECT '查看统计', NULL, NULL, NULL,
+       (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'Home' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       1, 'button', 'enabled', 'home:dashboard:query', 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_code = 'home:dashboard:query' AND deleted_at IS NULL)
+UNION ALL
+SELECT '查询用户', NULL, NULL, NULL,
+       (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'User' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       1, 'button', 'enabled', 'system:user:query', 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_code = 'system:user:query' AND deleted_at IS NULL)
+UNION ALL
+SELECT '新增用户', NULL, NULL, NULL,
+       (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'User' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       2, 'button', 'enabled', 'system:user:add', 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_code = 'system:user:add' AND deleted_at IS NULL)
+UNION ALL
+SELECT '编辑用户', NULL, NULL, NULL,
+       (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'User' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       3, 'button', 'enabled', 'system:user:edit', 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_code = 'system:user:edit' AND deleted_at IS NULL)
+UNION ALL
+SELECT '删除用户', NULL, NULL, NULL,
+       (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'User' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       4, 'button', 'enabled', 'system:user:delete', 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_code = 'system:user:delete' AND deleted_at IS NULL)
+UNION ALL
+SELECT '查询角色', NULL, NULL, NULL,
+       (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'Role' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       1, 'button', 'enabled', 'system:role:query', 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_code = 'system:role:query' AND deleted_at IS NULL)
+UNION ALL
+SELECT '新增角色', NULL, NULL, NULL,
+       (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'Role' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       2, 'button', 'enabled', 'system:role:add', 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_code = 'system:role:add' AND deleted_at IS NULL)
+UNION ALL
+SELECT '编辑角色', NULL, NULL, NULL,
+       (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'Role' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       3, 'button', 'enabled', 'system:role:edit', 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_code = 'system:role:edit' AND deleted_at IS NULL)
+UNION ALL
+SELECT '删除角色', NULL, NULL, NULL,
+       (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'Role' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       4, 'button', 'enabled', 'system:role:delete', 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_code = 'system:role:delete' AND deleted_at IS NULL)
+UNION ALL
+SELECT '分配权限', NULL, NULL, NULL,
+       (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'Role' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       5, 'button', 'enabled', 'system:role:perm', 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_code = 'system:role:perm' AND deleted_at IS NULL)
+UNION ALL
+SELECT '查询部门', NULL, NULL, NULL,
+       (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'Dept' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       1, 'button', 'enabled', 'system:dept:query', 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_code = 'system:dept:query' AND deleted_at IS NULL)
+UNION ALL
+SELECT '新增部门', NULL, NULL, NULL,
+       (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'Dept' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       2, 'button', 'enabled', 'system:dept:add', 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_code = 'system:dept:add' AND deleted_at IS NULL)
+UNION ALL
+SELECT '编辑部门', NULL, NULL, NULL,
+       (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'Dept' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       3, 'button', 'enabled', 'system:dept:edit', 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_code = 'system:dept:edit' AND deleted_at IS NULL)
+UNION ALL
+SELECT '删除部门', NULL, NULL, NULL,
+       (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'Dept' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       4, 'button', 'enabled', 'system:dept:delete', 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_code = 'system:dept:delete' AND deleted_at IS NULL)
+UNION ALL
+SELECT '查询菜单', NULL, NULL, NULL,
+       (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'Menu' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       1, 'button', 'enabled', 'system:menu:query', 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_code = 'system:menu:query' AND deleted_at IS NULL)
+UNION ALL
+SELECT '新增菜单', NULL, NULL, NULL,
+       (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'Menu' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       2, 'button', 'enabled', 'system:menu:add', 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_code = 'system:menu:add' AND deleted_at IS NULL)
+UNION ALL
+SELECT '编辑菜单', NULL, NULL, NULL,
+       (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'Menu' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       3, 'button', 'enabled', 'system:menu:edit', 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_code = 'system:menu:edit' AND deleted_at IS NULL)
+UNION ALL
+SELECT '删除菜单', NULL, NULL, NULL,
+       (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'Menu' AND deleted_at IS NULL ORDER BY id LIMIT 1),
+       4, 'button', 'enabled', 'system:menu:delete', 0, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_code = 'system:menu:delete' AND deleted_at IS NULL))sql",
+    },
+    {
+        "0019",
+        R"sql(DELETE rm FROM sys_role_menu rm
+INNER JOIN sys_role r ON r.id = rm.role_id
+WHERE r.code = '1' AND r.deleted_at IS NULL)sql",
     },
 }};
 

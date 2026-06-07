@@ -65,9 +65,9 @@ public:
             auto& item = list.emplace(c);
             const auto id = std::stoll(std::string(row[0].text()));
             item.id(static_cast<cyra::Int64>(id))
-                .name(std::string(row[1].text()))
-                .code(std::string(row[2].text()))
-                .status(std::string(row[3].text()));
+                .name(row[1].text())
+                .code(row[2].text())
+                .status(row[3].text());
             setMenuIds(c, item, co_await getRoleMenuIds(c, id));
         }
         co_return result;
@@ -83,9 +83,9 @@ public:
         const auto& row = rs.rows().front();
         RoleDetailDto out(c);
         out.id(static_cast<cyra::Int64>(std::stoll(std::string(row[0].text()))))
-            .name(std::string(row[1].text()))
-            .code(std::string(row[2].text()))
-            .status(std::string(row[3].text()));
+            .name(row[1].text())
+            .code(row[2].text())
+            .status(row[3].text());
 
         cyra::Array<cyra::Int64> menuIds(c.allocator<cyra::Int64>());
         cyra::Array<RoleMenuDto> menus(c.allocator<RoleMenuDto>());
@@ -100,8 +100,8 @@ public:
 
             RoleMenuDto menu(c);
             menu.id(static_cast<cyra::Int64>(mid))
-                .name(std::string(mrow[1].text()))
-                .type(std::string(mrow[2].text()));
+                .name(mrow[1].text())
+                .type(mrow[2].text());
             if (!mrow[3].isNull()) {
                 menu.parentId(static_cast<cyra::Int64>(std::stoll(std::string(mrow[3].text()))));
             }
@@ -120,8 +120,8 @@ public:
         for (const auto& row : rs.rows()) {
             auto& item = out.emplace(c);
             item.id(static_cast<cyra::Int64>(std::stoll(std::string(row[0].text()))))
-                .name(std::string(row[1].text()))
-                .code(std::string(row[2].text()));
+                .name(row[1].text())
+                .code(row[2].text());
         }
         co_return out;
     }
@@ -157,7 +157,8 @@ public:
 
         const auto code = body.code() ? std::optional<std::string>(std::string(body.code()->view()))
                                       : std::nullopt;
-        if (currentCode == "superadmin" && code && *code != "superadmin") {
+        if (currentCode == service::common::kSuperAdminRoleCode && code &&
+            *code != service::common::kSuperAdminRoleCode) {
             service::common::throwAppError(RoleError::SUPERADMIN_CANNOT_MODIFY);
         }
 
@@ -185,7 +186,14 @@ public:
                                     params);
         }
 
-        if (body.menuIds()) co_await syncRoleMenus(c, id, body.menuIds());
+        if (body.menuIds()) {
+            if (currentCode == service::common::kSuperAdminRoleCode) {
+                (void)co_await db.execute("DELETE FROM sys_role_menu WHERE role_id = ?",
+                                          {cyra::DbValue{id}});
+            } else {
+                co_await syncRoleMenus(c, id, body.menuIds());
+            }
+        }
         service::middleware::permissionService().clearAllCache();
         co_return;
     }
@@ -197,7 +205,9 @@ public:
             {cyra::DbValue{id}});
         if (rs.rows().empty()) service::common::throwAppError(RoleError::NOT_FOUND);
         const std::string code(rs.rows().front()[0].text());
-        if (code == "superadmin") service::common::throwAppError(RoleError::SUPERADMIN_CANNOT_DELETE);
+        if (code == service::common::kSuperAdminRoleCode) {
+            service::common::throwAppError(RoleError::SUPERADMIN_CANNOT_DELETE);
+        }
 
         const auto userRs = co_await db.query(
             "SELECT COUNT(*) FROM sys_user_role WHERE role_id = ?", {cyra::DbValue{id}});

@@ -31,14 +31,16 @@ private:
 
         AuthUserInfoDto user(c);
         user.id(static_cast<cyra::Int64>(result.user.id))
-            .username(result.user.username)
-            .nickname(result.user.nickname)
-            .status(result.user.status)
+            .username(std::move(result.user.username))
+            .nickname(std::move(result.user.nickname))
+            .status(std::move(result.user.status))
             .roles(std::move(result.user.roles))
             .menus(std::move(result.user.menus));
 
         LoginResultDto data(c);
-        data.token(result.token).refreshToken(result.refresh_token).user(std::move(user));
+        data.token(std::move(result.token))
+            .refreshToken(std::move(result.refresh_token))
+            .user(std::move(user));
 
         co_return c.json(service::common::ok<LoginResponse>(c, std::move(data)));
     }
@@ -48,14 +50,16 @@ private:
 
         AuthUserInfoDto user(c);
         user.id(static_cast<cyra::Int64>(result.user.id))
-            .username(result.user.username)
-            .nickname(result.user.nickname)
-            .status(result.user.status)
+            .username(std::move(result.user.username))
+            .nickname(std::move(result.user.nickname))
+            .status(std::move(result.user.status))
             .roles(std::move(result.user.roles))
             .menus(std::move(result.user.menus));
 
         LoginResultDto data(c);
-        data.token(result.token).refreshToken(result.refresh_token).user(std::move(user));
+        data.token(std::move(result.token))
+            .refreshToken(std::move(result.refresh_token))
+            .user(std::move(user));
 
         co_return c.json(service::common::ok<LoginResponse>(c, std::move(data)));
     }
@@ -70,9 +74,9 @@ private:
 
         AuthUserInfoDto data(c);
         data.id(static_cast<cyra::Int64>(info.id))
-            .username(info.username)
-            .nickname(info.nickname)
-            .status(info.status)
+            .username(std::move(info.username))
+            .nickname(std::move(info.nickname))
+            .status(std::move(info.status))
             .roles(std::move(info.roles))
             .menus(std::move(info.menus));
 
