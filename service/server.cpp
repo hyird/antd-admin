@@ -60,7 +60,8 @@ std::filesystem::path& webRootPath() {
 
 void configureDocumentRoot(cyra::App& app, const std::filesystem::path& runtimeDir) {
     auto webRoot = runtimeDir / "web";
-    if (!std::filesystem::is_directory(webRoot)) return;
+    if (!std::filesystem::is_directory(webRoot))
+        return;
 
     cyra::DocumentRootConfig config;
     config.root = std::move(webRoot);
@@ -89,9 +90,7 @@ void logMigrationReport(const cyra::DbMigrationReport& report) {
 
 void configureDatabase(cyra::App& app) {
     auto dbConfig = dbConfigFromEnv(app.env());
-    logMigrationReport(cyra::DbMigrator::migrate(
-        dbConfig,
-        service::config::kSchemaMigrations));
+    logMigrationReport(cyra::DbMigrator::migrate(dbConfig, service::config::kSchemaMigrations));
     app.useDb(std::move(dbConfig));
 }
 
@@ -104,15 +103,20 @@ ServerSettings serverSettingsFromEnv(const cyra::Env& env) {
 }
 
 bool isSpaFallbackRequest(cyra::Context& c, cyra::HttpErrorInfo info) {
-    if (info.statusCode != 404 || webRootPath().empty()) return false;
-    if (c.req().method() != cyra::HttpMethod::kGet && c.req().method() != cyra::HttpMethod::kHead) return false;
+    if (info.statusCode != 404 || webRootPath().empty())
+        return false;
+    if (c.req().method() != cyra::HttpMethod::kGet && c.req().method() != cyra::HttpMethod::kHead)
+        return false;
 
     auto path = c.req().path();
-    if (path.starts_with("/api/") || path == "/api") return false;
-    if (path.starts_with("/assets/")) return false;
+    if (path.starts_with("/api/") || path == "/api")
+        return false;
+    if (path.starts_with("/assets/"))
+        return false;
 
     const auto lastSlash = path.rfind('/');
-    const auto lastSegment = lastSlash == std::string_view::npos ? path : path.substr(lastSlash + 1);
+    const auto lastSegment =
+        lastSlash == std::string_view::npos ? path : path.substr(lastSlash + 1);
     return lastSegment.find('.') == std::string_view::npos;
 }
 
@@ -125,10 +129,9 @@ cyra::Task<cyra::HttpResponse> handleError(cyra::Context& c, cyra::HttpErrorInfo
     if (info.statusCode >= 500) {
         service::middleware::logError(std::string("Unhandled error: ") + std::string(info.message));
     }
-    co_return c.status(info.statusCode).json(
-        service::common::error(
-            c,
-            service::common::normalizeBusinessErrorCode(info.code, info.statusCode),
+    co_return c.status(info.statusCode)
+        .json(service::common::error(
+            c, service::common::normalizeBusinessErrorCode(info.code, info.statusCode),
             info.message.empty() ? cyra::defaultStatusText(info.statusCode) : info.message));
 }
 
@@ -138,19 +141,20 @@ void configureHttpServer(cyra::App& app) {
         .setListenAddress(settings.host, settings.port)
         .setThreadNum(settings.threads)
         .setErrorHandler(&handleError);
-    service::middleware::logInfo("Server starting on " + settings.host + ":" + std::to_string(settings.port));
+    service::middleware::logInfo("Server starting on " + settings.host + ":" +
+                                 std::to_string(settings.port));
 }
 
-}  // namespace
+} // namespace
 
 // 健康检查。
 class HealthController final : public cyra::Controller<HealthController> {
-public:
+  public:
     CYRA_ROUTES_BEGIN
     CYRA_GET("/api/health", health);
     CYRA_ROUTES_END
 
-private:
+  private:
     cyra::Task<cyra::HttpResponse> health(cyra::Context& c) {
         co_return c.json(service::common::health(c));
     }

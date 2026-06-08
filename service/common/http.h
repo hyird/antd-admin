@@ -30,29 +30,26 @@ struct AppErrorDef {
     std::uint16_t status{400};
 };
 
-CYRA_MODEL(ErrorResponse,
-    CYRA_FIELD(code, cyra::Int64),
-    CYRA_FIELD(message, cyra::String)
-);
+CYRA_MODEL(ErrorResponse, CYRA_FIELD(code, cyra::Int64), CYRA_FIELD(message, cyra::String));
 
 inline std::int64_t defaultBusinessErrorCode(std::uint16_t status) {
     switch (status) {
-        case 400:
-        case 422:
-            return kBadRequestErrorCode;
-        case 401:
-            return kAuthUnauthorizedErrorCode;
-        case 403:
-            return kAuthPermissionDeniedErrorCode;
-        case 404:
-            return kNotFoundErrorCode;
-        case 500:
-        case 502:
-        case 503:
-        case 504:
-            return kServerErrorCode;
-        default:
-            return status >= 500 ? kServerErrorCode : kUnknownErrorCode;
+    case 400:
+    case 422:
+        return kBadRequestErrorCode;
+    case 401:
+        return kAuthUnauthorizedErrorCode;
+    case 403:
+        return kAuthPermissionDeniedErrorCode;
+    case 404:
+        return kNotFoundErrorCode;
+    case 500:
+    case 502:
+    case 503:
+    case 504:
+        return kServerErrorCode;
+    default:
+        return status >= 500 ? kServerErrorCode : kUnknownErrorCode;
     }
 }
 
@@ -62,8 +59,10 @@ inline std::int64_t normalizeBusinessErrorCode(std::string_view code, std::uint1
         const auto* first = code.data();
         const auto* last = first + code.size();
         const auto [ptr, ec] = std::from_chars(first, last, value);
-        if (ec == std::errc{} && ptr == last) return value;
-        if (code == "validation_failed") return kValidationErrorCode;
+        if (ec == std::errc{} && ptr == last)
+            return value;
+        if (code == "validation_failed")
+            return kValidationErrorCode;
     }
     return defaultBusinessErrorCode(status);
 }
@@ -72,8 +71,7 @@ inline std::int64_t normalizeBusinessErrorCode(std::string_view code, std::uint1
     throw cyra::HttpError(def.status, std::to_string(def.code), def.message);
 }
 
-[[noreturn]] inline void throwAppError(std::int64_t code,
-                                       std::string message,
+[[noreturn]] inline void throwAppError(std::int64_t code, std::string message,
                                        std::uint16_t status = 400) {
     throw cyra::HttpError(status, std::to_string(code), message);
 }
@@ -84,8 +82,7 @@ inline OperationResponse operation(cyra::Context& c, std::string_view message) {
     return response;
 }
 
-template <typename ResponseT, typename DataT>
-inline ResponseT ok(cyra::Context& c, DataT&& data) {
+template <typename ResponseT, typename DataT> inline ResponseT ok(cyra::Context& c, DataT&& data) {
     ResponseT response(c);
     response.code(0).message("ok").data(std::forward<DataT>(data));
     return response;
@@ -113,4 +110,4 @@ inline ErrorResponse error(cyra::Context& c, std::int64_t code, std::string_view
     return response;
 }
 
-}  // namespace service::common
+} // namespace service::common

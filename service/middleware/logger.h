@@ -44,16 +44,11 @@ inline void writeLogLine(std::ostream& out, std::string_view level, std::string_
     out << '[' << loggerTimestamp() << "] " << level << ' ' << message << '\n';
 }
 
-inline void logInfo(std::string_view message) {
-    writeLogLine(std::cout, "INFO", message);
-}
+inline void logInfo(std::string_view message) { writeLogLine(std::cout, "INFO", message); }
 
-inline void logError(std::string_view message) {
-    writeLogLine(std::cerr, "ERROR", message);
-}
+inline void logError(std::string_view message) { writeLogLine(std::cerr, "ERROR", message); }
 
-inline void logRequest(cyra::Context& c,
-                       std::uint16_t statusCode,
+inline void logRequest(cyra::Context& c, std::uint16_t statusCode,
                        std::chrono::steady_clock::time_point startedAt) noexcept {
     try {
         const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
@@ -61,12 +56,9 @@ inline void logRequest(cyra::Context& c,
 
         std::ostringstream message;
         const auto remote = c.remoteAddress();
-        message << (remote.empty() ? "-" : remote) << ' '
-                << cyra::methodName(c.req().method()) << ' '
-                << c.req().target() << ' '
-                << statusCode << ' '
-                << elapsed.count() / 1000 << '.'
-                << std::setfill('0') << std::setw(3) << elapsed.count() % 1000 << "ms";
+        message << (remote.empty() ? "-" : remote) << ' ' << cyra::methodName(c.req().method())
+                << ' ' << c.req().target() << ' ' << statusCode << ' ' << elapsed.count() / 1000
+                << '.' << std::setfill('0') << std::setw(3) << elapsed.count() % 1000 << "ms";
 
         if (statusCode >= 500) {
             logError(message.str());
@@ -78,7 +70,7 @@ inline void logRequest(cyra::Context& c,
 }
 
 class LoggerMiddleware final : public cyra::Middleware<LoggerMiddleware> {
-public:
+  public:
     cyra::Task<cyra::HttpResponse> handle(cyra::Context& c, const cyra::Next& next) {
         const auto startedAt = std::chrono::steady_clock::now();
         try {
@@ -95,4 +87,4 @@ public:
     }
 };
 
-}  // namespace service::middleware
+} // namespace service::middleware

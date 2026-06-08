@@ -351,4 +351,4 @@ WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_co
     },
 }};
 
-}  // namespace service::config
+} // namespace service::config

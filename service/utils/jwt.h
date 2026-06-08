@@ -19,21 +19,23 @@ struct JwtPayload {
     std::int64_t exp{0};
 };
 
-}  // namespace service::core
+} // namespace service::core
 
 namespace service::utils {
 
 class JwtExpiredError : public std::runtime_error {
-public:
+  public:
     using std::runtime_error::runtime_error;
 };
 
 class JwtInvalidError : public std::runtime_error {
-public:
+  public:
     using std::runtime_error::runtime_error;
 };
 
-namespace detail {
+} // namespace service::utils
+
+namespace service::jwt_detail {
 
 inline std::string accessSecret() {
     auto secret = cyra::app().env().get("JWT_SECRET");
@@ -49,18 +51,28 @@ inline std::string refreshSecret() {
 }
 
 inline std::chrono::seconds parseDuration(std::string_view value, std::chrono::seconds fallback) {
-    if (value.empty()) return fallback;
+    if (value.empty())
+        return fallback;
     const char suffix = value.back();
     std::string number(value);
     std::int64_t multiplier = 1;
     if (suffix == 's' || suffix == 'm' || suffix == 'h' || suffix == 'd') {
         number = value.substr(0, value.size() - 1);
         switch (suffix) {
-            case 's': multiplier = 1; break;
-            case 'm': multiplier = 60; break;
-            case 'h': multiplier = 60 * 60; break;
-            case 'd': multiplier = 60 * 60 * 24; break;
-            default: break;
+        case 's':
+            multiplier = 1;
+            break;
+        case 'm':
+            multiplier = 60;
+            break;
+        case 'h':
+            multiplier = 60 * 60;
+            break;
+        case 'd':
+            multiplier = 60 * 60 * 24;
+            break;
+        default:
+            break;
         }
     }
     try {
@@ -80,8 +92,7 @@ inline std::chrono::seconds refreshExpiresIn() {
                          std::chrono::seconds(60 * 60 * 24 * 7));
 }
 
-inline std::string sign(const service::core::JwtPayload& payload,
-                        const std::string& secret,
+inline std::string sign(const service::core::JwtPayload& payload, const std::string& secret,
                         std::chrono::seconds expiresIn) {
     cyra::JwtSignOptions options;
     options.secret = secret;
@@ -125,36 +136,38 @@ inline service::core::JwtPayload verify(const std::string& token, const std::str
                           .count();
         }
         if (out.user_id <= 0 || out.username.empty()) {
-            throw JwtInvalidError("invalid token payload");
+            throw utils::JwtInvalidError("invalid token payload");
         }
         return out;
-    } catch (const JwtInvalidError&) {
+    } catch (const utils::JwtInvalidError&) {
         throw;
     } catch (const std::exception& ex) {
         const std::string message(ex.what());
         if (message.find("expired") != std::string::npos) {
-            throw JwtExpiredError(message);
+            throw utils::JwtExpiredError(message);
         }
-        throw JwtInvalidError(message);
+        throw utils::JwtInvalidError(message);
     }
 }
 
-}  // namespace detail
+} // namespace service::jwt_detail
+
+namespace service::utils {
 
 inline std::string signAccessToken(const service::core::JwtPayload& payload) {
-    return detail::sign(payload, detail::accessSecret(), detail::accessExpiresIn());
+    return jwt_detail::sign(payload, jwt_detail::accessSecret(), jwt_detail::accessExpiresIn());
 }
 
 inline std::string signRefreshToken(const service::core::JwtPayload& payload) {
-    return detail::sign(payload, detail::refreshSecret(), detail::refreshExpiresIn());
+    return jwt_detail::sign(payload, jwt_detail::refreshSecret(), jwt_detail::refreshExpiresIn());
 }
 
 inline service::core::JwtPayload verifyAccessToken(const std::string& token) {
-    return detail::verify(token, detail::accessSecret());
+    return jwt_detail::verify(token, jwt_detail::accessSecret());
 }
 
 inline service::core::JwtPayload verifyRefreshToken(const std::string& token) {
-    return detail::verify(token, detail::refreshSecret());
+    return jwt_detail::verify(token, jwt_detail::refreshSecret());
 }
 
-}  // namespace service::utils
+} // namespace service::utils

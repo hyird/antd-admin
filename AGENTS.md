@@ -5,7 +5,7 @@
 前后端分离的 admin 脚手架。前端基于 React + Vite，后端用 **C++23 + cyra** 重写并通过 **vcpkg + CMake** 构建，目录组织与 main 分支保持一致。
 
 - **前端运行时**: Node.js + npm；React 19 / Vite / Ant Design 6 / Tailwind 4 / TanStack Query / Zustand
-- **后端运行时**: C++23 / cyra v0.1.13 / asio / mimalloc / MariaDB / OpenSSL / ZLIB
+- **后端运行时**: C++23 / cyra v0.0.1 / asio / mimalloc / MariaDB / OpenSSL / ZLIB
 - **构建产物**: `build/web/`（前端）；`build/server`（后端可执行文件）
 
 ## 开发者命令

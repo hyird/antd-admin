@@ -28,11 +28,14 @@ inline service::core::JwtPayload requireAuth(cyra::Context& c) {
     try {
         return service::utils::verifyAccessToken(token);
     } catch (const service::utils::JwtExpiredError&) {
-        service::common::throwAppError(service::common::kAuthTokenExpiredErrorCode, "Token已过期", 401);
+        service::common::throwAppError(service::common::kAuthTokenExpiredErrorCode, "Token已过期",
+                                       401);
     } catch (const service::utils::JwtInvalidError&) {
-        service::common::throwAppError(service::common::kAuthTokenInvalidErrorCode, "Token无效", 401);
+        service::common::throwAppError(service::common::kAuthTokenInvalidErrorCode, "Token无效",
+                                       401);
     } catch (...) {
-        service::common::throwAppError(service::common::kAuthTokenInvalidErrorCode, "Token无效", 401);
+        service::common::throwAppError(service::common::kAuthTokenInvalidErrorCode, "Token无效",
+                                       401);
     }
 }
 
@@ -41,11 +44,11 @@ inline const service::core::JwtPayload& currentUser(cyra::Context& c) {
 }
 
 class AuthMiddleware final : public cyra::Middleware<AuthMiddleware> {
-public:
+  public:
     cyra::Task<cyra::HttpResponse> handle(cyra::Context& c, const cyra::Next& next) {
         c.setValid(cyra::Form, requireAuth(c));
         co_return co_await next(c);
     }
 };
 
-}  // namespace service::middleware
+} // namespace service::middleware

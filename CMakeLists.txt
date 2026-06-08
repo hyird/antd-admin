@@ -86,7 +86,7 @@ set(CYRA_ENABLE_STD_REGEX_RULES OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
     cyra
     GIT_REPOSITORY https://github.com/hyird/cyra.git
-    GIT_TAG v0.1.14
+    GIT_TAG v0.0.1
 )
 FetchContent_MakeAvailable(cyra)
 

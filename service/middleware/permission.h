@@ -21,7 +21,7 @@
 namespace service::middleware {
 
 class PermissionService {
-public:
+  public:
     static PermissionService& instance() {
         static PermissionService svc;
         return svc;
@@ -32,24 +32,26 @@ public:
         co_return data.is_superadmin || data.permissions.count(std::string(code)) > 0;
     }
 
-    cyra::Task<bool> hasAnyPermission(cyra::Context& c,
-                                      std::int64_t userId,
+    cyra::Task<bool> hasAnyPermission(cyra::Context& c, std::int64_t userId,
                                       std::initializer_list<std::string_view> codes) {
         auto data = co_await loadUser(c, userId);
-        if (data.is_superadmin) co_return true;
+        if (data.is_superadmin)
+            co_return true;
         for (auto code : codes) {
-            if (data.permissions.count(std::string(code))) co_return true;
+            if (data.permissions.count(std::string(code)))
+                co_return true;
         }
         co_return false;
     }
 
-    cyra::Task<bool> hasAllPermissions(cyra::Context& c,
-                                       std::int64_t userId,
+    cyra::Task<bool> hasAllPermissions(cyra::Context& c, std::int64_t userId,
                                        std::initializer_list<std::string_view> codes) {
         auto data = co_await loadUser(c, userId);
-        if (data.is_superadmin) co_return true;
+        if (data.is_superadmin)
+            co_return true;
         for (auto code : codes) {
-            if (!data.permissions.count(std::string(code))) co_return false;
+            if (!data.permissions.count(std::string(code)))
+                co_return false;
         }
         co_return true;
     }
@@ -64,7 +66,7 @@ public:
         cache_.clear();
     }
 
-private:
+  private:
     struct Snapshot {
         std::unordered_set<std::string> permissions;
         bool is_superadmin{false};
@@ -86,14 +88,15 @@ private:
         snap.expire_at = std::chrono::steady_clock::now() + kTtl;
 
         auto db = c.db();
-        const auto roles = co_await db.query(
-            "SELECT r.code, r.status FROM sys_role r "
-            "INNER JOIN sys_user_role ur ON r.id = ur.role_id "
-            "WHERE ur.user_id = ? AND r.deleted_at IS NULL",
-            {cyra::DbValue{userId}});
+        const auto roles = co_await db.query("SELECT r.code, r.status FROM sys_role r "
+                                             "INNER JOIN sys_user_role ur ON r.id = ur.role_id "
+                                             "WHERE ur.user_id = ? AND r.deleted_at IS NULL",
+                                             {cyra::DbValue{userId}});
         for (const auto& row : roles.rows()) {
-            if (row.size() < 2) continue;
-            if (row[1].text() == "enabled" && row[0].text() == service::common::kSuperAdminRoleCode) {
+            if (row.size() < 2)
+                continue;
+            if (row[1].text() == "enabled" &&
+                row[0].text() == service::common::kSuperAdminRoleCode) {
                 snap.is_superadmin = true;
             }
         }
@@ -113,7 +116,8 @@ private:
             "  AND m.permission_code IS NOT NULL AND m.permission_code != ''",
             {cyra::DbValue{userId}});
         for (const auto& row : perms.rows()) {
-            if (row.empty() || row[0].isNull()) continue;
+            if (row.empty() || row[0].isNull())
+                continue;
             snap.permissions.emplace(row[0].text());
         }
 
@@ -137,7 +141,8 @@ inline cyra::Task<void> requirePermission(cyra::Context& c, std::string_view cod
     }
     const bool allowed = co_await permissionService().hasPermission(c, jwt.user_id, code);
     if (!allowed) {
-        service::common::throwAppError(service::common::kAuthPermissionDeniedErrorCode, "无权限", 403);
+        service::common::throwAppError(service::common::kAuthPermissionDeniedErrorCode, "无权限",
+                                       403);
     }
 }
 
@@ -149,7 +154,8 @@ inline cyra::Task<void> requireAnyPermission(cyra::Context& c,
     }
     const bool allowed = co_await permissionService().hasAnyPermission(c, jwt.user_id, codes);
     if (!allowed) {
-        service::common::throwAppError(service::common::kAuthPermissionDeniedErrorCode, "无权限", 403);
+        service::common::throwAppError(service::common::kAuthPermissionDeniedErrorCode, "无权限",
+                                       403);
     }
 }
 
@@ -161,8 +167,9 @@ inline cyra::Task<void> requireAllPermissions(cyra::Context& c,
     }
     const bool allowed = co_await permissionService().hasAllPermissions(c, jwt.user_id, codes);
     if (!allowed) {
-        service::common::throwAppError(service::common::kAuthPermissionDeniedErrorCode, "无权限", 403);
+        service::common::throwAppError(service::common::kAuthPermissionDeniedErrorCode, "无权限",
+                                       403);
     }
 }
 
-}  // namespace service::middleware
+} // namespace service::middleware
