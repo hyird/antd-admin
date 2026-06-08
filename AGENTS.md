@@ -23,14 +23,19 @@ npm run typecheck    # tsc --noEmit
 
 ```bash
 # 配置 + 构建（vcpkg 自带 manifest 模式自动解析依赖）
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+  -DVCPKG_TARGET_TRIPLET=x64-windows-static
 cmake --build build --config Release
 
 # 运行
 ./build/server                  # 默认监听 0.0.0.0:1102
 ```
 
-如果 `VCPKG_ROOT` 未设置，CMakeLists.txt 会在项目相邻目录、`/opt/vcpkg`、Homebrew 路径、`~/vcpkg`、Windows 常见路径，以及 `PATH` 中的 `vcpkg` 可执行文件位置自动探测。
+`.vscode/` 已被 Git 忽略。VSCode/CMake Tools 构建时可在本地工作区 settings 中配置
+`CMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake` 与
+`VCPKG_TARGET_TRIPLET=x64-windows-static`。命令行构建时请先设置 `VCPKG_ROOT`，
+或手动传入等价的 `CMAKE_TOOLCHAIN_FILE`。
 
 ## 环境配置
 

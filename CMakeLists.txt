@@ -7,59 +7,6 @@ if(POLICY CMP0091)
     cmake_policy(SET CMP0091 NEW)
 endif()
 
-if(NOT CMAKE_TOOLCHAIN_FILE)
-    set(VCPKG_ROOT_CANDIDATES
-        "$ENV{VCPKG_ROOT}"
-        "$ENV{VCPKG_INSTALLATION_ROOT}"
-        "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg"
-        "${CMAKE_CURRENT_SOURCE_DIR}/../vcpkg"
-        "$ENV{HOME}/vcpkg"
-        "$ENV{HOME}/Dev/vcpkg"
-        "$ENV{HOME}/Workspace/vcpkg"
-        "/opt/vcpkg"
-        "/opt/homebrew/opt/vcpkg"
-        "/opt/homebrew/share/vcpkg"
-        "/usr/local/opt/vcpkg"
-        "/usr/local/share/vcpkg"
-        "/usr/local/vcpkg"
-        "D:/Dev/vcpkg"
-        "D:/vcpkg"
-        "C:/vcpkg"
-    )
-
-    find_program(VCPKG_EXECUTABLE NAMES vcpkg vcpkg.exe)
-    if(VCPKG_EXECUTABLE)
-        get_filename_component(VCPKG_EXECUTABLE_REAL "${VCPKG_EXECUTABLE}" REALPATH)
-        get_filename_component(VCPKG_EXECUTABLE_DIR "${VCPKG_EXECUTABLE_REAL}" DIRECTORY)
-        get_filename_component(VCPKG_EXECUTABLE_PARENT "${VCPKG_EXECUTABLE_DIR}" DIRECTORY)
-        list(APPEND VCPKG_ROOT_CANDIDATES
-            "${VCPKG_EXECUTABLE_DIR}"
-            "${VCPKG_EXECUTABLE_PARENT}"
-            "${VCPKG_EXECUTABLE_PARENT}/share/vcpkg"
-        )
-    endif()
-
-    foreach(VCPKG_ROOT_CANDIDATE IN LISTS VCPKG_ROOT_CANDIDATES)
-        if(NOT VCPKG_ROOT_CANDIDATE)
-            continue()
-        endif()
-
-        if(EXISTS "${VCPKG_ROOT_CANDIDATE}/scripts/buildsystems/vcpkg.cmake")
-            set(VCPKG_ROOT "${VCPKG_ROOT_CANDIDATE}" CACHE PATH "vcpkg root")
-            set(CMAKE_TOOLCHAIN_FILE
-                "${VCPKG_ROOT_CANDIDATE}/scripts/buildsystems/vcpkg.cmake"
-                CACHE FILEPATH "vcpkg toolchain file"
-            )
-            message(STATUS "Using vcpkg toolchain: ${CMAKE_TOOLCHAIN_FILE}")
-            break()
-        endif()
-    endforeach()
-endif()
-
-if(NOT VCPKG_TARGET_TRIPLET AND WIN32)
-    set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "")
-endif()
-
 project(antd_admin_service VERSION 0.1.0 LANGUAGES CXX)
 
 include(FetchContent)
@@ -91,31 +38,42 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(cyra)
 
 if(ANTD_ADMIN_BUILD_WEB)
-    find_program(NPM_EXECUTABLE NAMES npm npm.cmd)
+    if(WIN32)
+        find_program(NPM_EXECUTABLE NAMES npm.cmd npm)
+    else()
+        find_program(NPM_EXECUTABLE NAMES npm)
+    endif()
 
     if(NOT NPM_EXECUTABLE)
         message(FATAL_ERROR "npm is required to build the frontend")
     endif()
 
+    if(WIN32 AND NOT NPM_EXECUTABLE MATCHES "\\.cmd$")
+        if(EXISTS "${NPM_EXECUTABLE}.cmd")
+            set(NPM_EXECUTABLE "${NPM_EXECUTABLE}.cmd")
+        else()
+            get_filename_component(NPM_EXECUTABLE_DIR "${NPM_EXECUTABLE}" DIRECTORY)
+            if(EXISTS "${NPM_EXECUTABLE_DIR}/npm.cmd")
+                set(NPM_EXECUTABLE "${NPM_EXECUTABLE_DIR}/npm.cmd")
+            endif()
+        endif()
+    endif()
+
     message(STATUS "Using npm: ${NPM_EXECUTABLE}")
 
-    if(WIN32)
-        add_custom_target(antd_admin_web ALL
-            COMMAND cmd /c "chcp 65001 >nul 2>&1 && \"${NPM_EXECUTABLE}\" run build"
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-            COMMENT "Building frontend"
-        )
-    else()
-        add_custom_target(antd_admin_web ALL
-            COMMAND "${NPM_EXECUTABLE}" run build
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-            COMMENT "Building frontend"
-            VERBATIM
-        )
-    endif()
+    add_custom_target(antd_admin_web ALL
+        COMMAND "${CMAKE_COMMAND}" -E env
+            NO_COLOR=1
+            FORCE_COLOR=0
+            npm_config_color=false
+            "${NPM_EXECUTABLE}" run build -- --clearScreen false --logLevel warn
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        COMMENT "Building frontend"
+        VERBATIM
+    )
 endif()
 
-# 后端是 header-only：只有 service/server.cpp 一个翻译单元，业务模块通过 .h 内联实现。
+# Backend is header-only; server.cpp is the single translation unit.
 add_executable(antd_admin_service service/server.cpp)
 
 target_include_directories(antd_admin_service PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
