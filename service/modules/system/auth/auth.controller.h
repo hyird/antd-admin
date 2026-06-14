@@ -2,10 +2,10 @@
 
 #include <utility>
 
-#include <cyra/app/Task.h>
-#include <cyra/http/Context.h>
-#include <cyra/http/Controller.h>
-#include <cyra/http/HttpTypes.h>
+#include <ruvia/app/Task.h>
+#include <ruvia/http/Context.h>
+#include <ruvia/http/Controller.h>
+#include <ruvia/http/HttpTypes.h>
 
 #include "service/common/http.h"
 #include "service/middleware/auth.h"
@@ -14,32 +14,32 @@
 
 namespace service::auth {
 
-class AuthController final : public cyra::Controller<AuthController> {
+class AuthController final : public ruvia::Controller<AuthController> {
   public:
-    CYRA_CONTROLLER_GROUP("/api/auth")
-    CYRA_ROUTES_BEGIN
-    CYRA_POST("/login", login, LoginValidator);
-    CYRA_POST("/refresh", refresh, RefreshValidator);
-    CYRA_POST("/logout", logout);
-    CYRA_GET("/me", me, service::middleware::AuthMiddleware);
-    CYRA_ROUTES_END
+    RUVIA_CONTROLLER_GROUP("/api/auth")
+    RUVIA_ROUTES_BEGIN
+    RUVIA_POST("/login", login, LoginValidator);
+    RUVIA_POST("/refresh", refresh, RefreshValidator);
+    RUVIA_POST("/logout", logout);
+    RUVIA_GET("/me", me, service::middleware::AuthMiddleware);
+    RUVIA_ROUTES_END
 
   private:
-    cyra::Task<cyra::HttpResponse> login(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> login(ruvia::Context& c) {
         auto data = co_await authService().login(c, c.valid<LoginBody>());
         co_return c.json(service::common::ok<LoginResponse>(c, std::move(data)));
     }
 
-    cyra::Task<cyra::HttpResponse> refresh(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> refresh(ruvia::Context& c) {
         auto data = co_await authService().refresh(c, c.valid<RefreshBody>());
         co_return c.json(service::common::ok<LoginResponse>(c, std::move(data)));
     }
 
-    cyra::Task<cyra::HttpResponse> logout(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> logout(ruvia::Context& c) {
         co_return c.json(service::common::operation(c, "退出成功"));
     }
 
-    cyra::Task<cyra::HttpResponse> me(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> me(ruvia::Context& c) {
         const auto& jwt = service::middleware::currentUser(c);
         auto data = co_await authService().getCurrentUser(c, jwt.user_id);
         co_return c.json(service::common::ok<CurrentUserResponse>(c, std::move(data)));

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <cyra/app/Task.h>
-#include <cyra/http/Context.h>
-#include <cyra/http/Controller.h>
-#include <cyra/http/HttpTypes.h>
+#include <ruvia/app/Task.h>
+#include <ruvia/http/Context.h>
+#include <ruvia/http/Controller.h>
+#include <ruvia/http/HttpTypes.h>
 
 #include "service/common/http.h"
 #include "service/common/types.h"
@@ -14,20 +14,20 @@
 
 namespace service::dept {
 
-class DeptController final : public cyra::Controller<DeptController> {
+class DeptController final : public ruvia::Controller<DeptController> {
   public:
-    CYRA_CONTROLLER_GROUP("/api/depts", service::middleware::AuthMiddleware)
-    CYRA_ROUTES_BEGIN
-    CYRA_GET("/", list);
-    CYRA_GET("/tree", tree);
-    CYRA_GET("/:id", detail);
-    CYRA_POST("/", create, CreateDeptValidator);
-    CYRA_PUT("/:id", update, UpdateDeptValidator);
-    CYRA_DELETE("/:id", remove);
-    CYRA_ROUTES_END
+    RUVIA_CONTROLLER_GROUP("/api/depts", service::middleware::AuthMiddleware)
+    RUVIA_ROUTES_BEGIN
+    RUVIA_GET("/", list);
+    RUVIA_GET("/tree", tree);
+    RUVIA_GET("/:id", detail);
+    RUVIA_POST("/", create, CreateDeptValidator);
+    RUVIA_PUT("/:id", update, UpdateDeptValidator);
+    RUVIA_DELETE("/:id", remove);
+    RUVIA_ROUTES_END
 
   private:
-    cyra::Task<cyra::HttpResponse> list(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> list(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:dept:query");
         auto pageSize = c.query("pageSize").toInt64();
         if (!pageSize)
@@ -41,14 +41,14 @@ class DeptController final : public cyra::Controller<DeptController> {
                                            c.query("parent_id").toInt64())));
     }
 
-    cyra::Task<cyra::HttpResponse> tree(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> tree(ruvia::Context& c) {
         co_await service::middleware::requireAnyPermission(
             c, {"system:dept:query", "system:user:add", "system:user:edit"});
         co_return c.json(service::common::ok<DeptListResponse>(
             c, co_await deptService().getTree(c, c.query("status").toStringView())));
     }
 
-    cyra::Task<cyra::HttpResponse> detail(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> detail(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:dept:query");
         const auto id = c.param("id").toInt64();
         if (!id || *id <= 0)
@@ -58,13 +58,13 @@ class DeptController final : public cyra::Controller<DeptController> {
             service::common::ok<DeptDetailResponse>(c, co_await deptService().getById(c, *id)));
     }
 
-    cyra::Task<cyra::HttpResponse> create(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> create(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:dept:add");
         co_await deptService().create(c, c.valid<CreateDeptBody>());
         co_return c.json(service::common::operation(c, "创建成功"));
     }
 
-    cyra::Task<cyra::HttpResponse> update(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> update(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:dept:edit");
         const auto id = c.param("id").toInt64();
         if (!id || *id <= 0)
@@ -74,7 +74,7 @@ class DeptController final : public cyra::Controller<DeptController> {
         co_return c.json(service::common::operation(c, "更新成功"));
     }
 
-    cyra::Task<cyra::HttpResponse> remove(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> remove(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:dept:delete");
         const auto id = c.param("id").toInt64();
         if (!id || *id <= 0)

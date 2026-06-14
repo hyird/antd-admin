@@ -5,7 +5,7 @@
 #include <string>
 #include <string_view>
 
-#include <cyra/http/Model.h>
+#include <ruvia/http/Model.h>
 
 #include "service/modules/system/role/role.types.h"
 
@@ -21,42 +21,42 @@ inline bool isPhoneNumber(std::string_view value) {
     return true;
 }
 
-CYRA_MODEL(CreateUserBody, CYRA_FIELD(username, cyra::String), CYRA_FIELD(password, cyra::String),
-           CYRA_FIELD(nickname, cyra::String), CYRA_FIELD(phone, cyra::String),
-           CYRA_FIELD(email, cyra::String), CYRA_FIELD_NAME("dept_id", deptId, cyra::Int64),
-           CYRA_FIELD(status, cyra::String),
-           CYRA_FIELD_NAME("role_ids", roleIds, cyra::Array<cyra::Int64>));
+RUVIA_MODEL(CreateUserBody, RUVIA_FIELD(username, ruvia::String), RUVIA_FIELD(password, ruvia::String),
+           RUVIA_FIELD(nickname, ruvia::String), RUVIA_FIELD(phone, ruvia::String),
+           RUVIA_FIELD(email, ruvia::String), RUVIA_FIELD_NAME("dept_id", deptId, ruvia::Int64),
+           RUVIA_FIELD(status, ruvia::String),
+           RUVIA_FIELD_NAME("role_ids", roleIds, ruvia::Array<ruvia::Int64>));
 
-CYRA_MODEL(UpdateUserBody, CYRA_FIELD(nickname, cyra::String), CYRA_FIELD(phone, cyra::String),
-           CYRA_FIELD(email, cyra::String), CYRA_FIELD_NAME("dept_id", deptId, cyra::Int64),
-           CYRA_FIELD(status, cyra::String), CYRA_FIELD(password, cyra::String),
-           CYRA_FIELD_NAME("role_ids", roleIds, cyra::Array<cyra::Int64>));
+RUVIA_MODEL(UpdateUserBody, RUVIA_FIELD(nickname, ruvia::String), RUVIA_FIELD(phone, ruvia::String),
+           RUVIA_FIELD(email, ruvia::String), RUVIA_FIELD_NAME("dept_id", deptId, ruvia::Int64),
+           RUVIA_FIELD(status, ruvia::String), RUVIA_FIELD(password, ruvia::String),
+           RUVIA_FIELD_NAME("role_ids", roleIds, ruvia::Array<ruvia::Int64>));
 
-CYRA_MODEL(UserOptionDto, CYRA_FIELD(id, cyra::Int64), CYRA_FIELD(username, cyra::String),
-           CYRA_FIELD(nickname, cyra::String, CYRA_OMIT_EMPTY),
-           CYRA_FIELD(phone, cyra::String, CYRA_OMIT_EMPTY),
-           CYRA_FIELD(email, cyra::String, CYRA_OMIT_EMPTY));
+RUVIA_MODEL(UserOptionDto, RUVIA_FIELD(id, ruvia::Int64), RUVIA_FIELD(username, ruvia::String),
+           RUVIA_FIELD(nickname, ruvia::String, RUVIA_OMIT_EMPTY),
+           RUVIA_FIELD(phone, ruvia::String, RUVIA_OMIT_EMPTY),
+           RUVIA_FIELD(email, ruvia::String, RUVIA_OMIT_EMPTY));
 
-CYRA_MODEL(UserItemDto, CYRA_FIELD(id, cyra::Int64), CYRA_FIELD(username, cyra::String),
-           CYRA_FIELD(nickname, cyra::String, CYRA_OMIT_EMPTY),
-           CYRA_FIELD(phone, cyra::String, CYRA_OMIT_EMPTY),
-           CYRA_FIELD(email, cyra::String, CYRA_OMIT_EMPTY),
-           CYRA_FIELD_NAME("dept_id", deptId, cyra::Int64, CYRA_EMIT_NULL),
-           CYRA_FIELD_NAME("dept_name", deptName, cyra::String, CYRA_OMIT_EMPTY),
-           CYRA_FIELD(status, cyra::String), CYRA_FIELD(roles, cyra::List<role::RoleOptionDto>));
+RUVIA_MODEL(UserItemDto, RUVIA_FIELD(id, ruvia::Int64), RUVIA_FIELD(username, ruvia::String),
+           RUVIA_FIELD(nickname, ruvia::String, RUVIA_OMIT_EMPTY),
+           RUVIA_FIELD(phone, ruvia::String, RUVIA_OMIT_EMPTY),
+           RUVIA_FIELD(email, ruvia::String, RUVIA_OMIT_EMPTY),
+           RUVIA_FIELD_NAME("dept_id", deptId, ruvia::Int64, RUVIA_EMIT_NULL),
+           RUVIA_FIELD_NAME("dept_name", deptName, ruvia::String, RUVIA_OMIT_EMPTY),
+           RUVIA_FIELD(status, ruvia::String), RUVIA_FIELD(roles, ruvia::List<role::RoleOptionDto>));
 
-CYRA_MODEL(UserPageDataDto, CYRA_FIELD(list, cyra::List<UserItemDto>),
-           CYRA_FIELD(total, cyra::Int64), CYRA_FIELD(page, cyra::Int64),
-           CYRA_FIELD_NAME("pageSize", pageSize, cyra::Int64),
-           CYRA_FIELD_NAME("totalPages", totalPages, cyra::Int64));
+RUVIA_MODEL(UserPageDataDto, RUVIA_FIELD(list, ruvia::List<UserItemDto>),
+           RUVIA_FIELD(total, ruvia::Int64), RUVIA_FIELD(page, ruvia::Int64),
+           RUVIA_FIELD_NAME("pageSize", pageSize, ruvia::Int64),
+           RUVIA_FIELD_NAME("totalPages", totalPages, ruvia::Int64));
 
-CYRA_MODEL(UserPageResponse, CYRA_FIELD(code, cyra::Int64), CYRA_FIELD(message, cyra::String),
-           CYRA_FIELD(data, UserPageDataDto));
+RUVIA_MODEL(UserPageResponse, RUVIA_FIELD(code, ruvia::Int64), RUVIA_FIELD(message, ruvia::String),
+           RUVIA_FIELD(data, UserPageDataDto));
 
-CYRA_MODEL(UserDetailResponse, CYRA_FIELD(code, cyra::Int64), CYRA_FIELD(message, cyra::String),
-           CYRA_FIELD(data, UserItemDto));
+RUVIA_MODEL(UserDetailResponse, RUVIA_FIELD(code, ruvia::Int64), RUVIA_FIELD(message, ruvia::String),
+           RUVIA_FIELD(data, UserItemDto));
 
-CYRA_MODEL(UserOptionsResponse, CYRA_FIELD(code, cyra::Int64), CYRA_FIELD(message, cyra::String),
-           CYRA_FIELD(data, cyra::List<UserOptionDto>));
+RUVIA_MODEL(UserOptionsResponse, RUVIA_FIELD(code, ruvia::Int64), RUVIA_FIELD(message, ruvia::String),
+           RUVIA_FIELD(data, ruvia::List<UserOptionDto>));
 
 } // namespace service::user

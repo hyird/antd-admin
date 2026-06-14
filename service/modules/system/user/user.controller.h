@@ -1,9 +1,9 @@
 #pragma once
 
-#include <cyra/app/Task.h>
-#include <cyra/http/Context.h>
-#include <cyra/http/Controller.h>
-#include <cyra/http/HttpTypes.h>
+#include <ruvia/app/Task.h>
+#include <ruvia/http/Context.h>
+#include <ruvia/http/Controller.h>
+#include <ruvia/http/HttpTypes.h>
 
 #include "service/common/http.h"
 #include "service/common/types.h"
@@ -14,20 +14,20 @@
 
 namespace service::user {
 
-class UserController final : public cyra::Controller<UserController> {
+class UserController final : public ruvia::Controller<UserController> {
   public:
-    CYRA_CONTROLLER_GROUP("/api/users", service::middleware::AuthMiddleware)
-    CYRA_ROUTES_BEGIN
-    CYRA_GET("/", list);
-    CYRA_GET("/options", options);
-    CYRA_GET("/:id", detail);
-    CYRA_POST("/", create, CreateUserValidator);
-    CYRA_PUT("/:id", update, UpdateUserValidator);
-    CYRA_DELETE("/:id", remove);
-    CYRA_ROUTES_END
+    RUVIA_CONTROLLER_GROUP("/api/users", service::middleware::AuthMiddleware)
+    RUVIA_ROUTES_BEGIN
+    RUVIA_GET("/", list);
+    RUVIA_GET("/options", options);
+    RUVIA_GET("/:id", detail);
+    RUVIA_POST("/", create, CreateUserValidator);
+    RUVIA_PUT("/:id", update, UpdateUserValidator);
+    RUVIA_DELETE("/:id", remove);
+    RUVIA_ROUTES_END
 
   private:
-    cyra::Task<cyra::HttpResponse> list(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> list(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:user:query");
         auto pageSize = c.query("pageSize").toInt64();
         if (!pageSize)
@@ -41,7 +41,7 @@ class UserController final : public cyra::Controller<UserController> {
                                            c.query("dept_id").toInt64())));
     }
 
-    cyra::Task<cyra::HttpResponse> options(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> options(ruvia::Context& c) {
         co_await service::middleware::requireAnyPermission(
             c, {"system:user:query", "system:user:add", "system:user:edit", "system:dept:query",
                 "system:dept:add", "system:dept:edit"});
@@ -49,7 +49,7 @@ class UserController final : public cyra::Controller<UserController> {
             c, co_await userService().listOptions(c, c.query("keyword").toStringView())));
     }
 
-    cyra::Task<cyra::HttpResponse> detail(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> detail(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:user:query");
         const auto id = c.param("id").toInt64();
         if (!id || *id <= 0)
@@ -59,13 +59,13 @@ class UserController final : public cyra::Controller<UserController> {
             service::common::ok<UserDetailResponse>(c, co_await userService().getById(c, *id)));
     }
 
-    cyra::Task<cyra::HttpResponse> create(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> create(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:user:add");
         co_await userService().create(c, c.valid<CreateUserBody>());
         co_return c.json(service::common::operation(c, "创建成功"));
     }
 
-    cyra::Task<cyra::HttpResponse> update(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> update(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:user:edit");
         const auto id = c.param("id").toInt64();
         if (!id || *id <= 0)
@@ -75,7 +75,7 @@ class UserController final : public cyra::Controller<UserController> {
         co_return c.json(service::common::operation(c, "更新成功"));
     }
 
-    cyra::Task<cyra::HttpResponse> remove(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> remove(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:user:delete");
         const auto id = c.param("id").toInt64();
         if (!id || *id <= 0)

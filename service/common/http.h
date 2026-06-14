@@ -6,9 +6,9 @@
 #include <string_view>
 #include <utility>
 
-#include <cyra/http/Context.h>
-#include <cyra/http/Error.h>
-#include <cyra/http/HttpTypes.h>
+#include <ruvia/http/Context.h>
+#include <ruvia/http/Error.h>
+#include <ruvia/http/HttpTypes.h>
 
 #include "service/common/types.h"
 
@@ -30,7 +30,7 @@ struct AppErrorDef {
     std::uint16_t status{400};
 };
 
-CYRA_MODEL(ErrorResponse, CYRA_FIELD(code, cyra::Int64), CYRA_FIELD(message, cyra::String));
+RUVIA_MODEL(ErrorResponse, RUVIA_FIELD(code, ruvia::Int64), RUVIA_FIELD(message, ruvia::String));
 
 inline std::int64_t defaultBusinessErrorCode(std::uint16_t status) {
     switch (status) {
@@ -68,27 +68,27 @@ inline std::int64_t normalizeBusinessErrorCode(std::string_view code, std::uint1
 }
 
 [[noreturn]] inline void throwAppError(const AppErrorDef& def) {
-    throw cyra::HttpError(def.status, std::to_string(def.code), def.message);
+    throw ruvia::HttpError(def.status, std::to_string(def.code), def.message);
 }
 
 [[noreturn]] inline void throwAppError(std::int64_t code, std::string message,
                                        std::uint16_t status = 400) {
-    throw cyra::HttpError(status, std::to_string(code), message);
+    throw ruvia::HttpError(status, std::to_string(code), message);
 }
 
-inline OperationResponse operation(cyra::Context& c, std::string_view message) {
+inline OperationResponse operation(ruvia::Context& c, std::string_view message) {
     OperationResponse response(c);
     response.code(0).message(message);
     return response;
 }
 
-template <typename ResponseT, typename DataT> inline ResponseT ok(cyra::Context& c, DataT&& data) {
+template <typename ResponseT, typename DataT> inline ResponseT ok(ruvia::Context& c, DataT&& data) {
     ResponseT response(c);
     response.code(0).message("ok").data(std::forward<DataT>(data));
     return response;
 }
 
-inline HealthResponse health(cyra::Context& c) {
+inline HealthResponse health(ruvia::Context& c) {
     HealthData data(c);
     data.status("ok");
     HealthResponse response(c);
@@ -96,15 +96,15 @@ inline HealthResponse health(cyra::Context& c) {
     return response;
 }
 
-inline CountResponse count(cyra::Context& c, std::int64_t createdCount, std::string_view message) {
+inline CountResponse count(ruvia::Context& c, std::int64_t createdCount, std::string_view message) {
     CountData data(c);
-    data.createdCount(static_cast<cyra::Int64>(createdCount));
+    data.createdCount(static_cast<ruvia::Int64>(createdCount));
     CountResponse response(c);
     response.code(0).message(message).data(std::move(data));
     return response;
 }
 
-inline ErrorResponse error(cyra::Context& c, std::int64_t code, std::string_view message) {
+inline ErrorResponse error(ruvia::Context& c, std::int64_t code, std::string_view message) {
     ErrorResponse response(c);
     response.code(code).message(message);
     return response;

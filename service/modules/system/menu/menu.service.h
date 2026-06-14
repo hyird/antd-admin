@@ -9,9 +9,9 @@
 #include <utility>
 #include <vector>
 
-#include <cyra/app/Task.h>
-#include <cyra/db/Db.h>
-#include <cyra/http/Context.h>
+#include <ruvia/app/Task.h>
+#include <ruvia/db/Db.h>
+#include <ruvia/http/Context.h>
 
 #include "service/common/http.h"
 #include "service/middleware/permission.h"
@@ -28,23 +28,23 @@ class MenuService {
     }
 
     template <typename Rows>
-    static cyra::List<MenuDto> flatFromRows(cyra::Context& c, const Rows& rows) {
+    static ruvia::List<MenuDto> flatFromRows(ruvia::Context& c, const Rows& rows) {
         return buildFlatList(c, rowsToRecords(rows));
     }
 
     template <typename Rows>
-    static cyra::List<MenuDto> treeFromRows(cyra::Context& c, const Rows& rows) {
+    static ruvia::List<MenuDto> treeFromRows(ruvia::Context& c, const Rows& rows) {
         return buildTree(c, rowsToRecords(rows));
     }
 
-    cyra::Task<MenuPageDataDto> list(cyra::Context& c, std::int64_t page, std::int64_t pageSize,
+    ruvia::Task<MenuPageDataDto> list(ruvia::Context& c, std::int64_t page, std::int64_t pageSize,
                                      std::int64_t skip, const std::optional<std::string>& keyword,
                                      bool paginated, std::optional<std::string_view> status,
                                      std::optional<std::int64_t> parentId) {
         auto db = c.db();
 
         std::string where = " FROM sys_menu m WHERE m.deleted_at IS NULL";
-        std::vector<cyra::DbValue> params;
+        std::vector<ruvia::DbValue> params;
         if (keyword) {
             where += " AND (m.name LIKE ? OR m.path LIKE ? OR m.component LIKE ? OR "
                      "m.permission_code LIKE ?)";
@@ -80,10 +80,10 @@ class MenuService {
         const auto rs = co_await db.query(sql, params);
 
         MenuPageDataDto result(c);
-        result.total(static_cast<cyra::Int64>(total))
-            .page(static_cast<cyra::Int64>(page))
-            .pageSize(static_cast<cyra::Int64>(pageSize))
-            .totalPages(static_cast<cyra::Int64>(
+        result.total(static_cast<ruvia::Int64>(total))
+            .page(static_cast<ruvia::Int64>(page))
+            .pageSize(static_cast<ruvia::Int64>(pageSize))
+            .totalPages(static_cast<ruvia::Int64>(
                 paginated && pageSize > 0 ? (total + pageSize - 1) / pageSize : 1));
 
         auto& list = result.list().ensure();
@@ -94,13 +94,13 @@ class MenuService {
         co_return result;
     }
 
-    cyra::Task<cyra::List<MenuDto>> getTree(cyra::Context& c,
+    ruvia::Task<ruvia::List<MenuDto>> getTree(ruvia::Context& c,
                                             std::optional<std::string_view> status) {
         auto db = c.db();
         std::string sql =
             "SELECT id, name, path, icon, parent_id, `order`, type, component, status, "
             "       permission_code, is_default FROM sys_menu WHERE deleted_at IS NULL";
-        std::vector<cyra::DbValue> params;
+        std::vector<ruvia::DbValue> params;
         if (status && !status->empty()) {
             sql += " AND status = ?";
             params.emplace_back(std::string(*status));
@@ -110,13 +110,13 @@ class MenuService {
         co_return buildTree(c, rowsToRecords(rs.rows()));
     }
 
-    cyra::Task<MenuDto> getDetail(cyra::Context& c, std::int64_t id) {
+    ruvia::Task<MenuDto> getDetail(ruvia::Context& c, std::int64_t id) {
         auto db = c.db();
         const auto rs = co_await db.query(
             "SELECT id, name, path, icon, parent_id, `order`, type, component, status, "
             "       permission_code, is_default FROM sys_menu "
             "WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-            {cyra::DbValue{id}});
+            {ruvia::DbValue{id}});
         if (rs.rows().empty())
             service::common::throwAppError(MenuError::MENU_NOT_FOUND);
 
@@ -125,7 +125,7 @@ class MenuService {
         co_return out;
     }
 
-    cyra::Task<void> create(cyra::Context& c, const CreateMenuBody& body) {
+    ruvia::Task<void> create(ruvia::Context& c, const CreateMenuBody& body) {
         auto db = c.db();
         const std::string type = body.type() ? std::string(body.type()->view()) : "menu";
 
@@ -133,7 +133,7 @@ class MenuService {
         if (body.parentId()) {
             const auto prs =
                 co_await db.query("SELECT type FROM sys_menu WHERE id = ? AND deleted_at IS NULL",
-                                  {cyra::DbValue{static_cast<std::int64_t>(*body.parentId())}});
+                                  {ruvia::DbValue{static_cast<std::int64_t>(*body.parentId())}});
             if (prs.rows().empty())
                 service::common::throwAppError(MenuError::MENU_PARENT_NOT_FOUND);
             parentType = std::string(prs.rows().front()[0].text());
@@ -152,28 +152,28 @@ class MenuService {
             "INSERT INTO sys_menu (name, path, icon, component, parent_id, `order`, type, status, "
             "                     permission_code, is_default, created_at, updated_at) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())",
-            {cyra::DbValue{std::string(body.name()->view())},
-             body.path() ? cyra::DbValue{std::string(body.path()->view())} : cyra::DbValue{nullptr},
-             body.icon() ? cyra::DbValue{std::string(body.icon()->view())} : cyra::DbValue{nullptr},
-             body.component() ? cyra::DbValue{std::string(body.component()->view())}
-                              : cyra::DbValue{nullptr},
-             body.parentId() ? cyra::DbValue{static_cast<std::int64_t>(*body.parentId())}
-                             : cyra::DbValue{nullptr},
-             cyra::DbValue{body.sortOrder() ? static_cast<std::int64_t>(*body.sortOrder()) : 0},
-             cyra::DbValue{type},
-             cyra::DbValue{body.status() ? std::string(body.status()->view()) : "enabled"},
-             body.permissionCode() ? cyra::DbValue{std::string(body.permissionCode()->view())}
-                                   : cyra::DbValue{nullptr},
-             cyra::DbValue{static_cast<std::int64_t>(isDefault ? 1 : 0)}});
+            {ruvia::DbValue{std::string(body.name()->view())},
+             body.path() ? ruvia::DbValue{std::string(body.path()->view())} : ruvia::DbValue{nullptr},
+             body.icon() ? ruvia::DbValue{std::string(body.icon()->view())} : ruvia::DbValue{nullptr},
+             body.component() ? ruvia::DbValue{std::string(body.component()->view())}
+                              : ruvia::DbValue{nullptr},
+             body.parentId() ? ruvia::DbValue{static_cast<std::int64_t>(*body.parentId())}
+                             : ruvia::DbValue{nullptr},
+             ruvia::DbValue{body.sortOrder() ? static_cast<std::int64_t>(*body.sortOrder()) : 0},
+             ruvia::DbValue{type},
+             ruvia::DbValue{body.status() ? std::string(body.status()->view()) : "enabled"},
+             body.permissionCode() ? ruvia::DbValue{std::string(body.permissionCode()->view())}
+                                   : ruvia::DbValue{nullptr},
+             ruvia::DbValue{static_cast<std::int64_t>(isDefault ? 1 : 0)}});
         service::middleware::permissionService().clearAllCache();
         co_return;
     }
 
-    cyra::Task<void> update(cyra::Context& c, std::int64_t id, const UpdateMenuBody& body) {
+    ruvia::Task<void> update(ruvia::Context& c, std::int64_t id, const UpdateMenuBody& body) {
         auto db = c.db();
         const auto rs = co_await db.query(
             "SELECT type, parent_id FROM sys_menu WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-            {cyra::DbValue{id}});
+            {ruvia::DbValue{id}});
         if (rs.rows().empty())
             service::common::throwAppError(MenuError::MENU_NOT_FOUND);
         const std::string currentType(rs.rows().front()[0].text());
@@ -191,7 +191,7 @@ class MenuService {
         if (newParentId && *newParentId > 0) {
             const auto prs =
                 co_await db.query("SELECT type FROM sys_menu WHERE id = ? AND deleted_at IS NULL",
-                                  {cyra::DbValue{*newParentId}});
+                                  {ruvia::DbValue{*newParentId}});
             if (prs.rows().empty())
                 service::common::throwAppError(MenuError::MENU_PARENT_NOT_FOUND);
             checkParentChildType(std::string(prs.rows().front()[0].text()), newType);
@@ -204,8 +204,8 @@ class MenuService {
         }
 
         std::string set;
-        std::vector<cyra::DbValue> params;
-        auto append = [&](std::string_view col, cyra::DbValue value) {
+        std::vector<ruvia::DbValue> params;
+        auto append = [&](std::string_view col, ruvia::DbValue value) {
             if (!set.empty())
                 set += ", ";
             set.append(col);
@@ -213,23 +213,23 @@ class MenuService {
             params.emplace_back(std::move(value));
         };
         if (body.name())
-            append("name", cyra::DbValue{std::string(body.name()->view())});
+            append("name", ruvia::DbValue{std::string(body.name()->view())});
         if (body.path())
-            append("path", cyra::DbValue{std::string(body.path()->view())});
+            append("path", ruvia::DbValue{std::string(body.path()->view())});
         if (body.icon())
-            append("icon", cyra::DbValue{std::string(body.icon()->view())});
+            append("icon", ruvia::DbValue{std::string(body.icon()->view())});
         if (body.component())
-            append("component", cyra::DbValue{std::string(body.component()->view())});
+            append("component", ruvia::DbValue{std::string(body.component()->view())});
         if (newParentId)
-            append("parent_id", cyra::DbValue{*newParentId});
+            append("parent_id", ruvia::DbValue{*newParentId});
         if (body.sortOrder())
-            append("`order`", cyra::DbValue{static_cast<std::int64_t>(*body.sortOrder())});
+            append("`order`", ruvia::DbValue{static_cast<std::int64_t>(*body.sortOrder())});
         if (type)
-            append("type", cyra::DbValue{*type});
+            append("type", ruvia::DbValue{*type});
         if (body.status())
-            append("status", cyra::DbValue{std::string(body.status()->view())});
+            append("status", ruvia::DbValue{std::string(body.status()->view())});
         if (body.permissionCode()) {
-            append("permission_code", cyra::DbValue{std::string(body.permissionCode()->view())});
+            append("permission_code", ruvia::DbValue{std::string(body.permissionCode()->view())});
         }
         if (body.isDefault()) {
             const bool nextDefault = static_cast<bool>(*body.isDefault());
@@ -237,11 +237,11 @@ class MenuService {
                 (void)co_await db.execute(
                     "UPDATE sys_menu SET is_default = 0 WHERE is_default = 1");
             }
-            append("is_default", cyra::DbValue{static_cast<std::int64_t>(nextDefault ? 1 : 0)});
+            append("is_default", ruvia::DbValue{static_cast<std::int64_t>(nextDefault ? 1 : 0)});
         }
 
         if (!set.empty()) {
-            params.emplace_back(cyra::DbValue{id});
+            params.emplace_back(ruvia::DbValue{id});
             (void)co_await db.execute(
                 "UPDATE sys_menu SET " + set + ", updated_at = NOW() WHERE id = ?", params);
         }
@@ -249,11 +249,11 @@ class MenuService {
         co_return;
     }
 
-    cyra::Task<void> remove(cyra::Context& c, std::int64_t id) {
+    ruvia::Task<void> remove(ruvia::Context& c, std::int64_t id) {
         auto db = c.db();
         const auto rs = co_await db.query(
             "SELECT id, type FROM sys_menu WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-            {cyra::DbValue{id}});
+            {ruvia::DbValue{id}});
         if (rs.rows().empty())
             service::common::throwAppError(MenuError::MENU_NOT_FOUND);
 
@@ -263,7 +263,7 @@ class MenuService {
                 ? "SELECT COUNT(*) FROM sys_menu "
                   "WHERE parent_id = ? AND deleted_at IS NULL AND type != 'button'"
                 : "SELECT COUNT(*) FROM sys_menu WHERE parent_id = ? AND deleted_at IS NULL",
-            {cyra::DbValue{id}});
+            {ruvia::DbValue{id}});
         if (std::stoll(std::string(blockingChildren.rows().front()[0].text())) > 0) {
             service::common::throwAppError(MenuError::MENU_HAS_CHILDREN);
         }
@@ -276,43 +276,43 @@ class MenuService {
                 "    SELECT id FROM sys_menu WHERE parent_id = ? AND type = 'button' "
                 "      AND deleted_at IS NULL"
                 ")",
-                {cyra::DbValue{id}, cyra::DbValue{id}});
+                {ruvia::DbValue{id}, ruvia::DbValue{id}});
             (void)co_await tx.execute(
                 "UPDATE sys_menu SET deleted_at = NOW(), updated_at = NOW() "
                 "WHERE id = ? OR (parent_id = ? AND type = 'button' AND deleted_at IS NULL)",
-                {cyra::DbValue{id}, cyra::DbValue{id}});
+                {ruvia::DbValue{id}, ruvia::DbValue{id}});
         } else {
             (void)co_await tx.execute("DELETE FROM sys_role_menu WHERE menu_id = ?",
-                                      {cyra::DbValue{id}});
+                                      {ruvia::DbValue{id}});
             (void)co_await tx.execute(
                 "UPDATE sys_menu SET deleted_at = NOW(), updated_at = NOW() WHERE id = ?",
-                {cyra::DbValue{id}});
+                {ruvia::DbValue{id}});
         }
         co_await tx.commit();
         service::middleware::permissionService().clearAllCache();
         co_return;
     }
 
-    cyra::Task<void> reorder(cyra::Context& c, const ReorderMenuBody& body) {
+    ruvia::Task<void> reorder(ruvia::Context& c, const ReorderMenuBody& body) {
         if (!body.items() || body.items()->empty())
             co_return;
         auto db = c.db();
         for (const auto& item : *body.items()) {
             (void)co_await db.execute(
                 "UPDATE sys_menu SET `order` = ?, updated_at = NOW() WHERE id = ?",
-                {cyra::DbValue{static_cast<std::int64_t>(*item.sortOrder())},
-                 cyra::DbValue{static_cast<std::int64_t>(*item.id())}});
+                {ruvia::DbValue{static_cast<std::int64_t>(*item.sortOrder())},
+                 ruvia::DbValue{static_cast<std::int64_t>(*item.id())}});
         }
         service::middleware::permissionService().clearAllCache();
         co_return;
     }
 
-    cyra::Task<int> batchCreateButtons(cyra::Context& c, const BatchCreateMenuButtonsBody& body) {
+    ruvia::Task<int> batchCreateButtons(ruvia::Context& c, const BatchCreateMenuButtonsBody& body) {
         auto db = c.db();
         const auto parentId = static_cast<std::int64_t>(*body.parentId());
         const auto prs =
             co_await db.query("SELECT type FROM sys_menu WHERE id = ? AND deleted_at IS NULL",
-                              {cyra::DbValue{parentId}});
+                              {ruvia::DbValue{parentId}});
         if (prs.rows().empty())
             service::common::throwAppError(MenuError::MENU_PARENT_NOT_FOUND);
         if (std::string(prs.rows().front()[0].text()) != "page") {
@@ -326,19 +326,19 @@ class MenuService {
             const auto exists =
                 co_await db.query("SELECT id FROM sys_menu WHERE parent_id = ? AND type = 'button' "
                                   "  AND permission_code = ? AND deleted_at IS NULL LIMIT 1",
-                                  {cyra::DbValue{parentId}, cyra::DbValue{permissionCode}});
+                                  {ruvia::DbValue{parentId}, ruvia::DbValue{permissionCode}});
             if (!exists.rows().empty())
                 continue;
             const auto maxRs = co_await db.query(
                 "SELECT COALESCE(MAX(`order`), 0) FROM sys_menu WHERE parent_id = ?",
-                {cyra::DbValue{parentId}});
+                {ruvia::DbValue{parentId}});
             const std::int64_t maxOrder = std::stoll(std::string(maxRs.rows().front()[0].text()));
             (void)co_await db.execute(
                 "INSERT INTO sys_menu (name, parent_id, type, status, permission_code, `order`, "
                 "                     created_at, updated_at) "
                 "VALUES (?, ?, 'button', 'enabled', ?, ?, NOW(), NOW())",
-                {cyra::DbValue{name}, cyra::DbValue{parentId}, cyra::DbValue{permissionCode},
-                 cyra::DbValue{maxOrder + 1}});
+                {ruvia::DbValue{name}, ruvia::DbValue{parentId}, ruvia::DbValue{permissionCode},
+                 ruvia::DbValue{maxOrder + 1}});
             ++created;
         }
         service::middleware::permissionService().clearAllCache();
@@ -372,7 +372,7 @@ class MenuService {
         }
     }
 
-    cyra::Task<bool> isAncestorDescendant(cyra::Context& c, std::int64_t ancestor,
+    ruvia::Task<bool> isAncestorDescendant(ruvia::Context& c, std::int64_t ancestor,
                                           std::int64_t candidate) {
         auto db = c.db();
         const auto rs =
@@ -431,9 +431,9 @@ class MenuService {
     }
 
     static void fillMenuDto(MenuDto& item, const MenuRecord& record) {
-        item.id(static_cast<cyra::Int64>(record.id))
-            .sortOrder(static_cast<cyra::Int64>(record.sort_order))
-            .isDefault(cyra::Bool{record.is_default});
+        item.id(static_cast<ruvia::Int64>(record.id))
+            .sortOrder(static_cast<ruvia::Int64>(record.sort_order))
+            .isDefault(ruvia::Bool{record.is_default});
         item.name().assignView(record.name);
         item.type().assignView(record.type);
         item.status().assignView(record.status);
@@ -444,16 +444,16 @@ class MenuService {
         if (record.icon)
             item.icon().assignView(*record.icon);
         if (record.parent_id)
-            item.parentId(static_cast<cyra::Int64>(*record.parent_id));
+            item.parentId(static_cast<ruvia::Int64>(*record.parent_id));
         if (record.component)
             item.component().assignView(*record.component);
         if (record.permission_code)
             item.permissionCode().assignView(*record.permission_code);
     }
 
-    static cyra::List<MenuDto> buildFlatList(cyra::Context& c,
+    static ruvia::List<MenuDto> buildFlatList(ruvia::Context& c,
                                              const std::vector<MenuRecord>& records) {
-        cyra::List<MenuDto> out(c.resource());
+        ruvia::List<MenuDto> out(c.resource());
         for (const auto& record : records) {
             auto& item = out.emplace(c);
             fillMenuDto(item, record);
@@ -462,7 +462,7 @@ class MenuService {
     }
 
     static void
-    appendNode(cyra::Context& c, cyra::List<MenuDto>& out, const MenuRecord& record,
+    appendNode(ruvia::Context& c, ruvia::List<MenuDto>& out, const MenuRecord& record,
                const std::unordered_map<std::int64_t, std::vector<const MenuRecord*>>& children,
                std::unordered_set<std::int64_t> path = {}) {
         if (!path.insert(record.id).second)
@@ -496,8 +496,8 @@ class MenuService {
         return false;
     }
 
-    static cyra::List<MenuDto> buildTree(cyra::Context& c, const std::vector<MenuRecord>& records) {
-        cyra::List<MenuDto> out(c.resource());
+    static ruvia::List<MenuDto> buildTree(ruvia::Context& c, const std::vector<MenuRecord>& records) {
+        ruvia::List<MenuDto> out(c.resource());
         std::unordered_map<std::int64_t, const MenuRecord*> recordsById;
         recordsById.reserve(records.size());
         for (const auto& record : records)

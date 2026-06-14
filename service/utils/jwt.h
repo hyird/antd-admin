@@ -7,8 +7,8 @@
 #include <string_view>
 #include <utility>
 
-#include <cyra/app/App.h>
-#include <cyra/auth/Jwt.h>
+#include <ruvia/app/App.h>
+#include <ruvia/auth/Jwt.h>
 
 namespace service::core {
 
@@ -38,7 +38,7 @@ class JwtInvalidError : public std::runtime_error {
 namespace service::jwt_detail {
 
 inline std::string accessSecret() {
-    auto secret = cyra::app().env().get("JWT_SECRET");
+    auto secret = ruvia::app().env().get("JWT_SECRET");
     if (!secret) {
         throw std::runtime_error("JWT_SECRET environment variable is required");
     }
@@ -46,7 +46,7 @@ inline std::string accessSecret() {
 }
 
 inline std::string refreshSecret() {
-    auto secret = cyra::app().env().get("JWT_REFRESH_SECRET");
+    auto secret = ruvia::app().env().get("JWT_REFRESH_SECRET");
     return secret ? std::string(*secret) : accessSecret();
 }
 
@@ -83,40 +83,40 @@ inline std::chrono::seconds parseDuration(std::string_view value, std::chrono::s
 }
 
 inline std::chrono::seconds accessExpiresIn() {
-    return parseDuration(cyra::app().env().get("JWT_EXPIRES_IN").value_or("1d"),
+    return parseDuration(ruvia::app().env().get("JWT_EXPIRES_IN").value_or("1d"),
                          std::chrono::seconds(60 * 60 * 24));
 }
 
 inline std::chrono::seconds refreshExpiresIn() {
-    return parseDuration(cyra::app().env().get("JWT_REFRESH_EXPIRES_IN").value_or("7d"),
+    return parseDuration(ruvia::app().env().get("JWT_REFRESH_EXPIRES_IN").value_or("7d"),
                          std::chrono::seconds(60 * 60 * 24 * 7));
 }
 
 inline std::string sign(const service::core::JwtPayload& payload, const std::string& secret,
                         std::chrono::seconds expiresIn) {
-    cyra::JwtSignOptions options;
+    ruvia::JwtSignOptions options;
     options.secret = secret;
     options.subject = std::to_string(payload.user_id);
     options.expiresIn = expiresIn;
 
-    cyra::JwtClaim userId;
+    ruvia::JwtClaim userId;
     userId.name = "user_id";
     userId.value = std::to_string(payload.user_id);
     options.claims.push_back(std::move(userId));
 
-    cyra::JwtClaim username;
+    ruvia::JwtClaim username;
     username.name = "username";
     username.value = payload.username;
     options.claims.push_back(std::move(username));
 
-    return std::string(cyra::jwtSign(options));
+    return std::string(ruvia::jwtSign(options));
 }
 
 inline service::core::JwtPayload verify(const std::string& token, const std::string& secret) {
     try {
-        cyra::JwtVerifyOptions options;
+        ruvia::JwtVerifyOptions options;
         options.secret = secret;
-        const auto payload = cyra::jwtVerify(token, options);
+        const auto payload = ruvia::jwtVerify(token, options);
 
         service::core::JwtPayload out;
         if (auto userId = payload.claim("user_id")) {

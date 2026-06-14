@@ -7,9 +7,9 @@
 #include <utility>
 #include <vector>
 
-#include <cyra/app/Task.h>
-#include <cyra/db/Db.h>
-#include <cyra/http/Context.h>
+#include <ruvia/app/Task.h>
+#include <ruvia/db/Db.h>
+#include <ruvia/http/Context.h>
 
 #include "service/common/http.h"
 #include "service/common/types.h"
@@ -27,14 +27,14 @@ class UserService {
         return svc;
     }
 
-    cyra::Task<UserPageDataDto> list(cyra::Context& c, std::int64_t page, std::int64_t pageSize,
+    ruvia::Task<UserPageDataDto> list(ruvia::Context& c, std::int64_t page, std::int64_t pageSize,
                                      std::int64_t skip, const std::optional<std::string>& keyword,
                                      bool paginated, std::optional<std::string_view> status,
                                      std::optional<std::int64_t> deptId) {
         auto db = c.db();
 
         std::string where = " WHERE u.deleted_at IS NULL";
-        std::vector<cyra::DbValue> params;
+        std::vector<ruvia::DbValue> params;
         if (keyword) {
             where +=
                 " AND (u.username LIKE ? OR u.nickname LIKE ? OR u.phone LIKE ? OR u.email LIKE ?)";
@@ -64,10 +64,10 @@ class UserService {
         const auto rs = co_await db.query(sql, params);
 
         UserPageDataDto result(c);
-        result.total(static_cast<cyra::Int64>(total))
-            .page(static_cast<cyra::Int64>(page))
-            .pageSize(static_cast<cyra::Int64>(pageSize))
-            .totalPages(static_cast<cyra::Int64>(
+        result.total(static_cast<ruvia::Int64>(total))
+            .page(static_cast<ruvia::Int64>(page))
+            .pageSize(static_cast<ruvia::Int64>(pageSize))
+            .totalPages(static_cast<ruvia::Int64>(
                 paginated && pageSize > 0 ? (total + pageSize - 1) / pageSize : 1));
 
         auto& list = result.list().ensure();
@@ -79,12 +79,12 @@ class UserService {
         co_return result;
     }
 
-    cyra::Task<cyra::List<UserOptionDto>> listOptions(cyra::Context& c,
+    ruvia::Task<ruvia::List<UserOptionDto>> listOptions(ruvia::Context& c,
                                                       std::optional<std::string_view> keyword) {
         auto db = c.db();
         std::string sql =
             "SELECT id, username, nickname, phone, email FROM sys_user WHERE deleted_at IS NULL";
-        std::vector<cyra::DbValue> params;
+        std::vector<ruvia::DbValue> params;
         if (keyword && !keyword->empty()) {
             sql += " AND (username LIKE ? OR nickname LIKE ? OR phone LIKE ? OR email LIKE ?)";
             const std::string like = "%" + std::string(*keyword) + "%";
@@ -93,10 +93,10 @@ class UserService {
         }
         sql += " ORDER BY id ASC";
         const auto rs = co_await db.query(sql, params);
-        cyra::List<UserOptionDto> out(c.resource());
+        ruvia::List<UserOptionDto> out(c.resource());
         for (const auto& row : rs.rows()) {
             auto& item = out.emplace(c);
-            item.id(static_cast<cyra::Int64>(std::stoll(std::string(row[0].text()))));
+            item.id(static_cast<ruvia::Int64>(std::stoll(std::string(row[0].text()))));
             item.username().assignView(row[1].text());
             if (!row[2].isNull())
                 item.nickname().assignView(row[2].text());
@@ -108,14 +108,14 @@ class UserService {
         co_return out;
     }
 
-    cyra::Task<UserItemDto> getById(cyra::Context& c, std::int64_t id) {
+    ruvia::Task<UserItemDto> getById(ruvia::Context& c, std::int64_t id) {
         auto db = c.db();
         const auto rs = co_await db.query(
             "SELECT u.id, u.username, u.nickname, u.phone, u.email, u.dept_id, u.status, "
             "       d.name "
             "FROM sys_user u LEFT JOIN sys_dept d ON u.dept_id = d.id "
             "WHERE u.id = ? AND u.deleted_at IS NULL LIMIT 1",
-            {cyra::DbValue{id}});
+            {ruvia::DbValue{id}});
         if (rs.rows().empty())
             service::common::throwAppError(UserError::USER_NOT_FOUND);
 
@@ -125,14 +125,14 @@ class UserService {
         co_return item;
     }
 
-    cyra::Task<void> create(cyra::Context& c, const CreateUserBody& body) {
+    ruvia::Task<void> create(ruvia::Context& c, const CreateUserBody& body) {
         auto db = c.db();
         const std::string username(body.username()->view());
         const std::string phone = body.phone() ? std::string(body.phone()->view()) : std::string{};
         const std::string email = body.email() ? std::string(body.email()->view()) : std::string{};
         const auto existing = co_await db.query(
             "SELECT id FROM sys_user WHERE username = ? AND deleted_at IS NULL LIMIT 1",
-            {cyra::DbValue{username}});
+            {ruvia::DbValue{username}});
         if (!existing.rows().empty())
             service::common::throwAppError(UserError::USERNAME_EXISTS);
 
@@ -149,29 +149,29 @@ class UserService {
             "INSERT INTO sys_user (username, password_hash, nickname, phone, email, "
             "                     dept_id, status, created_at, updated_at) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())",
-            {cyra::DbValue{username}, cyra::DbValue{hash},
-             body.nickname() ? cyra::DbValue{std::string(body.nickname()->view())}
-                             : cyra::DbValue{nullptr},
-             !phone.empty() ? cyra::DbValue{phone} : cyra::DbValue{nullptr},
-             !email.empty() ? cyra::DbValue{email} : cyra::DbValue{nullptr},
-             body.deptId() ? cyra::DbValue{static_cast<std::int64_t>(*body.deptId())}
-                           : cyra::DbValue{nullptr},
-             cyra::DbValue{body.status() ? std::string(body.status()->view()) : "enabled"}});
+            {ruvia::DbValue{username}, ruvia::DbValue{hash},
+             body.nickname() ? ruvia::DbValue{std::string(body.nickname()->view())}
+                             : ruvia::DbValue{nullptr},
+             !phone.empty() ? ruvia::DbValue{phone} : ruvia::DbValue{nullptr},
+             !email.empty() ? ruvia::DbValue{email} : ruvia::DbValue{nullptr},
+             body.deptId() ? ruvia::DbValue{static_cast<std::int64_t>(*body.deptId())}
+                           : ruvia::DbValue{nullptr},
+             ruvia::DbValue{body.status() ? std::string(body.status()->view()) : "enabled"}});
         const std::int64_t userId = static_cast<std::int64_t>(rs.lastInsertId());
 
         for (const auto roleId : *body.roleIds()) {
             (void)co_await db.execute(
                 "INSERT IGNORE INTO sys_user_role (user_id, role_id) VALUES (?, ?)",
-                {cyra::DbValue{userId}, cyra::DbValue{static_cast<std::int64_t>(roleId)}});
+                {ruvia::DbValue{userId}, ruvia::DbValue{static_cast<std::int64_t>(roleId)}});
         }
         co_return;
     }
 
-    cyra::Task<void> update(cyra::Context& c, std::int64_t id, const UpdateUserBody& body) {
+    ruvia::Task<void> update(ruvia::Context& c, std::int64_t id, const UpdateUserBody& body) {
         auto db = c.db();
         const auto rs = co_await db.query(
             "SELECT username FROM sys_user WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-            {cyra::DbValue{id}});
+            {ruvia::DbValue{id}});
         if (rs.rows().empty())
             service::common::throwAppError(UserError::USER_NOT_FOUND);
         const std::string username(rs.rows().front()[0].text());
@@ -187,8 +187,8 @@ class UserService {
             co_await checkEmailUnique(c, email, id);
 
         std::string set;
-        std::vector<cyra::DbValue> params;
-        auto append = [&](std::string_view col, cyra::DbValue value) {
+        std::vector<ruvia::DbValue> params;
+        auto append = [&](std::string_view col, ruvia::DbValue value) {
             if (!set.empty())
                 set += ", ";
             set.append(col);
@@ -196,21 +196,21 @@ class UserService {
             params.emplace_back(std::move(value));
         };
         if (body.nickname())
-            append("nickname", cyra::DbValue{std::string(body.nickname()->view())});
+            append("nickname", ruvia::DbValue{std::string(body.nickname()->view())});
         if (body.phone())
-            append("phone", cyra::DbValue{phone});
+            append("phone", ruvia::DbValue{phone});
         if (body.email())
-            append("email", cyra::DbValue{email});
+            append("email", ruvia::DbValue{email});
         if (body.deptId())
-            append("dept_id", cyra::DbValue{static_cast<std::int64_t>(*body.deptId())});
+            append("dept_id", ruvia::DbValue{static_cast<std::int64_t>(*body.deptId())});
         if (body.status())
-            append("status", cyra::DbValue{std::string(body.status()->view())});
+            append("status", ruvia::DbValue{std::string(body.status()->view())});
         if (body.password() && !body.password()->empty()) {
             const auto hash = service::utils::hashPassword(body.password()->view());
-            append("password_hash", cyra::DbValue{hash});
+            append("password_hash", ruvia::DbValue{hash});
         }
         if (!set.empty()) {
-            params.emplace_back(cyra::DbValue{id});
+            params.emplace_back(ruvia::DbValue{id});
             (void)co_await db.execute(
                 "UPDATE sys_user SET " + set + ", updated_at = NOW() WHERE id = ?", params);
         }
@@ -219,29 +219,29 @@ class UserService {
             if (body.roleIds()->empty())
                 service::common::throwAppError(UserError::ROLE_REQUIRED);
             (void)co_await db.execute("DELETE FROM sys_user_role WHERE user_id = ?",
-                                      {cyra::DbValue{id}});
+                                      {ruvia::DbValue{id}});
             for (const auto roleId : *body.roleIds()) {
                 (void)co_await db.execute(
                     "INSERT IGNORE INTO sys_user_role (user_id, role_id) VALUES (?, ?)",
-                    {cyra::DbValue{id}, cyra::DbValue{static_cast<std::int64_t>(roleId)}});
+                    {ruvia::DbValue{id}, ruvia::DbValue{static_cast<std::int64_t>(roleId)}});
             }
             service::middleware::permissionService().clearUserCache(id);
         }
         co_return;
     }
 
-    cyra::Task<void> remove(cyra::Context& c, std::int64_t id) {
+    ruvia::Task<void> remove(ruvia::Context& c, std::int64_t id) {
         auto db = c.db();
         const auto rs = co_await db.query(
             "SELECT username FROM sys_user WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-            {cyra::DbValue{id}});
+            {ruvia::DbValue{id}});
         if (rs.rows().empty())
             service::common::throwAppError(UserError::USER_NOT_FOUND);
         if (std::string(rs.rows().front()[0].text()) == "admin") {
             service::common::throwAppError(UserError::ADMIN_DELETE_PROTECTED);
         }
         (void)co_await db.execute("UPDATE sys_user SET deleted_at = NOW() WHERE id = ?",
-                                  {cyra::DbValue{id}});
+                                  {ruvia::DbValue{id}});
         service::middleware::permissionService().clearUserCache(id);
         co_return;
     }
@@ -251,7 +251,7 @@ class UserService {
 
     template <typename Row> static std::int64_t fillUserItem(UserItemDto& item, const Row& row) {
         const std::int64_t userId = std::stoll(std::string(row[0].text()));
-        item.id(static_cast<cyra::Int64>(userId));
+        item.id(static_cast<ruvia::Int64>(userId));
         item.username().assignView(row[1].text());
         item.status().assignView(row[6].text());
         if (!row[2].isNull())
@@ -261,50 +261,50 @@ class UserService {
         if (!row[4].isNull())
             item.email().assignView(row[4].text());
         if (!row[5].isNull()) {
-            item.deptId(static_cast<cyra::Int64>(std::stoll(std::string(row[5].text()))));
+            item.deptId(static_cast<ruvia::Int64>(std::stoll(std::string(row[5].text()))));
         }
         if (!row[7].isNull())
             item.deptName().assignView(row[7].text());
         return userId;
     }
 
-    cyra::Task<void> attachRoles(cyra::Context& c, UserItemDto& item, std::int64_t userId) {
+    ruvia::Task<void> attachRoles(ruvia::Context& c, UserItemDto& item, std::int64_t userId) {
         auto db = c.db();
         const auto roles = co_await db.query("SELECT r.id, r.name, r.code FROM sys_role r "
                                              "INNER JOIN sys_user_role ur ON r.id = ur.role_id "
                                              "WHERE ur.user_id = ? AND r.deleted_at IS NULL",
-                                             {cyra::DbValue{userId}});
+                                             {ruvia::DbValue{userId}});
         auto& roleList = item.roles().ensure();
         for (const auto& rrow : roles.rows()) {
             auto& role = roleList.emplace(c);
-            role.id(static_cast<cyra::Int64>(std::stoll(std::string(rrow[0].text()))));
+            role.id(static_cast<ruvia::Int64>(std::stoll(std::string(rrow[0].text()))));
             role.name().assignView(rrow[1].text());
             role.code().assignView(rrow[2].text());
         }
         co_return;
     }
 
-    cyra::Task<void> checkPhoneUnique(cyra::Context& c, const std::string& phone,
+    ruvia::Task<void> checkPhoneUnique(ruvia::Context& c, const std::string& phone,
                                       std::int64_t excludeId) {
         if (phone.empty())
             co_return;
         auto db = c.db();
         const auto rs = co_await db.query(
             "SELECT id FROM sys_user WHERE phone = ? AND deleted_at IS NULL AND id != ? LIMIT 1",
-            {cyra::DbValue{phone}, cyra::DbValue{excludeId}});
+            {ruvia::DbValue{phone}, ruvia::DbValue{excludeId}});
         if (!rs.rows().empty())
             service::common::throwAppError(UserError::PHONE_EXISTS);
         co_return;
     }
 
-    cyra::Task<void> checkEmailUnique(cyra::Context& c, const std::string& email,
+    ruvia::Task<void> checkEmailUnique(ruvia::Context& c, const std::string& email,
                                       std::int64_t excludeId) {
         if (email.empty())
             co_return;
         auto db = c.db();
         const auto rs = co_await db.query(
             "SELECT id FROM sys_user WHERE email = ? AND deleted_at IS NULL AND id != ? LIMIT 1",
-            {cyra::DbValue{email}, cyra::DbValue{excludeId}});
+            {ruvia::DbValue{email}, ruvia::DbValue{excludeId}});
         if (!rs.rows().empty())
             service::common::throwAppError(UserError::EMAIL_EXISTS);
         co_return;

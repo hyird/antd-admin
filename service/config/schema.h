@@ -2,11 +2,11 @@
 
 #include <array>
 
-#include <cyra/db/Db.h>
+#include <ruvia/db/Db.h>
 
 namespace service::config {
 
-inline constexpr std::array<cyra::DbMigration, 17> kSchemaMigrations{{
+inline constexpr std::array<ruvia::DbMigration, 17> kSchemaMigrations{{
     {
         "0001",
         R"sql(SET NAMES utf8mb4)sql",

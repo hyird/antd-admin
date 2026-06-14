@@ -3,11 +3,11 @@
 #include <string>
 #include <string_view>
 
-#include <cyra/app/Task.h>
-#include <cyra/http/Context.h>
-#include <cyra/http/Controller.h>
-#include <cyra/http/HttpTypes.h>
-#include <cyra/http/Validation.h>
+#include <ruvia/app/Task.h>
+#include <ruvia/http/Context.h>
+#include <ruvia/http/Controller.h>
+#include <ruvia/http/HttpTypes.h>
+#include <ruvia/http/Validation.h>
 
 #include "service/common/http.h"
 #include "service/utils/jwt.h"
@@ -15,7 +15,7 @@
 namespace service::middleware {
 
 // 路由处理器内调用，校验 Authorization 头并解析 JWT；失败抛出 AppError。
-inline service::core::JwtPayload requireAuth(cyra::Context& c) {
+inline service::core::JwtPayload requireAuth(ruvia::Context& c) {
     const auto authHeader = c.header("Authorization");
     if (authHeader.empty()) {
         service::common::throwAppError(service::common::kAuthUnauthorizedErrorCode, "未登录", 401);
@@ -39,14 +39,14 @@ inline service::core::JwtPayload requireAuth(cyra::Context& c) {
     }
 }
 
-inline const service::core::JwtPayload& currentUser(cyra::Context& c) {
-    return c.valid<service::core::JwtPayload>(cyra::Form);
+inline const service::core::JwtPayload& currentUser(ruvia::Context& c) {
+    return c.valid<service::core::JwtPayload>(ruvia::Form);
 }
 
-class AuthMiddleware final : public cyra::Middleware<AuthMiddleware> {
+class AuthMiddleware final : public ruvia::Middleware<AuthMiddleware> {
   public:
-    cyra::Task<cyra::HttpResponse> handle(cyra::Context& c, const cyra::Next& next) {
-        c.setValid(cyra::Form, requireAuth(c));
+    ruvia::Task<ruvia::HttpResponse> handle(ruvia::Context& c, const ruvia::Next& next) {
+        c.setValid(ruvia::Form, requireAuth(c));
         co_return co_await next(c);
     }
 };

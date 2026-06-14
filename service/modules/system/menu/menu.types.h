@@ -4,60 +4,60 @@
 #include <optional>
 #include <string>
 
-#include <cyra/http/Model.h>
+#include <ruvia/http/Model.h>
 
 namespace service::menu {
 
-CYRA_MODEL(CreateMenuBody, CYRA_FIELD(name, cyra::String), CYRA_FIELD(path, cyra::String),
-           CYRA_FIELD(icon, cyra::String), CYRA_FIELD(component, cyra::String),
-           CYRA_FIELD_NAME("parent_id", parentId, cyra::Int64),
-           CYRA_FIELD_NAME("sort_order", sortOrder, cyra::Int64), CYRA_FIELD(type, cyra::String),
-           CYRA_FIELD(status, cyra::String),
-           CYRA_FIELD_NAME("permission_code", permissionCode, cyra::String),
-           CYRA_FIELD_NAME("is_default", isDefault, cyra::Bool));
+RUVIA_MODEL(CreateMenuBody, RUVIA_FIELD(name, ruvia::String), RUVIA_FIELD(path, ruvia::String),
+           RUVIA_FIELD(icon, ruvia::String), RUVIA_FIELD(component, ruvia::String),
+           RUVIA_FIELD_NAME("parent_id", parentId, ruvia::Int64),
+           RUVIA_FIELD_NAME("sort_order", sortOrder, ruvia::Int64), RUVIA_FIELD(type, ruvia::String),
+           RUVIA_FIELD(status, ruvia::String),
+           RUVIA_FIELD_NAME("permission_code", permissionCode, ruvia::String),
+           RUVIA_FIELD_NAME("is_default", isDefault, ruvia::Bool));
 
-CYRA_MODEL(UpdateMenuBody, CYRA_FIELD(name, cyra::String), CYRA_FIELD(path, cyra::String),
-           CYRA_FIELD(icon, cyra::String), CYRA_FIELD(component, cyra::String),
-           CYRA_FIELD_NAME("parent_id", parentId, cyra::Int64),
-           CYRA_FIELD_NAME("sort_order", sortOrder, cyra::Int64), CYRA_FIELD(type, cyra::String),
-           CYRA_FIELD(status, cyra::String),
-           CYRA_FIELD_NAME("permission_code", permissionCode, cyra::String),
-           CYRA_FIELD_NAME("is_default", isDefault, cyra::Bool));
+RUVIA_MODEL(UpdateMenuBody, RUVIA_FIELD(name, ruvia::String), RUVIA_FIELD(path, ruvia::String),
+           RUVIA_FIELD(icon, ruvia::String), RUVIA_FIELD(component, ruvia::String),
+           RUVIA_FIELD_NAME("parent_id", parentId, ruvia::Int64),
+           RUVIA_FIELD_NAME("sort_order", sortOrder, ruvia::Int64), RUVIA_FIELD(type, ruvia::String),
+           RUVIA_FIELD(status, ruvia::String),
+           RUVIA_FIELD_NAME("permission_code", permissionCode, ruvia::String),
+           RUVIA_FIELD_NAME("is_default", isDefault, ruvia::Bool));
 
-CYRA_MODEL(ReorderMenuItemBody, CYRA_FIELD(id, cyra::Int64),
-           CYRA_FIELD_NAME("sort_order", sortOrder, cyra::Int64),
-           CYRA_FIELD_NAME("parent_id", parentId, cyra::Int64));
+RUVIA_MODEL(ReorderMenuItemBody, RUVIA_FIELD(id, ruvia::Int64),
+           RUVIA_FIELD_NAME("sort_order", sortOrder, ruvia::Int64),
+           RUVIA_FIELD_NAME("parent_id", parentId, ruvia::Int64));
 
-CYRA_MODEL(ReorderMenuBody, CYRA_FIELD(items, cyra::Array<ReorderMenuItemBody>));
+RUVIA_MODEL(ReorderMenuBody, RUVIA_FIELD(items, ruvia::Array<ReorderMenuItemBody>));
 
-CYRA_MODEL(BatchCreateMenuButtonItemBody, CYRA_FIELD(name, cyra::String),
-           CYRA_FIELD_NAME("permission_code", permissionCode, cyra::String));
+RUVIA_MODEL(BatchCreateMenuButtonItemBody, RUVIA_FIELD(name, ruvia::String),
+           RUVIA_FIELD_NAME("permission_code", permissionCode, ruvia::String));
 
-CYRA_MODEL(BatchCreateMenuButtonsBody, CYRA_FIELD_NAME("parent_id", parentId, cyra::Int64),
-           CYRA_FIELD(items, cyra::Array<BatchCreateMenuButtonItemBody>));
+RUVIA_MODEL(BatchCreateMenuButtonsBody, RUVIA_FIELD_NAME("parent_id", parentId, ruvia::Int64),
+           RUVIA_FIELD(items, ruvia::Array<BatchCreateMenuButtonItemBody>));
 
-CYRA_MODEL(MenuDto, CYRA_FIELD(id, cyra::Int64), CYRA_FIELD(name, cyra::String),
-           CYRA_FIELD(path, cyra::String, CYRA_OMIT_EMPTY),
-           CYRA_FIELD(icon, cyra::String, CYRA_OMIT_EMPTY),
-           CYRA_FIELD_NAME("parent_id", parentId, cyra::Int64, CYRA_EMIT_NULL),
-           CYRA_FIELD_NAME("sort_order", sortOrder, cyra::Int64), CYRA_FIELD(type, cyra::String),
-           CYRA_FIELD(component, cyra::String, CYRA_OMIT_EMPTY), CYRA_FIELD(status, cyra::String),
-           CYRA_FIELD_NAME("permission_code", permissionCode, cyra::String, CYRA_OMIT_EMPTY),
-           CYRA_FIELD_NAME("is_default", isDefault, cyra::Bool),
-           CYRA_FIELD_NAME("full_path", fullPath, cyra::String, CYRA_OMIT_EMPTY),
-           CYRA_FIELD(children, cyra::List<MenuDto>, CYRA_OMIT_EMPTY));
+RUVIA_MODEL(MenuDto, RUVIA_FIELD(id, ruvia::Int64), RUVIA_FIELD(name, ruvia::String),
+           RUVIA_FIELD(path, ruvia::String, RUVIA_OMIT_EMPTY),
+           RUVIA_FIELD(icon, ruvia::String, RUVIA_OMIT_EMPTY),
+           RUVIA_FIELD_NAME("parent_id", parentId, ruvia::Int64, RUVIA_EMIT_NULL),
+           RUVIA_FIELD_NAME("sort_order", sortOrder, ruvia::Int64), RUVIA_FIELD(type, ruvia::String),
+           RUVIA_FIELD(component, ruvia::String, RUVIA_OMIT_EMPTY), RUVIA_FIELD(status, ruvia::String),
+           RUVIA_FIELD_NAME("permission_code", permissionCode, ruvia::String, RUVIA_OMIT_EMPTY),
+           RUVIA_FIELD_NAME("is_default", isDefault, ruvia::Bool),
+           RUVIA_FIELD_NAME("full_path", fullPath, ruvia::String, RUVIA_OMIT_EMPTY),
+           RUVIA_FIELD(children, ruvia::List<MenuDto>, RUVIA_OMIT_EMPTY));
 
-CYRA_MODEL(MenuListResponse, CYRA_FIELD(code, cyra::Int64), CYRA_FIELD(message, cyra::String),
-           CYRA_FIELD(data, cyra::List<MenuDto>));
+RUVIA_MODEL(MenuListResponse, RUVIA_FIELD(code, ruvia::Int64), RUVIA_FIELD(message, ruvia::String),
+           RUVIA_FIELD(data, ruvia::List<MenuDto>));
 
-CYRA_MODEL(MenuPageDataDto, CYRA_FIELD(list, cyra::List<MenuDto>), CYRA_FIELD(total, cyra::Int64),
-           CYRA_FIELD(page, cyra::Int64), CYRA_FIELD_NAME("pageSize", pageSize, cyra::Int64),
-           CYRA_FIELD_NAME("totalPages", totalPages, cyra::Int64));
+RUVIA_MODEL(MenuPageDataDto, RUVIA_FIELD(list, ruvia::List<MenuDto>), RUVIA_FIELD(total, ruvia::Int64),
+           RUVIA_FIELD(page, ruvia::Int64), RUVIA_FIELD_NAME("pageSize", pageSize, ruvia::Int64),
+           RUVIA_FIELD_NAME("totalPages", totalPages, ruvia::Int64));
 
-CYRA_MODEL(MenuPageResponse, CYRA_FIELD(code, cyra::Int64), CYRA_FIELD(message, cyra::String),
-           CYRA_FIELD(data, MenuPageDataDto));
+RUVIA_MODEL(MenuPageResponse, RUVIA_FIELD(code, ruvia::Int64), RUVIA_FIELD(message, ruvia::String),
+           RUVIA_FIELD(data, MenuPageDataDto));
 
-CYRA_MODEL(MenuDetailResponse, CYRA_FIELD(code, cyra::Int64), CYRA_FIELD(message, cyra::String),
-           CYRA_FIELD(data, MenuDto));
+RUVIA_MODEL(MenuDetailResponse, RUVIA_FIELD(code, ruvia::Int64), RUVIA_FIELD(message, ruvia::String),
+           RUVIA_FIELD(data, MenuDto));
 
 } // namespace service::menu

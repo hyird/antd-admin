@@ -8,9 +8,9 @@
 #include <unordered_map>
 #include <utility>
 
-#include <cyra/app/Task.h>
-#include <cyra/db/Db.h>
-#include <cyra/http/Context.h>
+#include <ruvia/app/Task.h>
+#include <ruvia/db/Db.h>
+#include <ruvia/http/Context.h>
 
 #include "service/common/http.h"
 #include "service/common/types.h"
@@ -93,7 +93,7 @@ class AuthService {
         return svc;
     }
 
-    cyra::Task<LoginResultDto> login(cyra::Context& c, const LoginBody& req) {
+    ruvia::Task<LoginResultDto> login(ruvia::Context& c, const LoginBody& req) {
         const std::string username(req.username()->view());
         const std::string password(req.password()->view());
 
@@ -109,7 +109,7 @@ class AuthService {
         const auto users =
             co_await db.query("SELECT id, username, password_hash, nickname, status "
                               "FROM sys_user WHERE username = ? AND deleted_at IS NULL LIMIT 1",
-                              {cyra::DbValue{username}});
+                              {ruvia::DbValue{username}});
         if (users.rows().empty()) {
             const int failureCount = rateLimitService().recordFailure(username);
             const int remaining = 5 - failureCount;
@@ -152,7 +152,7 @@ class AuthService {
         co_return result;
     }
 
-    cyra::Task<LoginResultDto> refresh(cyra::Context& c, const RefreshBody& req) {
+    ruvia::Task<LoginResultDto> refresh(ruvia::Context& c, const RefreshBody& req) {
         const std::string refreshToken(req.refreshToken()->view());
         if (refreshToken.empty())
             service::common::throwAppError(AuthError::UNAUTHORIZED);
@@ -167,7 +167,7 @@ class AuthService {
         const auto users =
             co_await db.query("SELECT id, username, nickname, status "
                               "FROM sys_user WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-                              {cyra::DbValue{payload.user_id}});
+                              {ruvia::DbValue{payload.user_id}});
         if (users.rows().empty())
             service::common::throwAppError(AuthError::USER_NOT_FOUND);
         const auto& row = users.rows().front();
@@ -187,11 +187,11 @@ class AuthService {
         co_return result;
     }
 
-    cyra::Task<AuthUserInfoDto> getCurrentUser(cyra::Context& c, std::int64_t userId) {
+    ruvia::Task<AuthUserInfoDto> getCurrentUser(ruvia::Context& c, std::int64_t userId) {
         auto db = c.db();
         const auto users = co_await db.query("SELECT username, nickname, status FROM sys_user "
                                              "WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-                                             {cyra::DbValue{userId}});
+                                             {ruvia::DbValue{userId}});
         if (users.rows().empty())
             service::common::throwAppError(AuthError::USER_NOT_FOUND);
         const auto& row = users.rows().front();
@@ -206,17 +206,17 @@ class AuthService {
   private:
     AuthService() = default;
 
-    cyra::Task<bool> loadUserRoles(cyra::Context& c, AuthUserInfoDto& info, std::int64_t userId) {
+    ruvia::Task<bool> loadUserRoles(ruvia::Context& c, AuthUserInfoDto& info, std::int64_t userId) {
         auto db = c.db();
         const auto rs = co_await db.query("SELECT r.id, r.name, r.code FROM sys_role r "
                                           "INNER JOIN sys_user_role ur ON r.id = ur.role_id "
                                           "WHERE ur.user_id = ? AND r.deleted_at IS NULL",
-                                          {cyra::DbValue{userId}});
+                                          {ruvia::DbValue{userId}});
         bool isSuperadmin = false;
         auto& roles = info.roles().ensure();
         for (const auto& row : rs.rows()) {
             auto& role = roles.emplace_back(c);
-            role.id(static_cast<cyra::Int64>(std::stoll(std::string(row[0].text()))));
+            role.id(static_cast<ruvia::Int64>(std::stoll(std::string(row[0].text()))));
 
             const auto code = row[2].text();
             role.name().assignView(row[1].text());
@@ -227,7 +227,7 @@ class AuthService {
         co_return isSuperadmin;
     }
 
-    cyra::Task<cyra::List<menu::MenuDto>> getAllMenus(cyra::Context& c) {
+    ruvia::Task<ruvia::List<menu::MenuDto>> getAllMenus(ruvia::Context& c) {
         auto db = c.db();
         const auto rs = co_await db.query(
             "SELECT id, name, path, icon, parent_id, `order`, type, component, status, "
@@ -237,7 +237,7 @@ class AuthService {
         co_return menu::MenuService::flatFromRows(c, rs.rows());
     }
 
-    cyra::Task<cyra::List<menu::MenuDto>> getUserRoleMenus(cyra::Context& c, std::int64_t userId) {
+    ruvia::Task<ruvia::List<menu::MenuDto>> getUserRoleMenus(ruvia::Context& c, std::int64_t userId) {
         auto db = c.db();
         const auto rs = co_await db.query(
             "SELECT DISTINCT m.id, m.name, m.path, m.icon, m.parent_id, m.`order`, m.type, "
@@ -248,16 +248,16 @@ class AuthService {
             "WHERE ur.user_id = ? AND r.deleted_at IS NULL AND r.status = 'enabled' "
             "  AND m.deleted_at IS NULL AND m.status = 'enabled' "
             "ORDER BY m.`order` ASC, m.id ASC",
-            {cyra::DbValue{userId}});
+            {ruvia::DbValue{userId}});
         co_return menu::MenuService::flatFromRows(c, rs.rows());
     }
 
-    cyra::Task<AuthUserInfoDto> buildUserInfo(cyra::Context& c, std::int64_t userId,
+    ruvia::Task<AuthUserInfoDto> buildUserInfo(ruvia::Context& c, std::int64_t userId,
                                               const std::string& username,
                                               const std::string& nickname,
                                               const std::string& status) {
         AuthUserInfoDto info(c);
-        info.id(static_cast<cyra::Int64>(userId))
+        info.id(static_cast<ruvia::Int64>(userId))
             .username(username)
             .nickname(nickname)
             .status(status);

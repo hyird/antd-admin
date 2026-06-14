@@ -10,11 +10,11 @@
 #include <string>
 #include <string_view>
 
-#include <cyra/app/Task.h>
-#include <cyra/http/Context.h>
-#include <cyra/http/Controller.h>
-#include <cyra/http/Error.h>
-#include <cyra/http/HttpTypes.h>
+#include <ruvia/app/Task.h>
+#include <ruvia/http/Context.h>
+#include <ruvia/http/Controller.h>
+#include <ruvia/http/Error.h>
+#include <ruvia/http/HttpTypes.h>
 
 namespace service::middleware {
 
@@ -48,7 +48,7 @@ inline void logInfo(std::string_view message) { writeLogLine(std::cout, "INFO", 
 
 inline void logError(std::string_view message) { writeLogLine(std::cerr, "ERROR", message); }
 
-inline void logRequest(cyra::Context& c, std::uint16_t statusCode,
+inline void logRequest(ruvia::Context& c, std::uint16_t statusCode,
                        std::chrono::steady_clock::time_point startedAt) noexcept {
     try {
         const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
@@ -56,7 +56,7 @@ inline void logRequest(cyra::Context& c, std::uint16_t statusCode,
 
         std::ostringstream message;
         const auto remote = c.remoteAddress();
-        message << (remote.empty() ? "-" : remote) << ' ' << cyra::methodName(c.req().method())
+        message << (remote.empty() ? "-" : remote) << ' ' << ruvia::methodName(c.req().method())
                 << ' ' << c.req().target() << ' ' << statusCode << ' ' << elapsed.count() / 1000
                 << '.' << std::setfill('0') << std::setw(3) << elapsed.count() % 1000 << "ms";
 
@@ -69,15 +69,15 @@ inline void logRequest(cyra::Context& c, std::uint16_t statusCode,
     }
 }
 
-class LoggerMiddleware final : public cyra::Middleware<LoggerMiddleware> {
+class LoggerMiddleware final : public ruvia::Middleware<LoggerMiddleware> {
   public:
-    cyra::Task<cyra::HttpResponse> handle(cyra::Context& c, const cyra::Next& next) {
+    ruvia::Task<ruvia::HttpResponse> handle(ruvia::Context& c, const ruvia::Next& next) {
         const auto startedAt = std::chrono::steady_clock::now();
         try {
             auto response = co_await next(c);
             logRequest(c, response.statusCode(), startedAt);
             co_return response;
-        } catch (const cyra::HttpError& error) {
+        } catch (const ruvia::HttpError& error) {
             logRequest(c, error.info().statusCode, startedAt);
             throw;
         } catch (...) {

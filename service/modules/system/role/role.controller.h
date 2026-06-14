@@ -1,9 +1,9 @@
 #pragma once
 
-#include <cyra/app/Task.h>
-#include <cyra/http/Context.h>
-#include <cyra/http/Controller.h>
-#include <cyra/http/HttpTypes.h>
+#include <ruvia/app/Task.h>
+#include <ruvia/http/Context.h>
+#include <ruvia/http/Controller.h>
+#include <ruvia/http/HttpTypes.h>
 
 #include "service/common/http.h"
 #include "service/common/types.h"
@@ -14,20 +14,20 @@
 
 namespace service::role {
 
-class RoleController final : public cyra::Controller<RoleController> {
+class RoleController final : public ruvia::Controller<RoleController> {
   public:
-    CYRA_CONTROLLER_GROUP("/api/roles", service::middleware::AuthMiddleware)
-    CYRA_ROUTES_BEGIN
-    CYRA_GET("/", list);
-    CYRA_GET("/all", listAll);
-    CYRA_GET("/:id", detail);
-    CYRA_POST("/", create, CreateRoleValidator);
-    CYRA_PUT("/:id", update, UpdateRoleValidator);
-    CYRA_DELETE("/:id", remove);
-    CYRA_ROUTES_END
+    RUVIA_CONTROLLER_GROUP("/api/roles", service::middleware::AuthMiddleware)
+    RUVIA_ROUTES_BEGIN
+    RUVIA_GET("/", list);
+    RUVIA_GET("/all", listAll);
+    RUVIA_GET("/:id", detail);
+    RUVIA_POST("/", create, CreateRoleValidator);
+    RUVIA_PUT("/:id", update, UpdateRoleValidator);
+    RUVIA_DELETE("/:id", remove);
+    RUVIA_ROUTES_END
 
   private:
-    cyra::Task<cyra::HttpResponse> list(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> list(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:role:query");
         auto pageSize = c.query("pageSize").toInt64();
         if (!pageSize)
@@ -40,14 +40,14 @@ class RoleController final : public cyra::Controller<RoleController> {
                                            c.query("status").toStringView())));
     }
 
-    cyra::Task<cyra::HttpResponse> listAll(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> listAll(ruvia::Context& c) {
         co_await service::middleware::requireAnyPermission(c,
                                                            {"system:user:add", "system:user:edit"});
         co_return c.json(
             service::common::ok<RoleOptionsResponse>(c, co_await roleService().listAllEnabled(c)));
     }
 
-    cyra::Task<cyra::HttpResponse> detail(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> detail(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:role:query");
         const auto id = c.param("id").toInt64();
         if (!id || *id <= 0)
@@ -57,13 +57,13 @@ class RoleController final : public cyra::Controller<RoleController> {
             service::common::ok<RoleDetailResponse>(c, co_await roleService().getById(c, *id)));
     }
 
-    cyra::Task<cyra::HttpResponse> create(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> create(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:role:add");
         co_await roleService().create(c, c.valid<CreateRoleBody>());
         co_return c.json(service::common::operation(c, "创建成功"));
     }
 
-    cyra::Task<cyra::HttpResponse> update(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> update(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:role:edit");
         const auto id = c.param("id").toInt64();
         if (!id || *id <= 0)
@@ -73,7 +73,7 @@ class RoleController final : public cyra::Controller<RoleController> {
         co_return c.json(service::common::operation(c, "更新成功"));
     }
 
-    cyra::Task<cyra::HttpResponse> remove(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> remove(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:role:delete");
         const auto id = c.param("id").toInt64();
         if (!id || *id <= 0)

@@ -8,7 +8,7 @@
 #include <string_view>
 #include <tuple>
 
-#include <cyra/http/Model.h>
+#include <ruvia/http/Model.h>
 
 namespace service::common {
 
@@ -43,16 +43,16 @@ inline auto normalizePagination(std::optional<std::int64_t> pageInput,
     return std::tuple{page, size, (page - 1) * size, std::move(keyword), paginated};
 }
 
-CYRA_MODEL(OperationResponse, CYRA_FIELD(code, cyra::Int64), CYRA_FIELD(message, cyra::String));
+RUVIA_MODEL(OperationResponse, RUVIA_FIELD(code, ruvia::Int64), RUVIA_FIELD(message, ruvia::String));
 
-CYRA_MODEL(HealthData, CYRA_FIELD(status, cyra::String));
+RUVIA_MODEL(HealthData, RUVIA_FIELD(status, ruvia::String));
 
-CYRA_MODEL(HealthResponse, CYRA_FIELD(code, cyra::Int64), CYRA_FIELD(message, cyra::String),
-           CYRA_FIELD(data, HealthData));
+RUVIA_MODEL(HealthResponse, RUVIA_FIELD(code, ruvia::Int64), RUVIA_FIELD(message, ruvia::String),
+           RUVIA_FIELD(data, HealthData));
 
-CYRA_MODEL(CountData, CYRA_FIELD_NAME("created_count", createdCount, cyra::Int64));
+RUVIA_MODEL(CountData, RUVIA_FIELD_NAME("created_count", createdCount, ruvia::Int64));
 
-CYRA_MODEL(CountResponse, CYRA_FIELD(code, cyra::Int64), CYRA_FIELD(message, cyra::String),
-           CYRA_FIELD(data, CountData));
+RUVIA_MODEL(CountResponse, RUVIA_FIELD(code, ruvia::Int64), RUVIA_FIELD(message, ruvia::String),
+           RUVIA_FIELD(data, CountData));
 
 } // namespace service::common

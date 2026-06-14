@@ -10,9 +10,9 @@
 #include <unordered_set>
 #include <vector>
 
-#include <cyra/app/Task.h>
-#include <cyra/db/Db.h>
-#include <cyra/http/Context.h>
+#include <ruvia/app/Task.h>
+#include <ruvia/db/Db.h>
+#include <ruvia/http/Context.h>
 
 #include "service/common/http.h"
 #include "service/common/types.h"
@@ -27,12 +27,12 @@ class PermissionService {
         return svc;
     }
 
-    cyra::Task<bool> hasPermission(cyra::Context& c, std::int64_t userId, std::string_view code) {
+    ruvia::Task<bool> hasPermission(ruvia::Context& c, std::int64_t userId, std::string_view code) {
         auto data = co_await loadUser(c, userId);
         co_return data.is_superadmin || data.permissions.count(std::string(code)) > 0;
     }
 
-    cyra::Task<bool> hasAnyPermission(cyra::Context& c, std::int64_t userId,
+    ruvia::Task<bool> hasAnyPermission(ruvia::Context& c, std::int64_t userId,
                                       std::initializer_list<std::string_view> codes) {
         auto data = co_await loadUser(c, userId);
         if (data.is_superadmin)
@@ -44,7 +44,7 @@ class PermissionService {
         co_return false;
     }
 
-    cyra::Task<bool> hasAllPermissions(cyra::Context& c, std::int64_t userId,
+    ruvia::Task<bool> hasAllPermissions(ruvia::Context& c, std::int64_t userId,
                                        std::initializer_list<std::string_view> codes) {
         auto data = co_await loadUser(c, userId);
         if (data.is_superadmin)
@@ -75,7 +75,7 @@ class PermissionService {
 
     static constexpr std::chrono::seconds kTtl{60};
 
-    cyra::Task<Snapshot> loadUser(cyra::Context& c, std::int64_t userId) {
+    ruvia::Task<Snapshot> loadUser(ruvia::Context& c, std::int64_t userId) {
         {
             std::lock_guard<std::mutex> lock(mutex_);
             auto it = cache_.find(userId);
@@ -91,7 +91,7 @@ class PermissionService {
         const auto roles = co_await db.query("SELECT r.code, r.status FROM sys_role r "
                                              "INNER JOIN sys_user_role ur ON r.id = ur.role_id "
                                              "WHERE ur.user_id = ? AND r.deleted_at IS NULL",
-                                             {cyra::DbValue{userId}});
+                                             {ruvia::DbValue{userId}});
         for (const auto& row : roles.rows()) {
             if (row.size() < 2)
                 continue;
@@ -114,7 +114,7 @@ class PermissionService {
             "WHERE ur.user_id = ? AND r.deleted_at IS NULL AND r.status = 'enabled' "
             "  AND m.deleted_at IS NULL AND m.status = 'enabled' "
             "  AND m.permission_code IS NOT NULL AND m.permission_code != ''",
-            {cyra::DbValue{userId}});
+            {ruvia::DbValue{userId}});
         for (const auto& row : perms.rows()) {
             if (row.empty() || row[0].isNull())
                 continue;
@@ -134,7 +134,7 @@ class PermissionService {
 
 inline PermissionService& permissionService() { return PermissionService::instance(); }
 
-inline cyra::Task<void> requirePermission(cyra::Context& c, std::string_view code) {
+inline ruvia::Task<void> requirePermission(ruvia::Context& c, std::string_view code) {
     const auto& jwt = currentUser(c);
     if (jwt.user_id <= 0) {
         service::common::throwAppError(service::common::kAuthUnauthorizedErrorCode, "未登录", 401);
@@ -146,7 +146,7 @@ inline cyra::Task<void> requirePermission(cyra::Context& c, std::string_view cod
     }
 }
 
-inline cyra::Task<void> requireAnyPermission(cyra::Context& c,
+inline ruvia::Task<void> requireAnyPermission(ruvia::Context& c,
                                              std::initializer_list<std::string_view> codes) {
     const auto& jwt = currentUser(c);
     if (jwt.user_id <= 0) {
@@ -159,7 +159,7 @@ inline cyra::Task<void> requireAnyPermission(cyra::Context& c,
     }
 }
 
-inline cyra::Task<void> requireAllPermissions(cyra::Context& c,
+inline ruvia::Task<void> requireAllPermissions(ruvia::Context& c,
                                               std::initializer_list<std::string_view> codes) {
     const auto& jwt = currentUser(c);
     if (jwt.user_id <= 0) {

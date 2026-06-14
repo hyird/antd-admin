@@ -6,18 +6,18 @@
 #include <system_error>
 #include <utility>
 
-#include <cyra/app/App.h>
-#include <cyra/db/Db.h>
-#include <cyra/http/Context.h>
-#include <cyra/http/Controller.h>
-#include <cyra/http/Error.h>
-#include <cyra/http/HttpTypes.h>
+#include <ruvia/app/App.h>
+#include <ruvia/db/Db.h>
+#include <ruvia/http/Context.h>
+#include <ruvia/http/Controller.h>
+#include <ruvia/http/Error.h>
+#include <ruvia/http/HttpTypes.h>
 
 #include "service/common/http.h"
 #include "service/config/schema.h"
 #include "service/middleware/logger.h"
 
-// 业务控制器（CYRA_CONTROLLER_GROUP 在静态阶段把路由表注册到 cyra::app()）。
+// 业务控制器（RUVIA_CONTROLLER_GROUP 在静态阶段把路由表注册到 ruvia::app()）。
 #include "service/modules/system/auth/auth.controller.h"
 #include "service/modules/system/dept/dept.controller.h"
 #include "service/modules/system/menu/menu.controller.h"
@@ -58,12 +58,12 @@ std::filesystem::path& webRootPath() {
     return path;
 }
 
-void configureDocumentRoot(cyra::App& app, const std::filesystem::path& runtimeDir) {
+void configureDocumentRoot(ruvia::App& app, const std::filesystem::path& runtimeDir) {
     auto webRoot = runtimeDir / "web";
     if (!std::filesystem::is_directory(webRoot))
         return;
 
-    cyra::DocumentRootConfig config;
+    ruvia::DocumentRootConfig config;
     config.root = std::move(webRoot);
     config.staticOptions.indexFile = "index.html";
     config.staticOptions.cacheControl = "public, max-age=3600";
@@ -71,8 +71,8 @@ void configureDocumentRoot(cyra::App& app, const std::filesystem::path& runtimeD
     app.setDocumentRoot(std::move(config));
 }
 
-cyra::DbConfig dbConfigFromEnv(const cyra::Env& env) {
-    cyra::DbConfig config;
+ruvia::DbConfig dbConfigFromEnv(const ruvia::Env& env) {
+    ruvia::DbConfig config;
     config.host.assign(env.get("DB_HOST").value_or("127.0.0.1"));
     config.port = static_cast<std::uint16_t>(env.get<int>("DB_PORT").value_or(3306));
     config.username.assign(env.get("DB_USERNAME").value_or("root"));
@@ -82,19 +82,21 @@ cyra::DbConfig dbConfigFromEnv(const cyra::Env& env) {
     return config;
 }
 
-void logMigrationReport(const cyra::DbMigrationReport& report) {
+void logMigrationReport(const ruvia::DbMigrationReport& report) {
     service::middleware::logInfo(
         "DB migrations applied=" + std::to_string(report.applied().size()) +
         ", skipped=" + std::to_string(report.skipped().size()));
 }
 
-void configureDatabase(cyra::App& app) {
+void configureDatabase(ruvia::App& app) {
     auto dbConfig = dbConfigFromEnv(app.env());
-    logMigrationReport(cyra::DbMigrator::migrate(dbConfig, service::config::kSchemaMigrations));
+    ruvia::DbMigrationOptions migrationOptions;
+    migrationOptions.table = "cyra_schema_migrations";
+    logMigrationReport(ruvia::DbMigrator::migrate(dbConfig, service::config::kSchemaMigrations, migrationOptions));
     app.useDb(std::move(dbConfig));
 }
 
-ServerSettings serverSettingsFromEnv(const cyra::Env& env) {
+ServerSettings serverSettingsFromEnv(const ruvia::Env& env) {
     return {
         .host = std::string(env.get("HOST").value_or("0.0.0.0")),
         .port = static_cast<std::uint16_t>(env.get<int>("PORT").value_or(1102)),
@@ -102,10 +104,10 @@ ServerSettings serverSettingsFromEnv(const cyra::Env& env) {
     };
 }
 
-bool isSpaFallbackRequest(cyra::Context& c, cyra::HttpErrorInfo info) {
+bool isSpaFallbackRequest(ruvia::Context& c, ruvia::HttpErrorInfo info) {
     if (info.statusCode != 404 || webRootPath().empty())
         return false;
-    if (c.req().method() != cyra::HttpMethod::kGet && c.req().method() != cyra::HttpMethod::kHead)
+    if (c.req().method() != ruvia::HttpMethod::kGet && c.req().method() != ruvia::HttpMethod::kHead)
         return false;
 
     auto path = c.req().path();
@@ -120,8 +122,8 @@ bool isSpaFallbackRequest(cyra::Context& c, cyra::HttpErrorInfo info) {
     return lastSegment.find('.') == std::string_view::npos;
 }
 
-// 与 cyra::HttpErrorHandler 签名匹配；运行时把业务 HttpError 转成统一响应 DTO。
-cyra::Task<cyra::HttpResponse> handleError(cyra::Context& c, cyra::HttpErrorInfo info) {
+// 与 ruvia::HttpErrorHandler 签名匹配；运行时把业务 HttpError 转成统一响应 DTO。
+ruvia::Task<ruvia::HttpResponse> handleError(ruvia::Context& c, ruvia::HttpErrorInfo info) {
     if (isSpaFallbackRequest(c, info)) {
         co_return c.file(webRootPath() / "index.html", "text/html; charset=utf-8");
     }
@@ -132,10 +134,10 @@ cyra::Task<cyra::HttpResponse> handleError(cyra::Context& c, cyra::HttpErrorInfo
     co_return c.status(info.statusCode)
         .json(service::common::error(
             c, service::common::normalizeBusinessErrorCode(info.code, info.statusCode),
-            info.message.empty() ? cyra::defaultStatusText(info.statusCode) : info.message));
+            info.message.empty() ? ruvia::defaultStatusText(info.statusCode) : info.message));
 }
 
-void configureHttpServer(cyra::App& app) {
+void configureHttpServer(ruvia::App& app) {
     const auto settings = serverSettingsFromEnv(app.env());
     app.use<service::middleware::LoggerMiddleware>()
         .setListenAddress(settings.host, settings.port)
@@ -148,21 +150,21 @@ void configureHttpServer(cyra::App& app) {
 } // namespace
 
 // 健康检查。
-class HealthController final : public cyra::Controller<HealthController> {
+class HealthController final : public ruvia::Controller<HealthController> {
   public:
-    CYRA_ROUTES_BEGIN
-    CYRA_GET("/api/health", health);
-    CYRA_ROUTES_END
+    RUVIA_ROUTES_BEGIN
+    RUVIA_GET("/api/health", health);
+    RUVIA_ROUTES_END
 
   private:
-    cyra::Task<cyra::HttpResponse> health(cyra::Context& c) {
+    ruvia::Task<ruvia::HttpResponse> health(ruvia::Context& c) {
         co_return c.json(service::common::health(c));
     }
 };
 
 int main(int argc, char* argv[]) {
     try {
-        auto& app = cyra::app();
+        auto& app = ruvia::app();
         app.loadDotenv();
         configureDocumentRoot(app, executableDir(argc > 0 ? argv[0] : nullptr));
         configureDatabase(app);

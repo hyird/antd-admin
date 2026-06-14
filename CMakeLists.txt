@@ -25,17 +25,18 @@ endif()
 
 option(ANTD_ADMIN_BUILD_WEB "Build the frontend as part of the service build" ON)
 
-set(CYRA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(CYRA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(CYRA_ENABLE_MEMORY_STATS OFF CACHE BOOL "" FORCE)
-set(CYRA_ENABLE_STD_REGEX_RULES OFF CACHE BOOL "" FORCE)
+set(RUVIA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(RUVIA_BUILD_TECHEMPOWER OFF CACHE BOOL "" FORCE)
+set(RUVIA_ENABLE_MARIADB ON CACHE BOOL "" FORCE)
+set(RUVIA_ENABLE_JWT ON CACHE BOOL "" FORCE)
+set(RUVIA_ENABLE_REDIS OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(
-    cyra
-    GIT_REPOSITORY https://github.com/hyird/cyra.git
-    GIT_TAG d15989a43c0dbe6e7e700e3b3d364983c0c707d9 # v0.0.1
+    ruvia
+    GIT_REPOSITORY https://github.com/hyird/Ruvia.git
+    GIT_TAG 4fb6e968222c2fafb5a8002d12713d7522e879e2 # v0.0.4
 )
-FetchContent_MakeAvailable(cyra)
+FetchContent_MakeAvailable(ruvia)
 
 if(ANTD_ADMIN_BUILD_WEB)
     if(WIN32)
@@ -80,7 +81,7 @@ target_include_directories(antd_admin_service PRIVATE ${CMAKE_CURRENT_SOURCE_DIR
 
 target_link_libraries(antd_admin_service
     PRIVATE
-        cyra::cyra
+        ruvia::ruvia
 )
 
 if(ANTD_ADMIN_BUILD_WEB)

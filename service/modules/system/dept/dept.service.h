@@ -9,9 +9,9 @@
 #include <utility>
 #include <vector>
 
-#include <cyra/app/Task.h>
-#include <cyra/db/Db.h>
-#include <cyra/http/Context.h>
+#include <ruvia/app/Task.h>
+#include <ruvia/db/Db.h>
+#include <ruvia/http/Context.h>
 
 #include "service/common/http.h"
 #include "service/modules/system/dept/dept.error.h"
@@ -26,14 +26,14 @@ class DeptService {
         return svc;
     }
 
-    cyra::Task<DeptPageDataDto> list(cyra::Context& c, std::int64_t page, std::int64_t pageSize,
+    ruvia::Task<DeptPageDataDto> list(ruvia::Context& c, std::int64_t page, std::int64_t pageSize,
                                      std::int64_t skip, const std::optional<std::string>& keyword,
                                      bool paginated, std::optional<std::string_view> status,
                                      std::optional<std::int64_t> parentId) {
         auto db = c.db();
 
         std::string where = " FROM sys_dept d WHERE d.deleted_at IS NULL";
-        std::vector<cyra::DbValue> params;
+        std::vector<ruvia::DbValue> params;
         if (keyword) {
             where += " AND (d.name LIKE ? OR d.code LIKE ?)";
             const std::string like = "%" + *keyword + "%";
@@ -67,10 +67,10 @@ class DeptService {
         const auto rs = co_await db.query(sql, params);
 
         DeptPageDataDto result(c);
-        result.total(static_cast<cyra::Int64>(total))
-            .page(static_cast<cyra::Int64>(page))
-            .pageSize(static_cast<cyra::Int64>(pageSize))
-            .totalPages(static_cast<cyra::Int64>(
+        result.total(static_cast<ruvia::Int64>(total))
+            .page(static_cast<ruvia::Int64>(page))
+            .pageSize(static_cast<ruvia::Int64>(pageSize))
+            .totalPages(static_cast<ruvia::Int64>(
                 paginated && pageSize > 0 ? (total + pageSize - 1) / pageSize : 1));
 
         auto& list = result.list().ensure();
@@ -81,13 +81,13 @@ class DeptService {
         co_return result;
     }
 
-    cyra::Task<cyra::List<DeptDto>> getTree(cyra::Context& c,
+    ruvia::Task<ruvia::List<DeptDto>> getTree(ruvia::Context& c,
                                             std::optional<std::string_view> status) {
         auto db = c.db();
         std::string sql =
             "SELECT id, name, code, parent_id, `order`, leader_id, status FROM sys_dept "
             "WHERE deleted_at IS NULL";
-        std::vector<cyra::DbValue> params;
+        std::vector<ruvia::DbValue> params;
         if (status && !status->empty()) {
             sql += " AND status = ?";
             params.emplace_back(std::string(*status));
@@ -97,12 +97,12 @@ class DeptService {
         co_return buildTree(c, rowsToRecords(rs.rows()));
     }
 
-    cyra::Task<DeptDto> getById(cyra::Context& c, std::int64_t id) {
+    ruvia::Task<DeptDto> getById(ruvia::Context& c, std::int64_t id) {
         auto db = c.db();
         const auto rs = co_await db.query(
             "SELECT id, name, code, parent_id, `order`, leader_id, status FROM sys_dept "
             "WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-            {cyra::DbValue{id}});
+            {ruvia::DbValue{id}});
         if (rs.rows().empty())
             service::common::throwAppError(DeptError::NOT_FOUND);
 
@@ -111,21 +111,21 @@ class DeptService {
         co_return out;
     }
 
-    cyra::Task<void> create(cyra::Context& c, const CreateDeptBody& body) {
+    ruvia::Task<void> create(ruvia::Context& c, const CreateDeptBody& body) {
         auto db = c.db();
         const auto code = body.code() ? std::optional<std::string>(std::string(body.code()->view()))
                                       : std::nullopt;
         if (code) {
             const auto exist = co_await db.query(
                 "SELECT id FROM sys_dept WHERE code = ? AND deleted_at IS NULL LIMIT 1",
-                {cyra::DbValue{*code}});
+                {ruvia::DbValue{*code}});
             if (!exist.rows().empty())
                 service::common::throwAppError(DeptError::CODE_EXISTS);
         }
         if (body.parentId()) {
             const auto parent = co_await db.query(
                 "SELECT id FROM sys_dept WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-                {cyra::DbValue{static_cast<std::int64_t>(*body.parentId())}});
+                {ruvia::DbValue{static_cast<std::int64_t>(*body.parentId())}});
             if (parent.rows().empty())
                 service::common::throwAppError(DeptError::NOT_FOUND);
         }
@@ -134,22 +134,22 @@ class DeptService {
             "INSERT INTO sys_dept (name, code, parent_id, `order`, leader_id, status, "
             "                          created_at, updated_at) "
             "VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())",
-            {cyra::DbValue{std::string(body.name()->view())},
-             code ? cyra::DbValue{*code} : cyra::DbValue{nullptr},
-             body.parentId() ? cyra::DbValue{static_cast<std::int64_t>(*body.parentId())}
-                             : cyra::DbValue{nullptr},
-             cyra::DbValue{body.sortOrder() ? static_cast<std::int64_t>(*body.sortOrder()) : 0},
-             body.leaderId() ? cyra::DbValue{static_cast<std::int64_t>(*body.leaderId())}
-                             : cyra::DbValue{nullptr},
-             cyra::DbValue{body.status() ? std::string(body.status()->view()) : "enabled"}});
+            {ruvia::DbValue{std::string(body.name()->view())},
+             code ? ruvia::DbValue{*code} : ruvia::DbValue{nullptr},
+             body.parentId() ? ruvia::DbValue{static_cast<std::int64_t>(*body.parentId())}
+                             : ruvia::DbValue{nullptr},
+             ruvia::DbValue{body.sortOrder() ? static_cast<std::int64_t>(*body.sortOrder()) : 0},
+             body.leaderId() ? ruvia::DbValue{static_cast<std::int64_t>(*body.leaderId())}
+                             : ruvia::DbValue{nullptr},
+             ruvia::DbValue{body.status() ? std::string(body.status()->view()) : "enabled"}});
         co_return;
     }
 
-    cyra::Task<void> update(cyra::Context& c, std::int64_t id, const UpdateDeptBody& body) {
+    ruvia::Task<void> update(ruvia::Context& c, std::int64_t id, const UpdateDeptBody& body) {
         auto db = c.db();
         const auto rs = co_await db.query(
             "SELECT id, code FROM sys_dept WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-            {cyra::DbValue{id}});
+            {ruvia::DbValue{id}});
         if (rs.rows().empty())
             service::common::throwAppError(DeptError::NOT_FOUND);
         const std::string currentCode = rs.rows().front()[1].isNull()
@@ -161,7 +161,7 @@ class DeptService {
         if (code && *code != currentCode) {
             const auto exist = co_await db.query(
                 "SELECT id FROM sys_dept WHERE code = ? AND id != ? AND deleted_at IS NULL LIMIT 1",
-                {cyra::DbValue{*code}, cyra::DbValue{id}});
+                {ruvia::DbValue{*code}, ruvia::DbValue{id}});
             if (!exist.rows().empty())
                 service::common::throwAppError(DeptError::CODE_EXISTS);
         }
@@ -173,7 +173,7 @@ class DeptService {
             if (parentId > 0) {
                 const auto parent = co_await db.query(
                     "SELECT id FROM sys_dept WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-                    {cyra::DbValue{parentId}});
+                    {ruvia::DbValue{parentId}});
                 if (parent.rows().empty())
                     service::common::throwAppError(DeptError::NOT_FOUND);
                 if (co_await isAncestorDescendant(c, id, parentId)) {
@@ -183,8 +183,8 @@ class DeptService {
         }
 
         std::string set;
-        std::vector<cyra::DbValue> params;
-        auto append = [&](std::string_view col, cyra::DbValue value) {
+        std::vector<ruvia::DbValue> params;
+        auto append = [&](std::string_view col, ruvia::DbValue value) {
             if (!set.empty())
                 set += ", ";
             set.append(col);
@@ -192,50 +192,50 @@ class DeptService {
             params.emplace_back(std::move(value));
         };
         if (body.name())
-            append("name", cyra::DbValue{std::string(body.name()->view())});
+            append("name", ruvia::DbValue{std::string(body.name()->view())});
         if (code)
-            append("code", cyra::DbValue{*code});
+            append("code", ruvia::DbValue{*code});
         if (body.parentId())
-            append("parent_id", cyra::DbValue{static_cast<std::int64_t>(*body.parentId())});
+            append("parent_id", ruvia::DbValue{static_cast<std::int64_t>(*body.parentId())});
         if (body.sortOrder())
-            append("`order`", cyra::DbValue{static_cast<std::int64_t>(*body.sortOrder())});
+            append("`order`", ruvia::DbValue{static_cast<std::int64_t>(*body.sortOrder())});
         if (body.leaderId())
-            append("leader_id", cyra::DbValue{static_cast<std::int64_t>(*body.leaderId())});
+            append("leader_id", ruvia::DbValue{static_cast<std::int64_t>(*body.leaderId())});
         if (body.status())
-            append("status", cyra::DbValue{std::string(body.status()->view())});
+            append("status", ruvia::DbValue{std::string(body.status()->view())});
 
         if (!set.empty()) {
-            params.emplace_back(cyra::DbValue{id});
+            params.emplace_back(ruvia::DbValue{id});
             (void)co_await db.execute(
                 "UPDATE sys_dept SET " + set + ", updated_at = NOW() WHERE id = ?", params);
         }
         co_return;
     }
 
-    cyra::Task<void> remove(cyra::Context& c, std::int64_t id) {
+    ruvia::Task<void> remove(ruvia::Context& c, std::int64_t id) {
         auto db = c.db();
         const auto rs =
             co_await db.query("SELECT id FROM sys_dept WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-                              {cyra::DbValue{id}});
+                              {ruvia::DbValue{id}});
         if (rs.rows().empty())
             service::common::throwAppError(DeptError::NOT_FOUND);
 
         const auto child = co_await db.query(
             "SELECT COUNT(*) FROM sys_dept WHERE parent_id = ? AND deleted_at IS NULL",
-            {cyra::DbValue{id}});
+            {ruvia::DbValue{id}});
         if (std::stoll(std::string(child.rows().front()[0].text())) > 0) {
             service::common::throwAppError(DeptError::HAS_CHILDREN);
         }
 
         const auto users = co_await db.query(
             "SELECT COUNT(*) FROM sys_user WHERE dept_id = ? AND deleted_at IS NULL",
-            {cyra::DbValue{id}});
+            {ruvia::DbValue{id}});
         if (std::stoll(std::string(users.rows().front()[0].text())) > 0) {
             service::common::throwAppError(DeptError::HAS_USERS);
         }
 
         (void)co_await db.execute("UPDATE sys_dept SET deleted_at = NOW() WHERE id = ?",
-                                  {cyra::DbValue{id}});
+                                  {ruvia::DbValue{id}});
         co_return;
     }
 
@@ -252,7 +252,7 @@ class DeptService {
 
     DeptService() = default;
 
-    cyra::Task<bool> isAncestorDescendant(cyra::Context& c, std::int64_t ancestor,
+    ruvia::Task<bool> isAncestorDescendant(ruvia::Context& c, std::int64_t ancestor,
                                           std::int64_t candidate) {
         auto db = c.db();
         const auto rs =
@@ -304,21 +304,21 @@ class DeptService {
     }
 
     static void fillDeptDto(DeptDto& item, const DeptRecord& record) {
-        item.id(static_cast<cyra::Int64>(record.id))
-            .sortOrder(static_cast<cyra::Int64>(record.sort_order));
+        item.id(static_cast<ruvia::Int64>(record.id))
+            .sortOrder(static_cast<ruvia::Int64>(record.sort_order));
         item.name().assignView(record.name);
         item.status().assignView(record.status);
         if (record.code)
             item.code().assignView(*record.code);
         if (record.parent_id)
-            item.parentId(static_cast<cyra::Int64>(*record.parent_id));
+            item.parentId(static_cast<ruvia::Int64>(*record.parent_id));
         if (record.leader_id)
-            item.leaderId(static_cast<cyra::Int64>(*record.leader_id));
+            item.leaderId(static_cast<ruvia::Int64>(*record.leader_id));
     }
 
-    static cyra::List<DeptDto> buildFlatList(cyra::Context& c,
+    static ruvia::List<DeptDto> buildFlatList(ruvia::Context& c,
                                              const std::vector<DeptRecord>& records) {
-        cyra::List<DeptDto> out(c.resource());
+        ruvia::List<DeptDto> out(c.resource());
         for (const auto& record : records) {
             auto& item = out.emplace(c);
             fillDeptDto(item, record);
@@ -327,7 +327,7 @@ class DeptService {
     }
 
     static void
-    appendNode(cyra::Context& c, cyra::List<DeptDto>& out, const DeptRecord& record,
+    appendNode(ruvia::Context& c, ruvia::List<DeptDto>& out, const DeptRecord& record,
                const std::unordered_map<std::int64_t, std::vector<const DeptRecord*>>& children) {
         auto& item = out.emplace(c);
         fillDeptDto(item, record);
@@ -341,8 +341,8 @@ class DeptService {
         }
     }
 
-    static cyra::List<DeptDto> buildTree(cyra::Context& c, const std::vector<DeptRecord>& records) {
-        cyra::List<DeptDto> out(c.resource());
+    static ruvia::List<DeptDto> buildTree(ruvia::Context& c, const std::vector<DeptRecord>& records) {
+        ruvia::List<DeptDto> out(c.resource());
         std::unordered_set<std::int64_t> ids;
         ids.reserve(records.size());
         for (const auto& record : records)
