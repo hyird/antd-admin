@@ -36,7 +36,7 @@ class DeptService {
         std::vector<ruvia::DbValue> params;
         if (keyword) {
             where += " AND (d.name LIKE ? OR d.code LIKE ?)";
-            const std::string like = "%" + *keyword + "%";
+            const std::string like = "%" + service::common::escapeLikePattern(*keyword) + "%";
             params.emplace_back(like);
             params.emplace_back(like);
         }

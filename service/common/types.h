@@ -43,6 +43,19 @@ inline auto normalizePagination(std::optional<std::int64_t> pageInput,
     return std::tuple{page, size, (page - 1) * size, std::move(keyword), paginated};
 }
 
+// 转义 LIKE 模式中的特殊字符（\ % _），避免用户输入被当作通配符解释；
+// 与参数化查询配合使用（MariaDB LIKE 默认以反斜杠为转义符）。
+inline std::string escapeLikePattern(std::string_view input) {
+    std::string out;
+    out.reserve(input.size());
+    for (const char ch : input) {
+        if (ch == '\\' || ch == '%' || ch == '_')
+            out.push_back('\\');
+        out.push_back(ch);
+    }
+    return out;
+}
+
 RUVIA_MODEL(OperationResponse, RUVIA_FIELD(code, ruvia::Int64), RUVIA_FIELD(message, ruvia::String));
 
 RUVIA_MODEL(HealthData, RUVIA_FIELD(status, ruvia::String));

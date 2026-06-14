@@ -241,7 +241,7 @@ class AuthService {
         auto db = c.db();
         const auto rs = co_await db.query(
             "SELECT DISTINCT m.id, m.name, m.path, m.icon, m.parent_id, m.`order`, m.type, "
-            "       m.component, m.status, m.permission_code FROM sys_menu m "
+            "       m.component, m.status, m.permission_code, m.is_default FROM sys_menu m "
             "INNER JOIN sys_role_menu rm ON m.id = rm.menu_id "
             "INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id "
             "INNER JOIN sys_role r ON ur.role_id = r.id "

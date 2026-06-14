@@ -6,9 +6,9 @@
 import { App } from 'antd';
 import type { MessageInstance } from 'antd/es/message/interface';
 
-let messageInstance: MessageInstance;
+let messageInstance: MessageInstance | undefined;
 
-export function getMessage(): MessageInstance {
+export function getMessage(): MessageInstance | undefined {
     return messageInstance;
 }
 

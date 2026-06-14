@@ -20,7 +20,7 @@ import { APP_NAME, getAppTitle } from '@/config/app';
 import type { Menu } from '@/pages/system/menu/menu.types';
 
 function AuthGuard() {
-    const { token } = useAuthStore();
+    const token = useAuthStore((s) => s.token);
     const location = useLocation();
     const redirectState = useMemo(
         () => ({ from: { pathname: location.pathname } }),

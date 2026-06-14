@@ -35,7 +35,7 @@ class RoleService {
         std::vector<ruvia::DbValue> params;
         if (keyword) {
             where += " AND (r.name LIKE ? OR r.code LIKE ?)";
-            const std::string like = "%" + *keyword + "%";
+            const std::string like = "%" + service::common::escapeLikePattern(*keyword) + "%";
             params.emplace_back(like);
             params.emplace_back(like);
         }
@@ -149,15 +149,17 @@ class RoleService {
             service::common::throwAppError(RoleError::CODE_EXISTS);
 
         const std::string status = body.status() ? std::string(body.status()->view()) : "enabled";
+        auto tx = co_await db.beginTransaction();
         const auto rs =
-            co_await db.execute("INSERT INTO sys_role (name, code, status, created_at, updated_at) "
+            co_await tx.execute("INSERT INTO sys_role (name, code, status, created_at, updated_at) "
                                 "VALUES (?, ?, ?, NOW(), NOW())",
                                 {ruvia::DbValue{name}, ruvia::DbValue{code}, ruvia::DbValue{status}});
         const std::int64_t roleId = static_cast<std::int64_t>(rs.lastInsertId());
 
         if (code != service::common::kSuperAdminRoleCode) {
-            co_await syncRoleMenus(c, roleId, body.menuIds());
+            co_await syncRoleMenus(tx, roleId, body.menuIds());
         }
+        co_await tx.commit();
         service::middleware::permissionService().clearAllCache();
         co_return;
     }
@@ -200,21 +202,23 @@ class RoleService {
         if (body.status())
             append("status", ruvia::DbValue{std::string(body.status()->view())});
 
+        auto tx = co_await db.beginTransaction();
         if (!set.empty()) {
             params.emplace_back(ruvia::DbValue{id});
-            (void)co_await db.execute(
+            (void)co_await tx.execute(
                 "UPDATE sys_role SET " + set + ", updated_at = NOW() WHERE id = ?", params);
         }
 
         const std::string effectiveCode = code.value_or(currentCode);
         if (body.menuIds()) {
             if (effectiveCode == service::common::kSuperAdminRoleCode) {
-                (void)co_await db.execute("DELETE FROM sys_role_menu WHERE role_id = ?",
+                (void)co_await tx.execute("DELETE FROM sys_role_menu WHERE role_id = ?",
                                           {ruvia::DbValue{id}});
             } else {
-                co_await syncRoleMenus(c, id, body.menuIds());
+                co_await syncRoleMenus(tx, id, body.menuIds());
             }
         }
+        co_await tx.commit();
         service::middleware::permissionService().clearAllCache();
         co_return;
     }
@@ -280,15 +284,14 @@ class RoleService {
         item.menuIds(std::move(menuIds));
     }
 
-    ruvia::Task<void> syncRoleMenus(ruvia::Context& c, std::int64_t roleId,
+    ruvia::Task<void> syncRoleMenus(ruvia::DbTransaction& tx, std::int64_t roleId,
                                    const std::optional<ruvia::Array<ruvia::Int64>>& menuIds) {
-        auto db = c.db();
-        (void)co_await db.execute("DELETE FROM sys_role_menu WHERE role_id = ?",
+        (void)co_await tx.execute("DELETE FROM sys_role_menu WHERE role_id = ?",
                                   {ruvia::DbValue{roleId}});
         if (!menuIds)
             co_return;
         for (const auto menuId : *menuIds) {
-            (void)co_await db.execute(
+            (void)co_await tx.execute(
                 "INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES (?, ?)",
                 {ruvia::DbValue{roleId}, ruvia::DbValue{static_cast<std::int64_t>(menuId)}});
         }

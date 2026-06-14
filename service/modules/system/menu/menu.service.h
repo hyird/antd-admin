@@ -48,7 +48,7 @@ class MenuService {
         if (keyword) {
             where += " AND (m.name LIKE ? OR m.path LIKE ? OR m.component LIKE ? OR "
                      "m.permission_code LIKE ?)";
-            const std::string like = "%" + *keyword + "%";
+            const std::string like = "%" + service::common::escapeLikePattern(*keyword) + "%";
             for (int i = 0; i < 4; ++i)
                 params.emplace_back(like);
         }
@@ -144,11 +144,12 @@ class MenuService {
             service::common::throwAppError(MenuError::DEFAULT_MUST_BE_PAGE);
         }
 
+        auto tx = co_await db.beginTransaction();
         if (isDefault) {
-            (void)co_await db.execute("UPDATE sys_menu SET is_default = 0 WHERE is_default = 1");
+            (void)co_await tx.execute("UPDATE sys_menu SET is_default = 0 WHERE is_default = 1");
         }
 
-        (void)co_await db.execute(
+        (void)co_await tx.execute(
             "INSERT INTO sys_menu (name, path, icon, component, parent_id, `order`, type, status, "
             "                     permission_code, is_default, created_at, updated_at) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())",
@@ -165,6 +166,7 @@ class MenuService {
              body.permissionCode() ? ruvia::DbValue{std::string(body.permissionCode()->view())}
                                    : ruvia::DbValue{nullptr},
              ruvia::DbValue{static_cast<std::int64_t>(isDefault ? 1 : 0)}});
+        co_await tx.commit();
         service::middleware::permissionService().clearAllCache();
         co_return;
     }
@@ -199,10 +201,11 @@ class MenuService {
                 service::common::throwAppError(MenuError::MENU_PARENT_IS_CHILD);
             }
         }
-        if (body.isDefault() && static_cast<bool>(*body.isDefault()) && type && *type != "page") {
+        if (body.isDefault() && static_cast<bool>(*body.isDefault()) && newType != "page") {
             service::common::throwAppError(MenuError::DEFAULT_MUST_BE_PAGE);
         }
 
+        bool clearOtherDefault = false;
         std::string set;
         std::vector<ruvia::DbValue> params;
         auto append = [&](std::string_view col, ruvia::DbValue value) {
@@ -233,18 +236,20 @@ class MenuService {
         }
         if (body.isDefault()) {
             const bool nextDefault = static_cast<bool>(*body.isDefault());
-            if (nextDefault) {
-                (void)co_await db.execute(
-                    "UPDATE sys_menu SET is_default = 0 WHERE is_default = 1");
-            }
+            clearOtherDefault = nextDefault;
             append("is_default", ruvia::DbValue{static_cast<std::int64_t>(nextDefault ? 1 : 0)});
         }
 
+        auto tx = co_await db.beginTransaction();
+        if (clearOtherDefault) {
+            (void)co_await tx.execute("UPDATE sys_menu SET is_default = 0 WHERE is_default = 1");
+        }
         if (!set.empty()) {
             params.emplace_back(ruvia::DbValue{id});
-            (void)co_await db.execute(
+            (void)co_await tx.execute(
                 "UPDATE sys_menu SET " + set + ", updated_at = NOW() WHERE id = ?", params);
         }
+        co_await tx.commit();
         service::middleware::permissionService().clearAllCache();
         co_return;
     }
@@ -297,12 +302,14 @@ class MenuService {
         if (!body.items() || body.items()->empty())
             co_return;
         auto db = c.db();
+        auto tx = co_await db.beginTransaction();
         for (const auto& item : *body.items()) {
-            (void)co_await db.execute(
+            (void)co_await tx.execute(
                 "UPDATE sys_menu SET `order` = ?, updated_at = NOW() WHERE id = ?",
                 {ruvia::DbValue{static_cast<std::int64_t>(*item.sortOrder())},
                  ruvia::DbValue{static_cast<std::int64_t>(*item.id())}});
         }
+        co_await tx.commit();
         service::middleware::permissionService().clearAllCache();
         co_return;
     }
@@ -319,21 +326,22 @@ class MenuService {
             service::common::throwAppError(MenuError::MENU_TYPE_INVALID);
         }
 
+        auto tx = co_await db.beginTransaction();
         int created = 0;
         for (const auto& item : *body.items()) {
             const std::string name(item.name()->view());
             const std::string permissionCode(item.permissionCode()->view());
             const auto exists =
-                co_await db.query("SELECT id FROM sys_menu WHERE parent_id = ? AND type = 'button' "
+                co_await tx.query("SELECT id FROM sys_menu WHERE parent_id = ? AND type = 'button' "
                                   "  AND permission_code = ? AND deleted_at IS NULL LIMIT 1",
                                   {ruvia::DbValue{parentId}, ruvia::DbValue{permissionCode}});
             if (!exists.rows().empty())
                 continue;
-            const auto maxRs = co_await db.query(
+            const auto maxRs = co_await tx.query(
                 "SELECT COALESCE(MAX(`order`), 0) FROM sys_menu WHERE parent_id = ?",
                 {ruvia::DbValue{parentId}});
             const std::int64_t maxOrder = std::stoll(std::string(maxRs.rows().front()[0].text()));
-            (void)co_await db.execute(
+            (void)co_await tx.execute(
                 "INSERT INTO sys_menu (name, parent_id, type, status, permission_code, `order`, "
                 "                     created_at, updated_at) "
                 "VALUES (?, ?, 'button', 'enabled', ?, ?, NOW(), NOW())",
@@ -341,6 +349,7 @@ class MenuService {
                  ruvia::DbValue{maxOrder + 1}});
             ++created;
         }
+        co_await tx.commit();
         service::middleware::permissionService().clearAllCache();
         co_return created;
     }

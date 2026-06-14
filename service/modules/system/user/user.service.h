@@ -38,7 +38,7 @@ class UserService {
         if (keyword) {
             where +=
                 " AND (u.username LIKE ? OR u.nickname LIKE ? OR u.phone LIKE ? OR u.email LIKE ?)";
-            const std::string like = "%" + *keyword + "%";
+            const std::string like = "%" + service::common::escapeLikePattern(*keyword) + "%";
             for (int i = 0; i < 4; ++i)
                 params.emplace_back(like);
         }
@@ -87,7 +87,7 @@ class UserService {
         std::vector<ruvia::DbValue> params;
         if (keyword && !keyword->empty()) {
             sql += " AND (username LIKE ? OR nickname LIKE ? OR phone LIKE ? OR email LIKE ?)";
-            const std::string like = "%" + std::string(*keyword) + "%";
+            const std::string like = "%" + service::common::escapeLikePattern(*keyword) + "%";
             for (int i = 0; i < 4; ++i)
                 params.emplace_back(like);
         }
@@ -145,7 +145,8 @@ class UserService {
             service::common::throwAppError(UserError::ROLE_REQUIRED);
 
         const auto hash = service::utils::hashPassword(body.password()->view());
-        const auto rs = co_await db.execute(
+        auto tx = co_await db.beginTransaction();
+        const auto rs = co_await tx.execute(
             "INSERT INTO sys_user (username, password_hash, nickname, phone, email, "
             "                     dept_id, status, created_at, updated_at) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())",
@@ -160,10 +161,11 @@ class UserService {
         const std::int64_t userId = static_cast<std::int64_t>(rs.lastInsertId());
 
         for (const auto roleId : *body.roleIds()) {
-            (void)co_await db.execute(
+            (void)co_await tx.execute(
                 "INSERT IGNORE INTO sys_user_role (user_id, role_id) VALUES (?, ?)",
                 {ruvia::DbValue{userId}, ruvia::DbValue{static_cast<std::int64_t>(roleId)}});
         }
+        co_await tx.commit();
         co_return;
     }
 
@@ -185,6 +187,9 @@ class UserService {
             co_await checkPhoneUnique(c, phone, id);
         if (!email.empty())
             co_await checkEmailUnique(c, email, id);
+
+        if (body.roleIds() && body.roleIds()->empty())
+            service::common::throwAppError(UserError::ROLE_REQUIRED);
 
         std::string set;
         std::vector<ruvia::DbValue> params;
@@ -209,24 +214,25 @@ class UserService {
             const auto hash = service::utils::hashPassword(body.password()->view());
             append("password_hash", ruvia::DbValue{hash});
         }
+        auto tx = co_await db.beginTransaction();
         if (!set.empty()) {
             params.emplace_back(ruvia::DbValue{id});
-            (void)co_await db.execute(
+            (void)co_await tx.execute(
                 "UPDATE sys_user SET " + set + ", updated_at = NOW() WHERE id = ?", params);
         }
 
         if (body.roleIds()) {
-            if (body.roleIds()->empty())
-                service::common::throwAppError(UserError::ROLE_REQUIRED);
-            (void)co_await db.execute("DELETE FROM sys_user_role WHERE user_id = ?",
+            (void)co_await tx.execute("DELETE FROM sys_user_role WHERE user_id = ?",
                                       {ruvia::DbValue{id}});
             for (const auto roleId : *body.roleIds()) {
-                (void)co_await db.execute(
+                (void)co_await tx.execute(
                     "INSERT IGNORE INTO sys_user_role (user_id, role_id) VALUES (?, ?)",
                     {ruvia::DbValue{id}, ruvia::DbValue{static_cast<std::int64_t>(roleId)}});
             }
-            service::middleware::permissionService().clearUserCache(id);
         }
+        co_await tx.commit();
+        if (body.roleIds())
+            service::middleware::permissionService().clearUserCache(id);
         co_return;
     }
 
