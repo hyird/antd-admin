@@ -9,9 +9,8 @@ import type { CSSProperties } from 'react';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { APP_NAME, getAppTitle } from '@/config/app';
-import { HOME_TAB } from '@/store/tabsStore';
 import { useAuthStore } from '@/store/authStore';
-import { useTabsStore } from '@/store/tabsStore';
+import { HOME_TAB, useTabsStore } from '@/store/tabsStore';
 import type { Menu } from '@/pages/system/menu/menu.types';
 import { buildMenuTree } from '@/utils/tree';
 
@@ -41,7 +40,10 @@ export default function PageTabs() {
     const { tabs, activeKey, addTab, removeTab, setActiveKey, clearTabs, setTabsState } =
         useTabsStore();
 
-    const prevPathRef = useRef<string>(location.pathname);
+    // 用空串而非当前路径初始化：保证挂载后下方 location effect 能完成一次
+    // location -> activeKey 的同步；否则刷新时若持久化的 activeKey 与当前路由不一致，
+    // 激活的标签会与实际页面错位。
+    const prevPathRef = useRef<string>('');
 
     const menuTree = useMemo<Menu.TreeItem[]>(() => {
         const menus = user?.menus || [];
@@ -97,9 +99,12 @@ export default function PageTabs() {
             nextTabs.some((tab, index) => tab.key !== tabs[index]?.key);
 
         if (tabsChanged || nextActiveKey !== activeKey) {
-            syncTabsAndNavigate(nextTabs, nextActiveKey);
+            // 仅净化持久化的标签 / 激活态，不在此处导航：路由跳转交给下方依赖
+            // location 的 effect。否则两个 effect 会通过 navigate <-> location 互相触发，
+            // 且这里会基于可能过期的 activeKey 把用户跳离当前有效页面。
+            setTabsState(nextTabs, nextActiveKey);
         }
-    }, [tabs, activeKey, validPagePaths, syncTabsAndNavigate]);
+    }, [tabs, activeKey, validPagePaths, setTabsState]);
 
     useEffect(() => {
         const path = location.pathname;
