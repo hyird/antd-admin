@@ -2,7 +2,7 @@
 
 #include <array>
 
-#include <ruvia/db/Db.h>
+#include <ruvia/web/db/DbMigration.h>
 
 namespace service::config {
 

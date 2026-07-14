@@ -9,9 +9,9 @@
 #include <utility>
 #include <vector>
 
-#include <ruvia/app/Task.h>
-#include <ruvia/db/Db.h>
-#include <ruvia/http/Context.h>
+#include <ruvia/core/Task.h>
+#include <ruvia/web/db/Db.h>
+#include <ruvia/web/Context.h>
 
 #include "service/common/http.h"
 #include "service/modules/system/dept/dept.error.h"
@@ -42,7 +42,7 @@ class DeptService {
         }
         if (status && !status->empty()) {
             where += " AND d.status = ?";
-            params.emplace_back(std::string(*status));
+            params.emplace_back(*status);
         }
         if (parentId) {
             const auto parentValue = *parentId;
@@ -73,7 +73,7 @@ class DeptService {
             .totalPages(static_cast<ruvia::Int64>(
                 paginated && pageSize > 0 ? (total + pageSize - 1) / pageSize : 1));
 
-        auto& list = result.list().ensure();
+        auto& list = result.listEnsure();
         for (const auto& row : rs.rows()) {
             auto& item = list.emplace(c);
             fillDeptDto(item, rowToRecord(row));
@@ -90,7 +90,7 @@ class DeptService {
         std::vector<ruvia::DbValue> params;
         if (status && !status->empty()) {
             sql += " AND status = ?";
-            params.emplace_back(std::string(*status));
+            params.emplace_back(*status);
         }
         sql += " ORDER BY `order` ASC, id ASC";
         const auto rs = co_await db.query(sql, params);
@@ -102,7 +102,7 @@ class DeptService {
         const auto rs = co_await db.query(
             "SELECT id, name, code, parent_id, `order`, leader_id, status FROM sys_dept "
             "WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-            {ruvia::DbValue{id}});
+            service::common::dbParams(ruvia::DbValue{id}));
         if (rs.rows().empty())
             service::common::throwAppError(DeptError::NOT_FOUND);
 
@@ -118,14 +118,14 @@ class DeptService {
         if (code) {
             const auto exist = co_await db.query(
                 "SELECT id FROM sys_dept WHERE code = ? AND deleted_at IS NULL LIMIT 1",
-                {ruvia::DbValue{*code}});
+                service::common::dbParams(ruvia::DbValue{*code}));
             if (!exist.rows().empty())
                 service::common::throwAppError(DeptError::CODE_EXISTS);
         }
         if (body.parentId()) {
             const auto parent = co_await db.query(
                 "SELECT id FROM sys_dept WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-                {ruvia::DbValue{static_cast<std::int64_t>(*body.parentId())}});
+                service::common::dbParams(ruvia::DbValue{static_cast<std::int64_t>(*body.parentId())}));
             if (parent.rows().empty())
                 service::common::throwAppError(DeptError::NOT_FOUND);
         }
@@ -134,14 +134,14 @@ class DeptService {
             "INSERT INTO sys_dept (name, code, parent_id, `order`, leader_id, status, "
             "                          created_at, updated_at) "
             "VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())",
-            {ruvia::DbValue{std::string(body.name()->view())},
+            service::common::dbParams(ruvia::DbValue{body.name()->view()},
              code ? ruvia::DbValue{*code} : ruvia::DbValue{nullptr},
              body.parentId() ? ruvia::DbValue{static_cast<std::int64_t>(*body.parentId())}
                              : ruvia::DbValue{nullptr},
              ruvia::DbValue{body.sortOrder() ? static_cast<std::int64_t>(*body.sortOrder()) : 0},
              body.leaderId() ? ruvia::DbValue{static_cast<std::int64_t>(*body.leaderId())}
                              : ruvia::DbValue{nullptr},
-             ruvia::DbValue{body.status() ? std::string(body.status()->view()) : "enabled"}});
+             ruvia::DbValue{body.status() ? std::string(body.status()->view()) : "enabled"}));
         co_return;
     }
 
@@ -149,7 +149,7 @@ class DeptService {
         auto db = c.db();
         const auto rs = co_await db.query(
             "SELECT id, code FROM sys_dept WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-            {ruvia::DbValue{id}});
+            service::common::dbParams(ruvia::DbValue{id}));
         if (rs.rows().empty())
             service::common::throwAppError(DeptError::NOT_FOUND);
         const std::string currentCode = rs.rows().front()[1].isNull()
@@ -161,7 +161,7 @@ class DeptService {
         if (code && *code != currentCode) {
             const auto exist = co_await db.query(
                 "SELECT id FROM sys_dept WHERE code = ? AND id != ? AND deleted_at IS NULL LIMIT 1",
-                {ruvia::DbValue{*code}, ruvia::DbValue{id}});
+                service::common::dbParams(ruvia::DbValue{*code}, ruvia::DbValue{id}));
             if (!exist.rows().empty())
                 service::common::throwAppError(DeptError::CODE_EXISTS);
         }
@@ -173,7 +173,7 @@ class DeptService {
             if (parentId > 0) {
                 const auto parent = co_await db.query(
                     "SELECT id FROM sys_dept WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-                    {ruvia::DbValue{parentId}});
+                    service::common::dbParams(ruvia::DbValue{parentId}));
                 if (parent.rows().empty())
                     service::common::throwAppError(DeptError::NOT_FOUND);
                 if (co_await isAncestorDescendant(c, id, parentId)) {
@@ -192,7 +192,7 @@ class DeptService {
             params.emplace_back(std::move(value));
         };
         if (body.name())
-            append("name", ruvia::DbValue{std::string(body.name()->view())});
+            append("name", ruvia::DbValue{body.name()->view()});
         if (code)
             append("code", ruvia::DbValue{*code});
         if (body.parentId())
@@ -202,7 +202,7 @@ class DeptService {
         if (body.leaderId())
             append("leader_id", ruvia::DbValue{static_cast<std::int64_t>(*body.leaderId())});
         if (body.status())
-            append("status", ruvia::DbValue{std::string(body.status()->view())});
+            append("status", ruvia::DbValue{body.status()->view()});
 
         if (!set.empty()) {
             params.emplace_back(ruvia::DbValue{id});
@@ -216,26 +216,26 @@ class DeptService {
         auto db = c.db();
         const auto rs =
             co_await db.query("SELECT id FROM sys_dept WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-                              {ruvia::DbValue{id}});
+                              service::common::dbParams(ruvia::DbValue{id}));
         if (rs.rows().empty())
             service::common::throwAppError(DeptError::NOT_FOUND);
 
         const auto child = co_await db.query(
             "SELECT COUNT(*) FROM sys_dept WHERE parent_id = ? AND deleted_at IS NULL",
-            {ruvia::DbValue{id}});
+            service::common::dbParams(ruvia::DbValue{id}));
         if (std::stoll(std::string(child.rows().front()[0].text())) > 0) {
             service::common::throwAppError(DeptError::HAS_CHILDREN);
         }
 
         const auto users = co_await db.query(
             "SELECT COUNT(*) FROM sys_user WHERE dept_id = ? AND deleted_at IS NULL",
-            {ruvia::DbValue{id}});
+            service::common::dbParams(ruvia::DbValue{id}));
         if (std::stoll(std::string(users.rows().front()[0].text())) > 0) {
             service::common::throwAppError(DeptError::HAS_USERS);
         }
 
         (void)co_await db.execute("UPDATE sys_dept SET deleted_at = NOW() WHERE id = ?",
-                                  {ruvia::DbValue{id}});
+                                  service::common::dbParams(ruvia::DbValue{id}));
         co_return;
     }
 
@@ -306,10 +306,10 @@ class DeptService {
     static void fillDeptDto(DeptDto& item, const DeptRecord& record) {
         item.id(static_cast<ruvia::Int64>(record.id))
             .sortOrder(static_cast<ruvia::Int64>(record.sort_order));
-        item.name().assignView(record.name);
-        item.status().assignView(record.status);
+        item.name(record.name);
+        item.status(record.status);
         if (record.code)
-            item.code().assignView(*record.code);
+            item.code(*record.code);
         if (record.parent_id)
             item.parentId(static_cast<ruvia::Int64>(*record.parent_id));
         if (record.leader_id)
@@ -335,7 +335,7 @@ class DeptService {
         const auto it = children.find(record.id);
         if (it == children.end())
             return;
-        auto& childList = item.children().ensure();
+        auto& childList = item.childrenEnsure();
         for (const auto* child : it->second) {
             appendNode(c, childList, *child, children);
         }

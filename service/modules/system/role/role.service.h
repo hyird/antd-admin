@@ -7,9 +7,9 @@
 #include <utility>
 #include <vector>
 
-#include <ruvia/app/Task.h>
-#include <ruvia/db/Db.h>
-#include <ruvia/http/Context.h>
+#include <ruvia/core/Task.h>
+#include <ruvia/web/db/Db.h>
+#include <ruvia/web/Context.h>
 
 #include "service/common/http.h"
 #include "service/common/types.h"
@@ -41,7 +41,7 @@ class RoleService {
         }
         if (status && !status->empty()) {
             where += " AND r.status = ?";
-            params.emplace_back(std::string(*status));
+            params.emplace_back(*status);
         }
 
         const auto countRs = co_await db.query("SELECT COUNT(*)" + where, params);
@@ -61,15 +61,15 @@ class RoleService {
             .totalPages(static_cast<ruvia::Int64>(
                 paginated && pageSize > 0 ? (total + pageSize - 1) / pageSize : 1));
 
-        auto& list = result.list().ensure();
+        auto& list = result.listEnsure();
         for (const auto& row : rs.rows()) {
             auto& item = list.emplace(c);
             const auto id = std::stoll(std::string(row[0].text()));
             const auto code = row[2].text();
             item.id(static_cast<ruvia::Int64>(id));
-            item.name().assignView(row[1].text());
-            item.code().assignView(code);
-            item.status().assignView(row[3].text());
+            item.name(row[1].text());
+            item.code(code);
+            item.status(row[3].text());
             const auto menuIds = code == service::common::kSuperAdminRoleCode
                                      ? co_await getAllMenuIds(c)
                                      : co_await getRoleMenuIds(c, id);
@@ -82,16 +82,16 @@ class RoleService {
         auto db = c.db();
         const auto rs = co_await db.query("SELECT id, name, code, status FROM sys_role WHERE id = "
                                           "? AND deleted_at IS NULL LIMIT 1",
-                                          {ruvia::DbValue{id}});
+                                          service::common::dbParams(ruvia::DbValue{id}));
         if (rs.rows().empty())
             service::common::throwAppError(RoleError::NOT_FOUND);
 
         const auto& row = rs.rows().front();
         RoleDetailDto out(c);
         out.id(static_cast<ruvia::Int64>(std::stoll(std::string(row[0].text()))));
-        out.name().assignView(row[1].text());
-        out.code().assignView(row[2].text());
-        out.status().assignView(row[3].text());
+        out.name(row[1].text());
+        out.code(row[2].text());
+        out.status(row[3].text());
 
         ruvia::Array<ruvia::Int64> menuIds(c.allocator<ruvia::Int64>());
         ruvia::Array<RoleMenuDto> menus(c.allocator<RoleMenuDto>());
@@ -105,15 +105,15 @@ class RoleService {
                                     "INNER JOIN sys_role_menu rm ON m.id = rm.menu_id "
                                     "WHERE rm.role_id = ? AND m.deleted_at IS NULL "
                                     "ORDER BY m.`order` ASC, m.id ASC",
-                                    {ruvia::DbValue{id}});
+                                    service::common::dbParams(ruvia::DbValue{id}));
         for (const auto& mrow : mrs.rows()) {
             const auto mid = std::stoll(std::string(mrow[0].text()));
             menuIds.emplace_back(static_cast<ruvia::Int64>(mid));
 
             RoleMenuDto menu(c);
             menu.id(static_cast<ruvia::Int64>(mid));
-            menu.name().assignView(mrow[1].text());
-            menu.type().assignView(mrow[2].text());
+            menu.name(mrow[1].text());
+            menu.type(mrow[2].text());
             if (!mrow[3].isNull()) {
                 menu.parentId(static_cast<ruvia::Int64>(std::stoll(std::string(mrow[3].text()))));
             }
@@ -132,8 +132,8 @@ class RoleService {
         for (const auto& row : rs.rows()) {
             auto& item = out.emplace(c);
             item.id(static_cast<ruvia::Int64>(std::stoll(std::string(row[0].text()))));
-            item.name().assignView(row[1].text());
-            item.code().assignView(row[2].text());
+            item.name(row[1].text());
+            item.code(row[2].text());
         }
         co_return out;
     }
@@ -144,7 +144,7 @@ class RoleService {
         auto db = c.db();
         const auto exists = co_await db.query(
             "SELECT id FROM sys_role WHERE code = ? AND deleted_at IS NULL LIMIT 1",
-            {ruvia::DbValue{code}});
+            service::common::dbParams(ruvia::DbValue{code}));
         if (!exists.rows().empty())
             service::common::throwAppError(RoleError::CODE_EXISTS);
 
@@ -153,7 +153,7 @@ class RoleService {
         const auto rs =
             co_await tx.execute("INSERT INTO sys_role (name, code, status, created_at, updated_at) "
                                 "VALUES (?, ?, ?, NOW(), NOW())",
-                                {ruvia::DbValue{name}, ruvia::DbValue{code}, ruvia::DbValue{status}});
+                                service::common::dbParams(ruvia::DbValue{name}, ruvia::DbValue{code}, ruvia::DbValue{status}));
         const std::int64_t roleId = static_cast<std::int64_t>(rs.lastInsertId());
 
         if (code != service::common::kSuperAdminRoleCode) {
@@ -168,7 +168,7 @@ class RoleService {
         auto db = c.db();
         const auto rs = co_await db.query(
             "SELECT code FROM sys_role WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-            {ruvia::DbValue{id}});
+            service::common::dbParams(ruvia::DbValue{id}));
         if (rs.rows().empty())
             service::common::throwAppError(RoleError::NOT_FOUND);
         const std::string currentCode(rs.rows().front()[0].text());
@@ -190,17 +190,17 @@ class RoleService {
             params.emplace_back(std::move(value));
         };
         if (body.name())
-            append("name", ruvia::DbValue{std::string(body.name()->view())});
+            append("name", ruvia::DbValue{body.name()->view()});
         if (code && *code != currentCode) {
             const auto existsRs = co_await db.query(
                 "SELECT id FROM sys_role WHERE code = ? AND id != ? AND deleted_at IS NULL LIMIT 1",
-                {ruvia::DbValue{*code}, ruvia::DbValue{id}});
+                service::common::dbParams(ruvia::DbValue{*code}, ruvia::DbValue{id}));
             if (!existsRs.rows().empty())
                 service::common::throwAppError(RoleError::CODE_EXISTS);
             append("code", ruvia::DbValue{*code});
         }
         if (body.status())
-            append("status", ruvia::DbValue{std::string(body.status()->view())});
+            append("status", ruvia::DbValue{body.status()->view()});
 
         auto tx = co_await db.beginTransaction();
         if (!set.empty()) {
@@ -213,7 +213,7 @@ class RoleService {
         if (body.menuIds()) {
             if (effectiveCode == service::common::kSuperAdminRoleCode) {
                 (void)co_await tx.execute("DELETE FROM sys_role_menu WHERE role_id = ?",
-                                          {ruvia::DbValue{id}});
+                                          service::common::dbParams(ruvia::DbValue{id}));
             } else {
                 co_await syncRoleMenus(tx, id, body.menuIds());
             }
@@ -227,7 +227,7 @@ class RoleService {
         auto db = c.db();
         const auto rs = co_await db.query(
             "SELECT code FROM sys_role WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-            {ruvia::DbValue{id}});
+            service::common::dbParams(ruvia::DbValue{id}));
         if (rs.rows().empty())
             service::common::throwAppError(RoleError::NOT_FOUND);
         const std::string code(rs.rows().front()[0].text());
@@ -236,13 +236,13 @@ class RoleService {
         }
 
         const auto userRs = co_await db.query(
-            "SELECT COUNT(*) FROM sys_user_role WHERE role_id = ?", {ruvia::DbValue{id}});
+            "SELECT COUNT(*) FROM sys_user_role WHERE role_id = ?", service::common::dbParams(ruvia::DbValue{id}));
         const std::int64_t userCount = std::stoll(std::string(userRs.rows().front()[0].text()));
         if (userCount > 0)
             service::common::throwAppError(RoleError::HAS_USERS);
 
         (void)co_await db.execute("UPDATE sys_role SET deleted_at = NOW() WHERE id = ?",
-                                  {ruvia::DbValue{id}});
+                                  service::common::dbParams(ruvia::DbValue{id}));
         service::middleware::permissionService().clearAllCache();
         co_return;
     }
@@ -250,7 +250,7 @@ class RoleService {
     ruvia::Task<std::vector<std::int64_t>> getRoleMenuIds(ruvia::Context& c, std::int64_t roleId) {
         auto db = c.db();
         const auto rs = co_await db.query("SELECT menu_id FROM sys_role_menu WHERE role_id = ?",
-                                          {ruvia::DbValue{roleId}});
+                                          service::common::dbParams(ruvia::DbValue{roleId}));
         std::vector<std::int64_t> ids;
         ids.reserve(rs.rows().size());
         for (const auto& row : rs.rows()) {
@@ -287,13 +287,13 @@ class RoleService {
     ruvia::Task<void> syncRoleMenus(ruvia::DbTransaction& tx, std::int64_t roleId,
                                    const std::optional<ruvia::Array<ruvia::Int64>>& menuIds) {
         (void)co_await tx.execute("DELETE FROM sys_role_menu WHERE role_id = ?",
-                                  {ruvia::DbValue{roleId}});
+                                  service::common::dbParams(ruvia::DbValue{roleId}));
         if (!menuIds)
             co_return;
         for (const auto menuId : *menuIds) {
             (void)co_await tx.execute(
                 "INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES (?, ?)",
-                {ruvia::DbValue{roleId}, ruvia::DbValue{static_cast<std::int64_t>(menuId)}});
+                service::common::dbParams(ruvia::DbValue{roleId}, ruvia::DbValue{static_cast<std::int64_t>(menuId)}));
         }
         co_return;
     }

@@ -10,9 +10,9 @@
 #include <unordered_set>
 #include <vector>
 
-#include <ruvia/app/Task.h>
-#include <ruvia/db/Db.h>
-#include <ruvia/http/Context.h>
+#include <ruvia/core/Task.h>
+#include <ruvia/web/Context.h>
+#include <ruvia/web/db/Db.h>
 
 #include "service/common/http.h"
 #include "service/common/types.h"
@@ -91,7 +91,7 @@ class PermissionService {
         const auto roles = co_await db.query("SELECT r.code, r.status FROM sys_role r "
                                              "INNER JOIN sys_user_role ur ON r.id = ur.role_id "
                                              "WHERE ur.user_id = ? AND r.deleted_at IS NULL",
-                                             {ruvia::DbValue{userId}});
+                                             service::common::dbParams(userId));
         for (const auto& row : roles.rows()) {
             if (row.size() < 2)
                 continue;
@@ -114,7 +114,7 @@ class PermissionService {
             "WHERE ur.user_id = ? AND r.deleted_at IS NULL AND r.status = 'enabled' "
             "  AND m.deleted_at IS NULL AND m.status = 'enabled' "
             "  AND m.permission_code IS NOT NULL AND m.permission_code != ''",
-            {ruvia::DbValue{userId}});
+            service::common::dbParams(userId));
         for (const auto& row : perms.rows()) {
             if (row.empty() || row[0].isNull())
                 continue;

@@ -1,9 +1,8 @@
 #pragma once
 
-#include <ruvia/app/Task.h>
-#include <ruvia/http/Context.h>
-#include <ruvia/http/Controller.h>
-#include <ruvia/http/HttpTypes.h>
+#include <ruvia/core/Task.h>
+#include <ruvia/web/Context.h>
+#include <ruvia/web/Controller.h>
 
 #include "service/common/http.h"
 #include "service/common/types.h"
@@ -29,16 +28,16 @@ class UserController final : public ruvia::Controller<UserController> {
   private:
     ruvia::Task<ruvia::HttpResponse> list(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:user:query");
-        auto pageSize = c.query("pageSize").toInt64();
+        auto pageSize = service::common::parseInt64(c.req().query("pageSize"));
         if (!pageSize)
-            pageSize = c.query("page_size").toInt64();
+            pageSize = service::common::parseInt64(c.req().query("page_size"));
         const auto [page, pageSizeValue, skip, keyword, paginated] =
-            service::common::normalizePagination(c.query("page").toInt64(), pageSize,
-                                                 c.query("keyword").toStringView());
+            service::common::normalizePagination(service::common::parseInt64(c.req().query("page")), pageSize,
+                                                 c.req().query("keyword"));
         co_return c.json(service::common::ok<UserPageResponse>(
             c, co_await userService().list(c, page, pageSizeValue, skip, keyword, paginated,
-                                           c.query("status").toStringView(),
-                                           c.query("dept_id").toInt64())));
+                                           c.req().query("status"),
+                                           service::common::parseInt64(c.req().query("dept_id")))));
     }
 
     ruvia::Task<ruvia::HttpResponse> options(ruvia::Context& c) {
@@ -46,12 +45,12 @@ class UserController final : public ruvia::Controller<UserController> {
             c, {"system:user:query", "system:user:add", "system:user:edit", "system:dept:query",
                 "system:dept:add", "system:dept:edit"});
         co_return c.json(service::common::ok<UserOptionsResponse>(
-            c, co_await userService().listOptions(c, c.query("keyword").toStringView())));
+            c, co_await userService().listOptions(c, c.req().query("keyword"))));
     }
 
     ruvia::Task<ruvia::HttpResponse> detail(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:user:query");
-        const auto id = c.param("id").toInt64();
+        const auto id = service::common::parseInt64(c.req().param("id"));
         if (!id || *id <= 0)
             service::common::throwAppError(service::common::kValidationErrorCode, "id 必须是正整数",
                                            400);
@@ -61,23 +60,23 @@ class UserController final : public ruvia::Controller<UserController> {
 
     ruvia::Task<ruvia::HttpResponse> create(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:user:add");
-        co_await userService().create(c, c.valid<CreateUserBody>());
+        co_await userService().create(c, c.req().valid<CreateUserBody>());
         co_return c.json(service::common::operation(c, "创建成功"));
     }
 
     ruvia::Task<ruvia::HttpResponse> update(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:user:edit");
-        const auto id = c.param("id").toInt64();
+        const auto id = service::common::parseInt64(c.req().param("id"));
         if (!id || *id <= 0)
             service::common::throwAppError(service::common::kValidationErrorCode, "id 必须是正整数",
                                            400);
-        co_await userService().update(c, *id, c.valid<UpdateUserBody>());
+        co_await userService().update(c, *id, c.req().valid<UpdateUserBody>());
         co_return c.json(service::common::operation(c, "更新成功"));
     }
 
     ruvia::Task<ruvia::HttpResponse> remove(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:user:delete");
-        const auto id = c.param("id").toInt64();
+        const auto id = service::common::parseInt64(c.req().param("id"));
         if (!id || *id <= 0)
             service::common::throwAppError(service::common::kValidationErrorCode, "id 必须是正整数",
                                            400);

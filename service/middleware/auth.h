@@ -3,11 +3,9 @@
 #include <string>
 #include <string_view>
 
-#include <ruvia/app/Task.h>
-#include <ruvia/http/Context.h>
-#include <ruvia/http/Controller.h>
-#include <ruvia/http/HttpTypes.h>
-#include <ruvia/http/Validation.h>
+#include <ruvia/core/Task.h>
+#include <ruvia/web/Context.h>
+#include <ruvia/web/Controller.h>
 
 #include "service/common/http.h"
 #include "service/utils/jwt.h"
@@ -16,15 +14,15 @@ namespace service::middleware {
 
 // 路由处理器内调用，校验 Authorization 头并解析 JWT；失败抛出 AppError。
 inline service::core::JwtPayload requireAuth(ruvia::Context& c) {
-    const auto authHeader = c.header("Authorization");
-    if (authHeader.empty()) {
+    const auto authHeader = c.req().header("Authorization");
+    if (!authHeader || authHeader->empty()) {
         service::common::throwAppError(service::common::kAuthUnauthorizedErrorCode, "未登录", 401);
     }
     constexpr std::string_view bearer = "Bearer ";
-    if (authHeader.size() <= bearer.size() || authHeader.substr(0, bearer.size()) != bearer) {
+    if (authHeader->size() <= bearer.size() || authHeader->substr(0, bearer.size()) != bearer) {
         service::common::throwAppError(service::common::kAuthUnauthorizedErrorCode, "未登录", 401);
     }
-    const std::string token(authHeader.substr(bearer.size()));
+    const std::string token(authHeader->substr(bearer.size()));
     try {
         return service::utils::verifyAccessToken(token);
     } catch (const service::utils::JwtExpiredError&) {
@@ -40,14 +38,15 @@ inline service::core::JwtPayload requireAuth(ruvia::Context& c) {
 }
 
 inline const service::core::JwtPayload& currentUser(ruvia::Context& c) {
-    return c.valid<service::core::JwtPayload>(ruvia::Form);
+    return c.req().valid<service::core::JwtPayload>();
 }
 
 class AuthMiddleware final : public ruvia::Middleware<AuthMiddleware> {
   public:
-    ruvia::Task<ruvia::HttpResponse> handle(ruvia::Context& c, const ruvia::Next& next) {
-        c.setValid(ruvia::Form, requireAuth(c));
-        co_return co_await next(c);
+    ruvia::Task<void> handle(ruvia::Context& c, ruvia::Next& next) {
+        // v0.1.0: per-request validated data is keyed by type (ruvia::Form is gone).
+        c.req().addValidatedData(requireAuth(c));
+        co_await next();
     }
 };
 

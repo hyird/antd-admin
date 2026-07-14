@@ -7,8 +7,8 @@
 #include <string_view>
 #include <utility>
 
-#include <ruvia/app/App.h>
-#include <ruvia/auth/Jwt.h>
+#include <ruvia/web/App.h>
+#include <ruvia/web/auth/Jwt.h>
 
 namespace service::core {
 
@@ -95,27 +95,23 @@ inline std::chrono::seconds refreshExpiresIn() {
 inline std::string sign(const service::core::JwtPayload& payload, const std::string& secret,
                         std::chrono::seconds expiresIn) {
     ruvia::JwtSignOptions options;
-    options.secret = secret;
-    options.subject = std::to_string(payload.user_id);
+    options.secret.assign(secret.data(), secret.size());
+    const std::string subject = std::to_string(payload.user_id);
+    options.subject.assign(subject.data(), subject.size());
     options.expiresIn = expiresIn;
 
-    ruvia::JwtClaim userId;
-    userId.name = "user_id";
-    userId.value = std::to_string(payload.user_id);
-    options.claims.push_back(std::move(userId));
+    // JwtClaim now owns pmr strings (copied from the given views); no field setters.
+    options.claims.emplace_back("user_id", subject);
+    options.claims.emplace_back("username", payload.username);
 
-    ruvia::JwtClaim username;
-    username.name = "username";
-    username.value = payload.username;
-    options.claims.push_back(std::move(username));
-
-    return std::string(ruvia::jwtSign(options));
+    const auto token = ruvia::jwtSign(options);
+    return std::string(token.data(), token.size());
 }
 
 inline service::core::JwtPayload verify(const std::string& token, const std::string& secret) {
     try {
         ruvia::JwtVerifyOptions options;
-        options.secret = secret;
+        options.secret.assign(secret.data(), secret.size());
         const auto payload = ruvia::jwtVerify(token, options);
 
         service::core::JwtPayload out;

@@ -2,17 +2,45 @@
 
 #include <charconv>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
-#include <ruvia/http/Context.h>
-#include <ruvia/http/Error.h>
-#include <ruvia/http/HttpTypes.h>
+#include <ruvia/web/Context.h>
+#include <ruvia/web/Error.h>
+#include <ruvia/web/db/DbTypes.h>
 
 #include "service/common/types.h"
 
 namespace service::common {
+
+// v0.1.0: request query/param/header accessors return std::optional<std::string_view>
+// (the old typed .toInt64()/.toStringView() helpers were removed), so parse ints here.
+inline std::optional<std::int64_t> parseInt64(std::optional<std::string_view> input) {
+    if (!input || input->empty())
+        return std::nullopt;
+    std::int64_t value = 0;
+    const auto* first = input->data();
+    const auto* last = first + input->size();
+    const auto [ptr, ec] = std::from_chars(first, last, value);
+    if (ec == std::errc{} && ptr == last)
+        return value;
+    return std::nullopt;
+}
+
+// v0.1.0: DbHandle::query/execute take std::span<const ruvia::DbValue> and the
+// initializer_list overload was deleted. This builds an owning vector (which
+// converts to a const span) so call sites can pass an inline parameter list.
+// The returned vector and any borrowed argument views live to the end of the
+// enclosing co_await full-expression, i.e. across the query's suspension.
+template <typename... Ts> inline std::vector<ruvia::DbValue> dbParams(Ts&&... values) {
+    std::vector<ruvia::DbValue> params;
+    params.reserve(sizeof...(Ts));
+    (params.emplace_back(std::forward<Ts>(values)), ...);
+    return params;
+}
 
 inline constexpr std::int64_t kUnknownErrorCode{10000};
 inline constexpr std::int64_t kValidationErrorCode{10001};
@@ -30,7 +58,8 @@ struct AppErrorDef {
     std::uint16_t status{400};
 };
 
-RUVIA_MODEL(ErrorResponse, RUVIA_FIELD(code, ruvia::Int64), RUVIA_FIELD(message, ruvia::String));
+RUVIA_RESPONSE_MODEL(ErrorResponse, RUVIA_FIELD(code, ruvia::Int64),
+                    RUVIA_FIELD(message, ruvia::String));
 
 inline std::int64_t defaultBusinessErrorCode(std::uint16_t status) {
     switch (status) {

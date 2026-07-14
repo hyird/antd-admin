@@ -6,11 +6,13 @@
     "dependencies": [
         "asio",
         "mimalloc",
+        "brotli",
         {
             "name": "libmariadb",
             "default-features": false
         },
         "openssl",
-        "zlib"
+        "zlib",
+        "zstd"
     ]
 }

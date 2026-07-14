@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ruvia/http/Controller.h>
+#include <ruvia/web/Controller.h>
 
 #include "service/modules/system/user/user.types.h"
 

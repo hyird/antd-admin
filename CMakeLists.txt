@@ -7,6 +7,20 @@ if(POLICY CMP0091)
     cmake_policy(SET CMP0091 NEW)
 endif()
 
+# Auto-detect vcpkg via VCPKG_ROOT when no toolchain file is given explicitly.
+# Must happen before the first project() call.
+if(NOT DEFINED CMAKE_TOOLCHAIN_FILE AND DEFINED ENV{VCPKG_ROOT})
+    file(TO_CMAKE_PATH "$ENV{VCPKG_ROOT}" _vcpkg_root)
+    if(EXISTS "${_vcpkg_root}/scripts/buildsystems/vcpkg.cmake")
+        set(CMAKE_TOOLCHAIN_FILE "${_vcpkg_root}/scripts/buildsystems/vcpkg.cmake"
+            CACHE FILEPATH "vcpkg toolchain file (auto-detected from VCPKG_ROOT)")
+        message(STATUS "vcpkg toolchain auto-detected: ${CMAKE_TOOLCHAIN_FILE}")
+    else()
+        message(WARNING "VCPKG_ROOT is set but vcpkg.cmake not found under it: ${_vcpkg_root}")
+    endif()
+    unset(_vcpkg_root)
+endif()
+
 project(antd_admin_service VERSION 0.1.0 LANGUAGES CXX)
 
 include(FetchContent)
@@ -25,8 +39,13 @@ endif()
 
 option(ANTD_ADMIN_BUILD_WEB "Build the frontend as part of the service build" ON)
 
+# v0.1.0 split Ruvia into three targets (core/http/web); we consume ruvia::web.
+set(RUVIA_BUILD_CORE ON CACHE BOOL "" FORCE)
+set(RUVIA_BUILD_HTTP ON CACHE BOOL "" FORCE)
+set(RUVIA_BUILD_WEB ON CACHE BOOL "" FORCE)
 set(RUVIA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(RUVIA_BUILD_TECHEMPOWER OFF CACHE BOOL "" FORCE)
+set(RUVIA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(RUVIA_BUILD_BENCHMARKS OFF CACHE BOOL "" FORCE)
 set(RUVIA_ENABLE_MARIADB ON CACHE BOOL "" FORCE)
 set(RUVIA_ENABLE_JWT ON CACHE BOOL "" FORCE)
 set(RUVIA_ENABLE_REDIS OFF CACHE BOOL "" FORCE)
@@ -34,7 +53,7 @@ set(RUVIA_ENABLE_REDIS OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
     ruvia
     GIT_REPOSITORY https://github.com/hyird/Ruvia.git
-    GIT_TAG 62a569347eda1f63c2714c6aff62c71ace301b89 # v0.0.6
+    GIT_TAG 376350200cfc25dad03a1cdbdfa85049bc14ddc8 # v0.1.0
 )
 FetchContent_MakeAvailable(ruvia)
 
@@ -81,7 +100,7 @@ target_include_directories(antd_admin_service PRIVATE ${CMAKE_CURRENT_SOURCE_DIR
 
 target_link_libraries(antd_admin_service
     PRIVATE
-        ruvia::ruvia
+        ruvia::web
 )
 
 if(ANTD_ADMIN_BUILD_WEB)

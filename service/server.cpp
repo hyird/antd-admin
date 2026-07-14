@@ -6,12 +6,15 @@
 #include <system_error>
 #include <utility>
 
-#include <ruvia/app/App.h>
-#include <ruvia/db/Db.h>
-#include <ruvia/http/Context.h>
-#include <ruvia/http/Controller.h>
-#include <ruvia/http/Error.h>
-#include <ruvia/http/HttpTypes.h>
+#include <ruvia/core/Task.h>
+#include <ruvia/http/HttpKnownMethod.h>
+#include <ruvia/http/HttpStatus.h>
+#include <ruvia/web/App.h>
+#include <ruvia/web/Context.h>
+#include <ruvia/web/Controller.h>
+#include <ruvia/web/Error.h>
+#include <ruvia/web/db/Db.h>
+#include <ruvia/web/db/DbMigration.h>
 
 #include "service/common/http.h"
 #include "service/config/schema.h"
@@ -105,9 +108,10 @@ ServerSettings serverSettingsFromEnv(const ruvia::Env& env) {
 }
 
 bool isSpaFallbackRequest(ruvia::Context& c, ruvia::HttpErrorInfo info) {
-    if (info.statusCode != 404 || webRootPath().empty())
+    if (info.status() != 404 || webRootPath().empty())
         return false;
-    if (c.req().method() != ruvia::HttpMethod::kGet && c.req().method() != ruvia::HttpMethod::kHead)
+    if (c.req().knownMethod() != ruvia::HttpKnownMethod::kGet &&
+        c.req().knownMethod() != ruvia::HttpKnownMethod::kHead)
         return false;
 
     auto path = c.req().path();
@@ -128,21 +132,27 @@ ruvia::Task<ruvia::HttpResponse> handleError(ruvia::Context& c, ruvia::HttpError
         co_return c.file(webRootPath() / "index.html", "text/html; charset=utf-8");
     }
 
-    if (info.statusCode >= 500) {
-        service::middleware::logError(std::string("Unhandled error: ") + std::string(info.message));
+    if (info.status() >= 500) {
+        service::middleware::logError(std::string("Unhandled error: ") +
+                                      std::string(info.message()));
     }
-    co_return c.status(info.statusCode)
-        .json(service::common::error(
-            c, service::common::normalizeBusinessErrorCode(info.code, info.statusCode),
-            info.message.empty() ? ruvia::defaultStatusText(info.statusCode) : info.message));
+    co_return c.json(
+        service::common::error(
+            c, service::common::normalizeBusinessErrorCode(info.code(), info.status()),
+            info.message().empty() ? ruvia::httpReasonPhrase(info.status()) : info.message()),
+        info.status());
 }
 
 void configureHttpServer(ruvia::App& app) {
     const auto settings = serverSettingsFromEnv(app.env());
-    app.use<service::middleware::LoggerMiddleware>()
-        .setListenAddress(settings.host, settings.port)
+    // v0.1.0 removed global App::use<Middleware>(); request logging is an access-log
+    // callback. The listener must outlive run(), so keep it in static storage.
+    static service::middleware::AccessLogger accessLogger;
+    app.setListenAddress(settings.host)
+        .setHttpListenPort(settings.port)
         .setThreadNum(settings.threads)
-        .setErrorHandler(&handleError);
+        .onError(&handleError)
+        .onAccess(ruvia::AccessLogCallback::bind(accessLogger));
     service::middleware::logInfo("Server starting on " + settings.host + ":" +
                                  std::to_string(settings.port));
 }

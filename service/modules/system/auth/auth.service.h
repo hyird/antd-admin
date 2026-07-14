@@ -8,9 +8,9 @@
 #include <unordered_map>
 #include <utility>
 
-#include <ruvia/app/Task.h>
-#include <ruvia/db/Db.h>
-#include <ruvia/http/Context.h>
+#include <ruvia/core/Task.h>
+#include <ruvia/web/db/Db.h>
+#include <ruvia/web/Context.h>
 
 #include "service/common/http.h"
 #include "service/common/types.h"
@@ -109,7 +109,7 @@ class AuthService {
         const auto users =
             co_await db.query("SELECT id, username, password_hash, nickname, status "
                               "FROM sys_user WHERE username = ? AND deleted_at IS NULL LIMIT 1",
-                              {ruvia::DbValue{username}});
+                              service::common::dbParams(ruvia::DbValue{username}));
         if (users.rows().empty()) {
             const int failureCount = rateLimitService().recordFailure(username);
             const int remaining = 5 - failureCount;
@@ -167,7 +167,7 @@ class AuthService {
         const auto users =
             co_await db.query("SELECT id, username, nickname, status "
                               "FROM sys_user WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-                              {ruvia::DbValue{payload.user_id}});
+                              service::common::dbParams(ruvia::DbValue{payload.user_id}));
         if (users.rows().empty())
             service::common::throwAppError(AuthError::USER_NOT_FOUND);
         const auto& row = users.rows().front();
@@ -191,7 +191,7 @@ class AuthService {
         auto db = c.db();
         const auto users = co_await db.query("SELECT username, nickname, status FROM sys_user "
                                              "WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-                                             {ruvia::DbValue{userId}});
+                                             service::common::dbParams(ruvia::DbValue{userId}));
         if (users.rows().empty())
             service::common::throwAppError(AuthError::USER_NOT_FOUND);
         const auto& row = users.rows().front();
@@ -211,16 +211,16 @@ class AuthService {
         const auto rs = co_await db.query("SELECT r.id, r.name, r.code FROM sys_role r "
                                           "INNER JOIN sys_user_role ur ON r.id = ur.role_id "
                                           "WHERE ur.user_id = ? AND r.deleted_at IS NULL",
-                                          {ruvia::DbValue{userId}});
+                                          service::common::dbParams(ruvia::DbValue{userId}));
         bool isSuperadmin = false;
-        auto& roles = info.roles().ensure();
+        auto& roles = info.rolesEnsure();
         for (const auto& row : rs.rows()) {
             auto& role = roles.emplace_back(c);
             role.id(static_cast<ruvia::Int64>(std::stoll(std::string(row[0].text()))));
 
             const auto code = row[2].text();
-            role.name().assignView(row[1].text());
-            role.code().assignView(code);
+            role.name(row[1].text());
+            role.code(code);
             if (code == service::common::kSuperAdminRoleCode)
                 isSuperadmin = true;
         }
@@ -248,7 +248,7 @@ class AuthService {
             "WHERE ur.user_id = ? AND r.deleted_at IS NULL AND r.status = 'enabled' "
             "  AND m.deleted_at IS NULL AND m.status = 'enabled' "
             "ORDER BY m.`order` ASC, m.id ASC",
-            {ruvia::DbValue{userId}});
+            service::common::dbParams(ruvia::DbValue{userId}));
         co_return menu::MenuService::flatFromRows(c, rs.rows());
     }
 

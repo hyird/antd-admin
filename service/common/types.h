@@ -8,7 +8,7 @@
 #include <string_view>
 #include <tuple>
 
-#include <ruvia/http/Model.h>
+#include <ruvia/web/Model.h>
 
 namespace service::common {
 
@@ -56,16 +56,17 @@ inline std::string escapeLikePattern(std::string_view input) {
     return out;
 }
 
-RUVIA_MODEL(OperationResponse, RUVIA_FIELD(code, ruvia::Int64), RUVIA_FIELD(message, ruvia::String));
+RUVIA_RESPONSE_MODEL(OperationResponse, RUVIA_FIELD(code, ruvia::Int64),
+                    RUVIA_FIELD(message, ruvia::String));
 
-RUVIA_MODEL(HealthData, RUVIA_FIELD(status, ruvia::String));
+RUVIA_RESPONSE_MODEL(HealthData, RUVIA_FIELD(status, ruvia::String));
 
-RUVIA_MODEL(HealthResponse, RUVIA_FIELD(code, ruvia::Int64), RUVIA_FIELD(message, ruvia::String),
-           RUVIA_FIELD(data, HealthData));
+RUVIA_RESPONSE_MODEL(HealthResponse, RUVIA_FIELD(code, ruvia::Int64),
+                    RUVIA_FIELD(message, ruvia::String), RUVIA_FIELD(data, HealthData));
 
-RUVIA_MODEL(CountData, RUVIA_FIELD_NAME("created_count", createdCount, ruvia::Int64));
+RUVIA_RESPONSE_MODEL(CountData, RUVIA_FIELD_NAME("created_count", createdCount, ruvia::Int64));
 
-RUVIA_MODEL(CountResponse, RUVIA_FIELD(code, ruvia::Int64), RUVIA_FIELD(message, ruvia::String),
-           RUVIA_FIELD(data, CountData));
+RUVIA_RESPONSE_MODEL(CountResponse, RUVIA_FIELD(code, ruvia::Int64),
+                    RUVIA_FIELD(message, ruvia::String), RUVIA_FIELD(data, CountData));
 
 } // namespace service::common

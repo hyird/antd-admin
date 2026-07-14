@@ -10,11 +10,7 @@
 #include <string>
 #include <string_view>
 
-#include <ruvia/app/Task.h>
-#include <ruvia/http/Context.h>
-#include <ruvia/http/Controller.h>
-#include <ruvia/http/Error.h>
-#include <ruvia/http/HttpTypes.h>
+#include <ruvia/web/ServerConfig.h>
 
 namespace service::middleware {
 
@@ -48,19 +44,19 @@ inline void logInfo(std::string_view message) { writeLogLine(std::cout, "INFO", 
 
 inline void logError(std::string_view message) { writeLogLine(std::cerr, "ERROR", message); }
 
-inline void logRequest(ruvia::Context& c, std::uint16_t statusCode,
-                       std::chrono::steady_clock::time_point startedAt) noexcept {
+// v0.1.0 removed the global App::use<Middleware>() hook, so request access logging
+// runs through App::onAccess. The callback fires once per terminal response with the
+// committed status, elapsed time, and connection metadata (all borrowed for the call).
+inline void logAccess(const ruvia::AccessLogRecord& record) noexcept {
     try {
-        const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
-            std::chrono::steady_clock::now() - startedAt);
-
+        const auto micros = record.durationMicros();
         std::ostringstream message;
-        const auto remote = c.remoteAddress();
-        message << (remote.empty() ? "-" : remote) << ' ' << ruvia::methodName(c.req().method())
-                << ' ' << c.req().target() << ' ' << statusCode << ' ' << elapsed.count() / 1000
-                << '.' << std::setfill('0') << std::setw(3) << elapsed.count() % 1000 << "ms";
+        const auto remote = record.remoteAddress();
+        message << (remote.empty() ? "-" : remote) << ' ' << record.method() << ' '
+                << record.path() << ' ' << record.status() << ' ' << micros / 1000 << '.'
+                << std::setfill('0') << std::setw(3) << micros % 1000 << "ms";
 
-        if (statusCode >= 500) {
+        if (record.status() >= 500) {
             logError(message.str());
         } else {
             logInfo(message.str());
@@ -69,22 +65,10 @@ inline void logRequest(ruvia::Context& c, std::uint16_t statusCode,
     }
 }
 
-class LoggerMiddleware final : public ruvia::Middleware<LoggerMiddleware> {
-  public:
-    ruvia::Task<ruvia::HttpResponse> handle(ruvia::Context& c, const ruvia::Next& next) {
-        const auto startedAt = std::chrono::steady_clock::now();
-        try {
-            auto response = co_await next(c);
-            logRequest(c, response.statusCode(), startedAt);
-            co_return response;
-        } catch (const ruvia::HttpError& error) {
-            logRequest(c, error.info().statusCode, startedAt);
-            throw;
-        } catch (...) {
-            logRequest(c, 500, startedAt);
-            throw;
-        }
-    }
+// Bound into App::onAccess via AccessLogCallback::bind; must be nothrow-invocable
+// and outlive App::run().
+struct AccessLogger {
+    void operator()(const ruvia::AccessLogRecord& record) const noexcept { logAccess(record); }
 };
 
 } // namespace service::middleware

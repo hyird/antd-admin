@@ -1,9 +1,8 @@
 #pragma once
 
-#include <ruvia/app/Task.h>
-#include <ruvia/http/Context.h>
-#include <ruvia/http/Controller.h>
-#include <ruvia/http/HttpTypes.h>
+#include <ruvia/core/Task.h>
+#include <ruvia/web/Context.h>
+#include <ruvia/web/Controller.h>
 
 #include "service/common/http.h"
 #include "service/common/types.h"
@@ -31,28 +30,28 @@ class MenuController final : public ruvia::Controller<MenuController> {
   private:
     ruvia::Task<ruvia::HttpResponse> list(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:menu:query");
-        auto pageSize = c.query("pageSize").toInt64();
+        auto pageSize = service::common::parseInt64(c.req().query("pageSize"));
         if (!pageSize)
-            pageSize = c.query("page_size").toInt64();
+            pageSize = service::common::parseInt64(c.req().query("page_size"));
         const auto [page, pageSizeValue, skip, keyword, paginated] =
-            service::common::normalizePagination(c.query("page").toInt64(), pageSize,
-                                                 c.query("keyword").toStringView());
+            service::common::normalizePagination(service::common::parseInt64(c.req().query("page")), pageSize,
+                                                 c.req().query("keyword"));
         co_return c.json(service::common::ok<MenuPageResponse>(
             c, co_await menuService().list(c, page, pageSizeValue, skip, keyword, paginated,
-                                           c.query("status").toStringView(),
-                                           c.query("parent_id").toInt64())));
+                                           c.req().query("status"),
+                                           service::common::parseInt64(c.req().query("parent_id")))));
     }
 
     ruvia::Task<ruvia::HttpResponse> tree(ruvia::Context& c) {
         co_await service::middleware::requireAnyPermission(
             c, {"system:menu:query", "system:role:perm"});
         co_return c.json(service::common::ok<MenuListResponse>(
-            c, co_await menuService().getTree(c, c.query("status").toStringView())));
+            c, co_await menuService().getTree(c, c.req().query("status"))));
     }
 
     ruvia::Task<ruvia::HttpResponse> detail(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:menu:query");
-        const auto id = c.param("id").toInt64();
+        const auto id = service::common::parseInt64(c.req().param("id"));
         if (!id || *id <= 0)
             service::common::throwAppError(service::common::kValidationErrorCode, "id 必须是正整数",
                                            400);
@@ -62,36 +61,36 @@ class MenuController final : public ruvia::Controller<MenuController> {
 
     ruvia::Task<ruvia::HttpResponse> create(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:menu:add");
-        co_await menuService().create(c, c.valid<CreateMenuBody>());
+        co_await menuService().create(c, c.req().valid<CreateMenuBody>());
         co_return c.json(service::common::operation(c, "创建成功"));
     }
 
     ruvia::Task<ruvia::HttpResponse> update(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:menu:edit");
-        const auto id = c.param("id").toInt64();
+        const auto id = service::common::parseInt64(c.req().param("id"));
         if (!id || *id <= 0)
             service::common::throwAppError(service::common::kValidationErrorCode, "id 必须是正整数",
                                            400);
-        co_await menuService().update(c, *id, c.valid<UpdateMenuBody>());
+        co_await menuService().update(c, *id, c.req().valid<UpdateMenuBody>());
         co_return c.json(service::common::operation(c, "更新成功"));
     }
 
     ruvia::Task<ruvia::HttpResponse> reorder(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:menu:edit");
-        co_await menuService().reorder(c, c.valid<ReorderMenuBody>());
+        co_await menuService().reorder(c, c.req().valid<ReorderMenuBody>());
         co_return c.json(service::common::operation(c, "更新成功"));
     }
 
     ruvia::Task<ruvia::HttpResponse> batchButtons(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:menu:add");
         const int created =
-            co_await menuService().batchCreateButtons(c, c.valid<BatchCreateMenuButtonsBody>());
+            co_await menuService().batchCreateButtons(c, c.req().valid<BatchCreateMenuButtonsBody>());
         co_return c.json(service::common::count(c, created, "创建成功"));
     }
 
     ruvia::Task<ruvia::HttpResponse> remove(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:menu:delete");
-        const auto id = c.param("id").toInt64();
+        const auto id = service::common::parseInt64(c.req().param("id"));
         if (!id || *id <= 0)
             service::common::throwAppError(service::common::kValidationErrorCode, "id 必须是正整数",
                                            400);

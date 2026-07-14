@@ -1,9 +1,8 @@
 #pragma once
 
-#include <ruvia/app/Task.h>
-#include <ruvia/http/Context.h>
-#include <ruvia/http/Controller.h>
-#include <ruvia/http/HttpTypes.h>
+#include <ruvia/core/Task.h>
+#include <ruvia/web/Context.h>
+#include <ruvia/web/Controller.h>
 
 #include "service/common/http.h"
 #include "service/common/types.h"
@@ -29,15 +28,15 @@ class RoleController final : public ruvia::Controller<RoleController> {
   private:
     ruvia::Task<ruvia::HttpResponse> list(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:role:query");
-        auto pageSize = c.query("pageSize").toInt64();
+        auto pageSize = service::common::parseInt64(c.req().query("pageSize"));
         if (!pageSize)
-            pageSize = c.query("page_size").toInt64();
+            pageSize = service::common::parseInt64(c.req().query("page_size"));
         const auto [page, pageSizeValue, skip, keyword, paginated] =
-            service::common::normalizePagination(c.query("page").toInt64(), pageSize,
-                                                 c.query("keyword").toStringView());
+            service::common::normalizePagination(service::common::parseInt64(c.req().query("page")), pageSize,
+                                                 c.req().query("keyword"));
         co_return c.json(service::common::ok<RolePageResponse>(
             c, co_await roleService().list(c, page, pageSizeValue, skip, keyword, paginated,
-                                           c.query("status").toStringView())));
+                                           c.req().query("status"))));
     }
 
     ruvia::Task<ruvia::HttpResponse> listAll(ruvia::Context& c) {
@@ -49,7 +48,7 @@ class RoleController final : public ruvia::Controller<RoleController> {
 
     ruvia::Task<ruvia::HttpResponse> detail(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:role:query");
-        const auto id = c.param("id").toInt64();
+        const auto id = service::common::parseInt64(c.req().param("id"));
         if (!id || *id <= 0)
             service::common::throwAppError(service::common::kValidationErrorCode, "id 必须是正整数",
                                            400);
@@ -59,23 +58,23 @@ class RoleController final : public ruvia::Controller<RoleController> {
 
     ruvia::Task<ruvia::HttpResponse> create(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:role:add");
-        co_await roleService().create(c, c.valid<CreateRoleBody>());
+        co_await roleService().create(c, c.req().valid<CreateRoleBody>());
         co_return c.json(service::common::operation(c, "创建成功"));
     }
 
     ruvia::Task<ruvia::HttpResponse> update(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:role:edit");
-        const auto id = c.param("id").toInt64();
+        const auto id = service::common::parseInt64(c.req().param("id"));
         if (!id || *id <= 0)
             service::common::throwAppError(service::common::kValidationErrorCode, "id 必须是正整数",
                                            400);
-        co_await roleService().update(c, *id, c.valid<UpdateRoleBody>());
+        co_await roleService().update(c, *id, c.req().valid<UpdateRoleBody>());
         co_return c.json(service::common::operation(c, "更新成功"));
     }
 
     ruvia::Task<ruvia::HttpResponse> remove(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:role:delete");
-        const auto id = c.param("id").toInt64();
+        const auto id = service::common::parseInt64(c.req().param("id"));
         if (!id || *id <= 0)
             service::common::throwAppError(service::common::kValidationErrorCode, "id 必须是正整数",
                                            400);

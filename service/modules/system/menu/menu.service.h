@@ -9,9 +9,9 @@
 #include <utility>
 #include <vector>
 
-#include <ruvia/app/Task.h>
-#include <ruvia/db/Db.h>
-#include <ruvia/http/Context.h>
+#include <ruvia/core/Task.h>
+#include <ruvia/web/db/Db.h>
+#include <ruvia/web/Context.h>
 
 #include "service/common/http.h"
 #include "service/middleware/permission.h"
@@ -54,7 +54,7 @@ class MenuService {
         }
         if (status && !status->empty()) {
             where += " AND m.status = ?";
-            params.emplace_back(std::string(*status));
+            params.emplace_back(*status);
         }
         if (parentId) {
             const auto parentValue = *parentId;
@@ -86,7 +86,7 @@ class MenuService {
             .totalPages(static_cast<ruvia::Int64>(
                 paginated && pageSize > 0 ? (total + pageSize - 1) / pageSize : 1));
 
-        auto& list = result.list().ensure();
+        auto& list = result.listEnsure();
         for (const auto& row : rs.rows()) {
             auto& item = list.emplace(c);
             fillMenuDto(item, rowToRecord(row));
@@ -103,7 +103,7 @@ class MenuService {
         std::vector<ruvia::DbValue> params;
         if (status && !status->empty()) {
             sql += " AND status = ?";
-            params.emplace_back(std::string(*status));
+            params.emplace_back(*status);
         }
         sql += " ORDER BY `order` ASC, id ASC";
         const auto rs = co_await db.query(sql, params);
@@ -116,7 +116,7 @@ class MenuService {
             "SELECT id, name, path, icon, parent_id, `order`, type, component, status, "
             "       permission_code, is_default FROM sys_menu "
             "WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-            {ruvia::DbValue{id}});
+            service::common::dbParams(ruvia::DbValue{id}));
         if (rs.rows().empty())
             service::common::throwAppError(MenuError::MENU_NOT_FOUND);
 
@@ -133,7 +133,7 @@ class MenuService {
         if (body.parentId()) {
             const auto prs =
                 co_await db.query("SELECT type FROM sys_menu WHERE id = ? AND deleted_at IS NULL",
-                                  {ruvia::DbValue{static_cast<std::int64_t>(*body.parentId())}});
+                                  service::common::dbParams(ruvia::DbValue{static_cast<std::int64_t>(*body.parentId())}));
             if (prs.rows().empty())
                 service::common::throwAppError(MenuError::MENU_PARENT_NOT_FOUND);
             parentType = std::string(prs.rows().front()[0].text());
@@ -153,19 +153,19 @@ class MenuService {
             "INSERT INTO sys_menu (name, path, icon, component, parent_id, `order`, type, status, "
             "                     permission_code, is_default, created_at, updated_at) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())",
-            {ruvia::DbValue{std::string(body.name()->view())},
-             body.path() ? ruvia::DbValue{std::string(body.path()->view())} : ruvia::DbValue{nullptr},
-             body.icon() ? ruvia::DbValue{std::string(body.icon()->view())} : ruvia::DbValue{nullptr},
-             body.component() ? ruvia::DbValue{std::string(body.component()->view())}
+            service::common::dbParams(ruvia::DbValue{body.name()->view()},
+             body.path() ? ruvia::DbValue{body.path()->view()} : ruvia::DbValue{nullptr},
+             body.icon() ? ruvia::DbValue{body.icon()->view()} : ruvia::DbValue{nullptr},
+             body.component() ? ruvia::DbValue{body.component()->view()}
                               : ruvia::DbValue{nullptr},
              body.parentId() ? ruvia::DbValue{static_cast<std::int64_t>(*body.parentId())}
                              : ruvia::DbValue{nullptr},
              ruvia::DbValue{body.sortOrder() ? static_cast<std::int64_t>(*body.sortOrder()) : 0},
              ruvia::DbValue{type},
              ruvia::DbValue{body.status() ? std::string(body.status()->view()) : "enabled"},
-             body.permissionCode() ? ruvia::DbValue{std::string(body.permissionCode()->view())}
+             body.permissionCode() ? ruvia::DbValue{body.permissionCode()->view()}
                                    : ruvia::DbValue{nullptr},
-             ruvia::DbValue{static_cast<std::int64_t>(isDefault ? 1 : 0)}});
+             ruvia::DbValue{static_cast<std::int64_t>(isDefault ? 1 : 0)}));
         co_await tx.commit();
         service::middleware::permissionService().clearAllCache();
         co_return;
@@ -175,7 +175,7 @@ class MenuService {
         auto db = c.db();
         const auto rs = co_await db.query(
             "SELECT type, parent_id FROM sys_menu WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-            {ruvia::DbValue{id}});
+            service::common::dbParams(ruvia::DbValue{id}));
         if (rs.rows().empty())
             service::common::throwAppError(MenuError::MENU_NOT_FOUND);
         const std::string currentType(rs.rows().front()[0].text());
@@ -193,7 +193,7 @@ class MenuService {
         if (newParentId && *newParentId > 0) {
             const auto prs =
                 co_await db.query("SELECT type FROM sys_menu WHERE id = ? AND deleted_at IS NULL",
-                                  {ruvia::DbValue{*newParentId}});
+                                  service::common::dbParams(ruvia::DbValue{*newParentId}));
             if (prs.rows().empty())
                 service::common::throwAppError(MenuError::MENU_PARENT_NOT_FOUND);
             checkParentChildType(std::string(prs.rows().front()[0].text()), newType);
@@ -216,13 +216,13 @@ class MenuService {
             params.emplace_back(std::move(value));
         };
         if (body.name())
-            append("name", ruvia::DbValue{std::string(body.name()->view())});
+            append("name", ruvia::DbValue{body.name()->view()});
         if (body.path())
-            append("path", ruvia::DbValue{std::string(body.path()->view())});
+            append("path", ruvia::DbValue{body.path()->view()});
         if (body.icon())
-            append("icon", ruvia::DbValue{std::string(body.icon()->view())});
+            append("icon", ruvia::DbValue{body.icon()->view()});
         if (body.component())
-            append("component", ruvia::DbValue{std::string(body.component()->view())});
+            append("component", ruvia::DbValue{body.component()->view()});
         if (newParentId)
             append("parent_id", ruvia::DbValue{*newParentId});
         if (body.sortOrder())
@@ -230,9 +230,9 @@ class MenuService {
         if (type)
             append("type", ruvia::DbValue{*type});
         if (body.status())
-            append("status", ruvia::DbValue{std::string(body.status()->view())});
+            append("status", ruvia::DbValue{body.status()->view()});
         if (body.permissionCode()) {
-            append("permission_code", ruvia::DbValue{std::string(body.permissionCode()->view())});
+            append("permission_code", ruvia::DbValue{body.permissionCode()->view()});
         }
         if (body.isDefault()) {
             const bool nextDefault = static_cast<bool>(*body.isDefault());
@@ -258,7 +258,7 @@ class MenuService {
         auto db = c.db();
         const auto rs = co_await db.query(
             "SELECT id, type FROM sys_menu WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-            {ruvia::DbValue{id}});
+            service::common::dbParams(ruvia::DbValue{id}));
         if (rs.rows().empty())
             service::common::throwAppError(MenuError::MENU_NOT_FOUND);
 
@@ -268,7 +268,7 @@ class MenuService {
                 ? "SELECT COUNT(*) FROM sys_menu "
                   "WHERE parent_id = ? AND deleted_at IS NULL AND type != 'button'"
                 : "SELECT COUNT(*) FROM sys_menu WHERE parent_id = ? AND deleted_at IS NULL",
-            {ruvia::DbValue{id}});
+            service::common::dbParams(ruvia::DbValue{id}));
         if (std::stoll(std::string(blockingChildren.rows().front()[0].text())) > 0) {
             service::common::throwAppError(MenuError::MENU_HAS_CHILDREN);
         }
@@ -281,17 +281,17 @@ class MenuService {
                 "    SELECT id FROM sys_menu WHERE parent_id = ? AND type = 'button' "
                 "      AND deleted_at IS NULL"
                 ")",
-                {ruvia::DbValue{id}, ruvia::DbValue{id}});
+                service::common::dbParams(ruvia::DbValue{id}, ruvia::DbValue{id}));
             (void)co_await tx.execute(
                 "UPDATE sys_menu SET deleted_at = NOW(), updated_at = NOW() "
                 "WHERE id = ? OR (parent_id = ? AND type = 'button' AND deleted_at IS NULL)",
-                {ruvia::DbValue{id}, ruvia::DbValue{id}});
+                service::common::dbParams(ruvia::DbValue{id}, ruvia::DbValue{id}));
         } else {
             (void)co_await tx.execute("DELETE FROM sys_role_menu WHERE menu_id = ?",
-                                      {ruvia::DbValue{id}});
+                                      service::common::dbParams(ruvia::DbValue{id}));
             (void)co_await tx.execute(
                 "UPDATE sys_menu SET deleted_at = NOW(), updated_at = NOW() WHERE id = ?",
-                {ruvia::DbValue{id}});
+                service::common::dbParams(ruvia::DbValue{id}));
         }
         co_await tx.commit();
         service::middleware::permissionService().clearAllCache();
@@ -306,8 +306,8 @@ class MenuService {
         for (const auto& item : *body.items()) {
             (void)co_await tx.execute(
                 "UPDATE sys_menu SET `order` = ?, updated_at = NOW() WHERE id = ?",
-                {ruvia::DbValue{static_cast<std::int64_t>(*item.sortOrder())},
-                 ruvia::DbValue{static_cast<std::int64_t>(*item.id())}});
+                service::common::dbParams(ruvia::DbValue{static_cast<std::int64_t>(*item.sortOrder())},
+                 ruvia::DbValue{static_cast<std::int64_t>(*item.id())}));
         }
         co_await tx.commit();
         service::middleware::permissionService().clearAllCache();
@@ -319,7 +319,7 @@ class MenuService {
         const auto parentId = static_cast<std::int64_t>(*body.parentId());
         const auto prs =
             co_await db.query("SELECT type FROM sys_menu WHERE id = ? AND deleted_at IS NULL",
-                              {ruvia::DbValue{parentId}});
+                              service::common::dbParams(ruvia::DbValue{parentId}));
         if (prs.rows().empty())
             service::common::throwAppError(MenuError::MENU_PARENT_NOT_FOUND);
         if (std::string(prs.rows().front()[0].text()) != "page") {
@@ -334,19 +334,19 @@ class MenuService {
             const auto exists =
                 co_await tx.query("SELECT id FROM sys_menu WHERE parent_id = ? AND type = 'button' "
                                   "  AND permission_code = ? AND deleted_at IS NULL LIMIT 1",
-                                  {ruvia::DbValue{parentId}, ruvia::DbValue{permissionCode}});
+                                  service::common::dbParams(ruvia::DbValue{parentId}, ruvia::DbValue{permissionCode}));
             if (!exists.rows().empty())
                 continue;
             const auto maxRs = co_await tx.query(
                 "SELECT COALESCE(MAX(`order`), 0) FROM sys_menu WHERE parent_id = ?",
-                {ruvia::DbValue{parentId}});
+                service::common::dbParams(ruvia::DbValue{parentId}));
             const std::int64_t maxOrder = std::stoll(std::string(maxRs.rows().front()[0].text()));
             (void)co_await tx.execute(
                 "INSERT INTO sys_menu (name, parent_id, type, status, permission_code, `order`, "
                 "                     created_at, updated_at) "
                 "VALUES (?, ?, 'button', 'enabled', ?, ?, NOW(), NOW())",
-                {ruvia::DbValue{name}, ruvia::DbValue{parentId}, ruvia::DbValue{permissionCode},
-                 ruvia::DbValue{maxOrder + 1}});
+                service::common::dbParams(ruvia::DbValue{name}, ruvia::DbValue{parentId}, ruvia::DbValue{permissionCode},
+                 ruvia::DbValue{maxOrder + 1}));
             ++created;
         }
         co_await tx.commit();
@@ -443,21 +443,21 @@ class MenuService {
         item.id(static_cast<ruvia::Int64>(record.id))
             .sortOrder(static_cast<ruvia::Int64>(record.sort_order))
             .isDefault(ruvia::Bool{record.is_default});
-        item.name().assignView(record.name);
-        item.type().assignView(record.type);
-        item.status().assignView(record.status);
+        item.name(record.name);
+        item.type(record.type);
+        item.status(record.status);
         if (record.path) {
-            item.path().assignView(*record.path);
-            item.fullPath().assignView(*record.path);
+            item.path(*record.path);
+            item.fullPath(*record.path);
         }
         if (record.icon)
-            item.icon().assignView(*record.icon);
+            item.icon(*record.icon);
         if (record.parent_id)
             item.parentId(static_cast<ruvia::Int64>(*record.parent_id));
         if (record.component)
-            item.component().assignView(*record.component);
+            item.component(*record.component);
         if (record.permission_code)
-            item.permissionCode().assignView(*record.permission_code);
+            item.permissionCode(*record.permission_code);
     }
 
     static ruvia::List<MenuDto> buildFlatList(ruvia::Context& c,
@@ -483,7 +483,7 @@ class MenuService {
         const auto it = children.find(record.id);
         if (it == children.end())
             return;
-        auto& childList = item.children().ensure();
+        auto& childList = item.childrenEnsure();
         for (const auto* child : it->second) {
             appendNode(c, childList, *child, children, path);
         }

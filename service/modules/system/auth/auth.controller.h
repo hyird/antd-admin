@@ -2,10 +2,9 @@
 
 #include <utility>
 
-#include <ruvia/app/Task.h>
-#include <ruvia/http/Context.h>
-#include <ruvia/http/Controller.h>
-#include <ruvia/http/HttpTypes.h>
+#include <ruvia/core/Task.h>
+#include <ruvia/web/Context.h>
+#include <ruvia/web/Controller.h>
 
 #include "service/common/http.h"
 #include "service/middleware/auth.h"
@@ -26,12 +25,12 @@ class AuthController final : public ruvia::Controller<AuthController> {
 
   private:
     ruvia::Task<ruvia::HttpResponse> login(ruvia::Context& c) {
-        auto data = co_await authService().login(c, c.valid<LoginBody>());
+        auto data = co_await authService().login(c, c.req().valid<LoginBody>());
         co_return c.json(service::common::ok<LoginResponse>(c, std::move(data)));
     }
 
     ruvia::Task<ruvia::HttpResponse> refresh(ruvia::Context& c) {
-        auto data = co_await authService().refresh(c, c.valid<RefreshBody>());
+        auto data = co_await authService().refresh(c, c.req().valid<RefreshBody>());
         co_return c.json(service::common::ok<LoginResponse>(c, std::move(data)));
     }
 
