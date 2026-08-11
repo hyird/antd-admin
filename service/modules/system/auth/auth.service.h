@@ -227,7 +227,7 @@ class AuthService {
         co_return isSuperadmin;
     }
 
-    ruvia::Task<ruvia::List<menu::MenuDto>> getAllMenus(ruvia::Context& c) {
+    ruvia::Task<ruvia::BoxedArray<menu::MenuDto>> getAllMenus(ruvia::Context& c) {
         auto db = c.db();
         const auto rs = co_await db.query(
             "SELECT id, name, path, icon, parent_id, `order`, type, component, status, "
@@ -237,7 +237,8 @@ class AuthService {
         co_return menu::MenuService::flatFromRows(c, rs.rows());
     }
 
-    ruvia::Task<ruvia::List<menu::MenuDto>> getUserRoleMenus(ruvia::Context& c, std::int64_t userId) {
+    ruvia::Task<ruvia::BoxedArray<menu::MenuDto>> getUserRoleMenus(ruvia::Context& c,
+                                                                   std::int64_t userId) {
         auto db = c.db();
         const auto rs = co_await db.query(
             "SELECT DISTINCT m.id, m.name, m.path, m.icon, m.parent_id, m.`order`, m.type, "
@@ -253,9 +254,9 @@ class AuthService {
     }
 
     ruvia::Task<AuthUserInfoDto> buildUserInfo(ruvia::Context& c, std::int64_t userId,
-                                              const std::string& username,
-                                              const std::string& nickname,
-                                              const std::string& status) {
+                                               const std::string& username,
+                                               const std::string& nickname,
+                                               const std::string& status) {
         AuthUserInfoDto info(c);
         info.id(static_cast<ruvia::Int64>(userId))
             .username(username)

@@ -14,11 +14,6 @@ if (!rootElement) throw new Error('Root element #root not found in DOM');
 
 document.title = APP_NAME;
 
-const loadingElement = document.getElementById('app-loading-text');
-if (loadingElement) {
-    loadingElement.textContent = `${APP_NAME} 正在加载`;
-}
-
 ReactDOM.createRoot(rootElement).render(
     <ErrorBoundary>
         <StyleProvider hashPriority="low" layer>

@@ -28,19 +28,19 @@ class MenuService {
     }
 
     template <typename Rows>
-    static ruvia::List<MenuDto> flatFromRows(ruvia::Context& c, const Rows& rows) {
+    static ruvia::BoxedArray<MenuDto> flatFromRows(ruvia::Context& c, const Rows& rows) {
         return buildFlatList(c, rowsToRecords(rows));
     }
 
     template <typename Rows>
-    static ruvia::List<MenuDto> treeFromRows(ruvia::Context& c, const Rows& rows) {
+    static ruvia::BoxedArray<MenuDto> treeFromRows(ruvia::Context& c, const Rows& rows) {
         return buildTree(c, rowsToRecords(rows));
     }
 
     ruvia::Task<MenuPageDataDto> list(ruvia::Context& c, std::int64_t page, std::int64_t pageSize,
-                                     std::int64_t skip, const std::optional<std::string>& keyword,
-                                     bool paginated, std::optional<std::string_view> status,
-                                     std::optional<std::int64_t> parentId) {
+                                      std::int64_t skip, const std::optional<std::string>& keyword,
+                                      bool paginated, std::optional<std::string_view> status,
+                                      std::optional<std::int64_t> parentId) {
         auto db = c.db();
 
         std::string where = " FROM sys_menu m WHERE m.deleted_at IS NULL";
@@ -94,8 +94,8 @@ class MenuService {
         co_return result;
     }
 
-    ruvia::Task<ruvia::List<MenuDto>> getTree(ruvia::Context& c,
-                                            std::optional<std::string_view> status) {
+    ruvia::Task<ruvia::BoxedArray<MenuDto>> getTree(ruvia::Context& c,
+                                                    std::optional<std::string_view> status) {
         auto db = c.db();
         std::string sql =
             "SELECT id, name, path, icon, parent_id, `order`, type, component, status, "
@@ -133,7 +133,8 @@ class MenuService {
         if (body.parentId()) {
             const auto prs =
                 co_await db.query("SELECT type FROM sys_menu WHERE id = ? AND deleted_at IS NULL",
-                                  service::common::dbParams(ruvia::DbValue{static_cast<std::int64_t>(*body.parentId())}));
+                                  service::common::dbParams(
+                                      ruvia::DbValue{static_cast<std::int64_t>(*body.parentId())}));
             if (prs.rows().empty())
                 service::common::throwAppError(MenuError::MENU_PARENT_NOT_FOUND);
             parentType = std::string(prs.rows().front()[0].text());
@@ -153,19 +154,20 @@ class MenuService {
             "INSERT INTO sys_menu (name, path, icon, component, parent_id, `order`, type, status, "
             "                     permission_code, is_default, created_at, updated_at) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())",
-            service::common::dbParams(ruvia::DbValue{body.name()->view()},
-             body.path() ? ruvia::DbValue{body.path()->view()} : ruvia::DbValue{nullptr},
-             body.icon() ? ruvia::DbValue{body.icon()->view()} : ruvia::DbValue{nullptr},
-             body.component() ? ruvia::DbValue{body.component()->view()}
-                              : ruvia::DbValue{nullptr},
-             body.parentId() ? ruvia::DbValue{static_cast<std::int64_t>(*body.parentId())}
-                             : ruvia::DbValue{nullptr},
-             ruvia::DbValue{body.sortOrder() ? static_cast<std::int64_t>(*body.sortOrder()) : 0},
-             ruvia::DbValue{type},
-             ruvia::DbValue{body.status() ? std::string(body.status()->view()) : "enabled"},
-             body.permissionCode() ? ruvia::DbValue{body.permissionCode()->view()}
-                                   : ruvia::DbValue{nullptr},
-             ruvia::DbValue{static_cast<std::int64_t>(isDefault ? 1 : 0)}));
+            service::common::dbParams(
+                ruvia::DbValue{body.name()->view()},
+                body.path() ? ruvia::DbValue{body.path()->view()} : ruvia::DbValue{nullptr},
+                body.icon() ? ruvia::DbValue{body.icon()->view()} : ruvia::DbValue{nullptr},
+                body.component() ? ruvia::DbValue{body.component()->view()}
+                                 : ruvia::DbValue{nullptr},
+                body.parentId() ? ruvia::DbValue{static_cast<std::int64_t>(*body.parentId())}
+                                : ruvia::DbValue{nullptr},
+                ruvia::DbValue{body.sortOrder() ? static_cast<std::int64_t>(*body.sortOrder()) : 0},
+                ruvia::DbValue{type},
+                ruvia::DbValue{body.status() ? body.status()->view() : std::string_view{"enabled"}},
+                body.permissionCode() ? ruvia::DbValue{body.permissionCode()->view()}
+                                      : ruvia::DbValue{nullptr},
+                ruvia::DbValue{static_cast<std::int64_t>(isDefault ? 1 : 0)}));
         co_await tx.commit();
         service::middleware::permissionService().clearAllCache();
         co_return;
@@ -306,8 +308,9 @@ class MenuService {
         for (const auto& item : *body.items()) {
             (void)co_await tx.execute(
                 "UPDATE sys_menu SET `order` = ?, updated_at = NOW() WHERE id = ?",
-                service::common::dbParams(ruvia::DbValue{static_cast<std::int64_t>(*item.sortOrder())},
-                 ruvia::DbValue{static_cast<std::int64_t>(*item.id())}));
+                service::common::dbParams(
+                    ruvia::DbValue{static_cast<std::int64_t>(*item.sortOrder())},
+                    ruvia::DbValue{static_cast<std::int64_t>(*item.id())}));
         }
         co_await tx.commit();
         service::middleware::permissionService().clearAllCache();
@@ -334,7 +337,8 @@ class MenuService {
             const auto exists =
                 co_await tx.query("SELECT id FROM sys_menu WHERE parent_id = ? AND type = 'button' "
                                   "  AND permission_code = ? AND deleted_at IS NULL LIMIT 1",
-                                  service::common::dbParams(ruvia::DbValue{parentId}, ruvia::DbValue{permissionCode}));
+                                  service::common::dbParams(ruvia::DbValue{parentId},
+                                                            ruvia::DbValue{permissionCode}));
             if (!exists.rows().empty())
                 continue;
             const auto maxRs = co_await tx.query(
@@ -345,8 +349,9 @@ class MenuService {
                 "INSERT INTO sys_menu (name, parent_id, type, status, permission_code, `order`, "
                 "                     created_at, updated_at) "
                 "VALUES (?, ?, 'button', 'enabled', ?, ?, NOW(), NOW())",
-                service::common::dbParams(ruvia::DbValue{name}, ruvia::DbValue{parentId}, ruvia::DbValue{permissionCode},
-                 ruvia::DbValue{maxOrder + 1}));
+                service::common::dbParams(ruvia::DbValue{name}, ruvia::DbValue{parentId},
+                                          ruvia::DbValue{permissionCode},
+                                          ruvia::DbValue{maxOrder + 1}));
             ++created;
         }
         co_await tx.commit();
@@ -382,7 +387,7 @@ class MenuService {
     }
 
     ruvia::Task<bool> isAncestorDescendant(ruvia::Context& c, std::int64_t ancestor,
-                                          std::int64_t candidate) {
+                                           std::int64_t candidate) {
         auto db = c.db();
         const auto rs =
             co_await db.query("SELECT id, parent_id FROM sys_menu WHERE deleted_at IS NULL");
@@ -460,9 +465,9 @@ class MenuService {
             item.permissionCode(*record.permission_code);
     }
 
-    static ruvia::List<MenuDto> buildFlatList(ruvia::Context& c,
-                                             const std::vector<MenuRecord>& records) {
-        ruvia::List<MenuDto> out(c.resource());
+    static ruvia::BoxedArray<MenuDto> buildFlatList(ruvia::Context& c,
+                                                    const std::vector<MenuRecord>& records) {
+        ruvia::BoxedArray<MenuDto> out(c.resource());
         for (const auto& record : records) {
             auto& item = out.emplace(c);
             fillMenuDto(item, record);
@@ -471,7 +476,7 @@ class MenuService {
     }
 
     static void
-    appendNode(ruvia::Context& c, ruvia::List<MenuDto>& out, const MenuRecord& record,
+    appendNode(ruvia::Context& c, ruvia::BoxedArray<MenuDto>& out, const MenuRecord& record,
                const std::unordered_map<std::int64_t, std::vector<const MenuRecord*>>& children,
                std::unordered_set<std::int64_t> path = {}) {
         if (!path.insert(record.id).second)
@@ -505,8 +510,9 @@ class MenuService {
         return false;
     }
 
-    static ruvia::List<MenuDto> buildTree(ruvia::Context& c, const std::vector<MenuRecord>& records) {
-        ruvia::List<MenuDto> out(c.resource());
+    static ruvia::BoxedArray<MenuDto> buildTree(ruvia::Context& c,
+                                                const std::vector<MenuRecord>& records) {
+        ruvia::BoxedArray<MenuDto> out(c.resource());
         std::unordered_map<std::int64_t, const MenuRecord*> recordsById;
         recordsById.reserve(records.size());
         for (const auto& record : records)

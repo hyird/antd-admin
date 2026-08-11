@@ -58,8 +58,11 @@ struct AppErrorDef {
     std::uint16_t status{400};
 };
 
-RUVIA_RESPONSE_MODEL(ErrorResponse, RUVIA_FIELD(code, ruvia::Int64),
-                    RUVIA_FIELD(message, ruvia::String));
+struct ErrorResponse final {
+    RUVIA_OPTIONAL_FIELD(code, ruvia::Int64);
+    RUVIA_OPTIONAL_FIELD(message, ruvia::String);
+    RUVIA_MODEL(ErrorResponse, code, message);
+};
 
 inline std::int64_t defaultBusinessErrorCode(std::uint16_t status) {
     switch (status) {
@@ -97,12 +100,13 @@ inline std::int64_t normalizeBusinessErrorCode(std::string_view code, std::uint1
 }
 
 [[noreturn]] inline void throwAppError(const AppErrorDef& def) {
-    throw ruvia::HttpError(def.status, std::to_string(def.code), def.message);
+    throw ruvia::HttpError(ruvia::HttpStatusCode::fromValue(def.status), std::to_string(def.code),
+                           def.message);
 }
 
 [[noreturn]] inline void throwAppError(std::int64_t code, std::string message,
                                        std::uint16_t status = 400) {
-    throw ruvia::HttpError(status, std::to_string(code), message);
+    throw ruvia::HttpError(ruvia::HttpStatusCode::fromValue(status), std::to_string(code), message);
 }
 
 inline OperationResponse operation(ruvia::Context& c, std::string_view message) {

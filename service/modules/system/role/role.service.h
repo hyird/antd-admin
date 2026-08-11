@@ -27,8 +27,8 @@ class RoleService {
     }
 
     ruvia::Task<RolePageDataDto> list(ruvia::Context& c, std::int64_t page, std::int64_t pageSize,
-                                     std::int64_t skip, const std::optional<std::string>& keyword,
-                                     bool paginated, std::optional<std::string_view> status) {
+                                      std::int64_t skip, const std::optional<std::string>& keyword,
+                                      bool paginated, std::optional<std::string_view> status) {
         auto db = c.db();
 
         std::string where = " FROM sys_role r WHERE r.deleted_at IS NULL";
@@ -123,12 +123,12 @@ class RoleService {
         co_return out;
     }
 
-    ruvia::Task<ruvia::List<RoleOptionDto>> listAllEnabled(ruvia::Context& c) {
+    ruvia::Task<ruvia::BoxedArray<RoleOptionDto>> listAllEnabled(ruvia::Context& c) {
         auto db = c.db();
         const auto rs =
             co_await db.query("SELECT id, name, code FROM sys_role "
                               "WHERE status = 'enabled' AND deleted_at IS NULL ORDER BY id ASC");
-        ruvia::List<RoleOptionDto> out(c.resource());
+        ruvia::BoxedArray<RoleOptionDto> out(c.resource());
         for (const auto& row : rs.rows()) {
             auto& item = out.emplace(c);
             item.id(static_cast<ruvia::Int64>(std::stoll(std::string(row[0].text()))));
@@ -150,11 +150,12 @@ class RoleService {
 
         const std::string status = body.status() ? std::string(body.status()->view()) : "enabled";
         auto tx = co_await db.beginTransaction();
-        const auto rs =
-            co_await tx.execute("INSERT INTO sys_role (name, code, status, created_at, updated_at) "
-                                "VALUES (?, ?, ?, NOW(), NOW())",
-                                service::common::dbParams(ruvia::DbValue{name}, ruvia::DbValue{code}, ruvia::DbValue{status}));
-        const std::int64_t roleId = static_cast<std::int64_t>(rs.lastInsertId());
+        const auto rs = co_await tx.execute(
+            "INSERT INTO sys_role (name, code, status, created_at, updated_at) "
+            "VALUES (?, ?, ?, NOW(), NOW())",
+            service::common::dbParams(ruvia::DbValue{name}, ruvia::DbValue{code},
+                                      ruvia::DbValue{status}));
+        const std::int64_t roleId = static_cast<std::int64_t>(rs.lastInsertId().value_or(0));
 
         if (code != service::common::kSuperAdminRoleCode) {
             co_await syncRoleMenus(tx, roleId, body.menuIds());
@@ -235,8 +236,9 @@ class RoleService {
             service::common::throwAppError(RoleError::SUPERADMIN_CANNOT_DELETE);
         }
 
-        const auto userRs = co_await db.query(
-            "SELECT COUNT(*) FROM sys_user_role WHERE role_id = ?", service::common::dbParams(ruvia::DbValue{id}));
+        const auto userRs =
+            co_await db.query("SELECT COUNT(*) FROM sys_user_role WHERE role_id = ?",
+                              service::common::dbParams(ruvia::DbValue{id}));
         const std::int64_t userCount = std::stoll(std::string(userRs.rows().front()[0].text()));
         if (userCount > 0)
             service::common::throwAppError(RoleError::HAS_USERS);
@@ -285,7 +287,7 @@ class RoleService {
     }
 
     ruvia::Task<void> syncRoleMenus(ruvia::DbTransaction& tx, std::int64_t roleId,
-                                   const std::optional<ruvia::Array<ruvia::Int64>>& menuIds) {
+                                    const std::optional<ruvia::Array<ruvia::Int64>>& menuIds) {
         (void)co_await tx.execute("DELETE FROM sys_role_menu WHERE role_id = ?",
                                   service::common::dbParams(ruvia::DbValue{roleId}));
         if (!menuIds)
@@ -293,7 +295,8 @@ class RoleService {
         for (const auto menuId : *menuIds) {
             (void)co_await tx.execute(
                 "INSERT IGNORE INTO sys_role_menu (role_id, menu_id) VALUES (?, ?)",
-                service::common::dbParams(ruvia::DbValue{roleId}, ruvia::DbValue{static_cast<std::int64_t>(menuId)}));
+                service::common::dbParams(ruvia::DbValue{roleId},
+                                          ruvia::DbValue{static_cast<std::int64_t>(menuId)}));
         }
         co_return;
     }

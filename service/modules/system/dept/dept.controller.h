@@ -32,12 +32,12 @@ class DeptController final : public ruvia::Controller<DeptController> {
         if (!pageSize)
             pageSize = service::common::parseInt64(c.req().query("page_size"));
         const auto [page, pageSizeValue, skip, keyword, paginated] =
-            service::common::normalizePagination(service::common::parseInt64(c.req().query("page")), pageSize,
-                                                 c.req().query("keyword"));
+            service::common::normalizePagination(service::common::parseInt64(c.req().query("page")),
+                                                 pageSize, c.req().query("keyword"));
         co_return c.json(service::common::ok<DeptPageResponse>(
-            c, co_await deptService().list(c, page, pageSizeValue, skip, keyword, paginated,
-                                           c.req().query("status"),
-                                           service::common::parseInt64(c.req().query("parent_id")))));
+            c, co_await deptService().list(
+                   c, page, pageSizeValue, skip, keyword, paginated, c.req().query("status"),
+                   service::common::parseInt64(c.req().query("parent_id")))));
     }
 
     ruvia::Task<ruvia::HttpResponse> tree(ruvia::Context& c) {
@@ -59,7 +59,7 @@ class DeptController final : public ruvia::Controller<DeptController> {
 
     ruvia::Task<ruvia::HttpResponse> create(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:dept:add");
-        co_await deptService().create(c, c.req().valid<CreateDeptBody>());
+        co_await deptService().create(c, c.req().validated<CreateDeptBody>());
         co_return c.json(service::common::operation(c, "创建成功"));
     }
 
@@ -69,7 +69,7 @@ class DeptController final : public ruvia::Controller<DeptController> {
         if (!id || *id <= 0)
             service::common::throwAppError(service::common::kValidationErrorCode, "id 必须是正整数",
                                            400);
-        co_await deptService().update(c, *id, c.req().valid<UpdateDeptBody>());
+        co_await deptService().update(c, *id, c.req().validated<UpdateDeptBody>());
         co_return c.json(service::common::operation(c, "更新成功"));
     }
 

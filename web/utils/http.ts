@@ -86,13 +86,14 @@ export interface RequestConfig extends AxiosRequestConfig {
     _silent?: boolean;
 }
 
-interface RequestInstance extends AxiosInstance {
+type RequestInstance = Omit<AxiosInstance, 'get' | 'post' | 'put' | 'delete' | 'patch'> & {
+    (config: RequestConfig): Promise<AxiosResponse>;
     get<T = unknown>(url: string, config?: RequestConfig): Promise<T>;
     post<T = unknown>(url: string, data?: unknown, config?: RequestConfig): Promise<T>;
     put<T = unknown>(url: string, data?: unknown, config?: RequestConfig): Promise<T>;
     delete<T = unknown>(url: string, config?: RequestConfig): Promise<T>;
     patch<T = unknown>(url: string, data?: unknown, config?: RequestConfig): Promise<T>;
-}
+};
 
 const request = axios.create({
     baseURL: '/',

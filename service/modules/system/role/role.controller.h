@@ -32,8 +32,8 @@ class RoleController final : public ruvia::Controller<RoleController> {
         if (!pageSize)
             pageSize = service::common::parseInt64(c.req().query("page_size"));
         const auto [page, pageSizeValue, skip, keyword, paginated] =
-            service::common::normalizePagination(service::common::parseInt64(c.req().query("page")), pageSize,
-                                                 c.req().query("keyword"));
+            service::common::normalizePagination(service::common::parseInt64(c.req().query("page")),
+                                                 pageSize, c.req().query("keyword"));
         co_return c.json(service::common::ok<RolePageResponse>(
             c, co_await roleService().list(c, page, pageSizeValue, skip, keyword, paginated,
                                            c.req().query("status"))));
@@ -58,7 +58,7 @@ class RoleController final : public ruvia::Controller<RoleController> {
 
     ruvia::Task<ruvia::HttpResponse> create(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:role:add");
-        co_await roleService().create(c, c.req().valid<CreateRoleBody>());
+        co_await roleService().create(c, c.req().validated<CreateRoleBody>());
         co_return c.json(service::common::operation(c, "创建成功"));
     }
 
@@ -68,7 +68,7 @@ class RoleController final : public ruvia::Controller<RoleController> {
         if (!id || *id <= 0)
             service::common::throwAppError(service::common::kValidationErrorCode, "id 必须是正整数",
                                            400);
-        co_await roleService().update(c, *id, c.req().valid<UpdateRoleBody>());
+        co_await roleService().update(c, *id, c.req().validated<UpdateRoleBody>());
         co_return c.json(service::common::operation(c, "更新成功"));
     }
 

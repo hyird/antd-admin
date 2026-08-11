@@ -50,13 +50,14 @@ inline void logError(std::string_view message) { writeLogLine(std::cerr, "ERROR"
 inline void logAccess(const ruvia::AccessLogRecord& record) noexcept {
     try {
         const auto micros = record.durationMicros();
+        const auto status = record.status();
         std::ostringstream message;
         const auto remote = record.remoteAddress();
-        message << (remote.empty() ? "-" : remote) << ' ' << record.method() << ' '
-                << record.path() << ' ' << record.status() << ' ' << micros / 1000 << '.'
-                << std::setfill('0') << std::setw(3) << micros % 1000 << "ms";
+        message << (remote.empty() ? "-" : remote) << ' ' << record.method() << ' ' << record.path()
+                << ' ' << status.value() << ' ' << micros / 1000 << '.' << std::setfill('0')
+                << std::setw(3) << micros % 1000 << "ms";
 
-        if (record.status() >= 500) {
+        if (status.isServerError()) {
             logError(message.str());
         } else {
             logInfo(message.str());
@@ -65,8 +66,7 @@ inline void logAccess(const ruvia::AccessLogRecord& record) noexcept {
     }
 }
 
-// Bound into App::onAccess via AccessLogCallback::bind; must be nothrow-invocable
-// and outlive App::run().
+// Stored by AccessLogCallback; must be nothrow-invocable.
 struct AccessLogger {
     void operator()(const ruvia::AccessLogRecord& record) const noexcept { logAccess(record); }
 };

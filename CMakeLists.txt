@@ -39,7 +39,7 @@ endif()
 
 option(ANTD_ADMIN_BUILD_WEB "Build the frontend as part of the service build" ON)
 
-# v0.1.0 split Ruvia into three targets (core/http/web); we consume ruvia::web.
+# Ruvia exposes three targets (core/http/web); we consume ruvia::web.
 set(RUVIA_BUILD_CORE ON CACHE BOOL "" FORCE)
 set(RUVIA_BUILD_HTTP ON CACHE BOOL "" FORCE)
 set(RUVIA_BUILD_WEB ON CACHE BOOL "" FORCE)
@@ -53,7 +53,7 @@ set(RUVIA_ENABLE_REDIS OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
     ruvia
     GIT_REPOSITORY https://github.com/hyird/Ruvia.git
-    GIT_TAG 376350200cfc25dad03a1cdbdfa85049bc14ddc8 # v0.1.0
+    GIT_TAG 13dfb7f9cafeb45ea30b5a17b590b807747079da # main, 2026-08-11
 )
 FetchContent_MakeAvailable(ruvia)
 

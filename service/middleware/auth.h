@@ -38,14 +38,14 @@ inline service::core::JwtPayload requireAuth(ruvia::Context& c) {
 }
 
 inline const service::core::JwtPayload& currentUser(ruvia::Context& c) {
-    return c.req().valid<service::core::JwtPayload>();
+    return c.requestState<service::core::JwtPayload>();
 }
 
 class AuthMiddleware final : public ruvia::Middleware<AuthMiddleware> {
   public:
     ruvia::Task<void> handle(ruvia::Context& c, ruvia::Next& next) {
-        // v0.1.0: per-request validated data is keyed by type (ruvia::Form is gone).
-        c.req().addValidatedData(requireAuth(c));
+        const auto principal = requireAuth(c);
+        const auto binding = c.bindRequestState(principal);
         co_await next();
     }
 };

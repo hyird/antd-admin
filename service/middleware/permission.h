@@ -33,7 +33,7 @@ class PermissionService {
     }
 
     ruvia::Task<bool> hasAnyPermission(ruvia::Context& c, std::int64_t userId,
-                                      std::initializer_list<std::string_view> codes) {
+                                       std::initializer_list<std::string_view> codes) {
         auto data = co_await loadUser(c, userId);
         if (data.is_superadmin)
             co_return true;
@@ -45,7 +45,7 @@ class PermissionService {
     }
 
     ruvia::Task<bool> hasAllPermissions(ruvia::Context& c, std::int64_t userId,
-                                       std::initializer_list<std::string_view> codes) {
+                                        std::initializer_list<std::string_view> codes) {
         auto data = co_await loadUser(c, userId);
         if (data.is_superadmin)
             co_return true;
@@ -147,7 +147,7 @@ inline ruvia::Task<void> requirePermission(ruvia::Context& c, std::string_view c
 }
 
 inline ruvia::Task<void> requireAnyPermission(ruvia::Context& c,
-                                             std::initializer_list<std::string_view> codes) {
+                                              std::initializer_list<std::string_view> codes) {
     const auto& jwt = currentUser(c);
     if (jwt.user_id <= 0) {
         service::common::throwAppError(service::common::kAuthUnauthorizedErrorCode, "未登录", 401);
@@ -160,7 +160,7 @@ inline ruvia::Task<void> requireAnyPermission(ruvia::Context& c,
 }
 
 inline ruvia::Task<void> requireAllPermissions(ruvia::Context& c,
-                                              std::initializer_list<std::string_view> codes) {
+                                               std::initializer_list<std::string_view> codes) {
     const auto& jwt = currentUser(c);
     if (jwt.user_id <= 0) {
         service::common::throwAppError(service::common::kAuthUnauthorizedErrorCode, "未登录", 401);

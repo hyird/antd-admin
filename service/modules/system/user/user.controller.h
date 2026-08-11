@@ -32,8 +32,8 @@ class UserController final : public ruvia::Controller<UserController> {
         if (!pageSize)
             pageSize = service::common::parseInt64(c.req().query("page_size"));
         const auto [page, pageSizeValue, skip, keyword, paginated] =
-            service::common::normalizePagination(service::common::parseInt64(c.req().query("page")), pageSize,
-                                                 c.req().query("keyword"));
+            service::common::normalizePagination(service::common::parseInt64(c.req().query("page")),
+                                                 pageSize, c.req().query("keyword"));
         co_return c.json(service::common::ok<UserPageResponse>(
             c, co_await userService().list(c, page, pageSizeValue, skip, keyword, paginated,
                                            c.req().query("status"),
@@ -60,7 +60,7 @@ class UserController final : public ruvia::Controller<UserController> {
 
     ruvia::Task<ruvia::HttpResponse> create(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:user:add");
-        co_await userService().create(c, c.req().valid<CreateUserBody>());
+        co_await userService().create(c, c.req().validated<CreateUserBody>());
         co_return c.json(service::common::operation(c, "创建成功"));
     }
 
@@ -70,7 +70,7 @@ class UserController final : public ruvia::Controller<UserController> {
         if (!id || *id <= 0)
             service::common::throwAppError(service::common::kValidationErrorCode, "id 必须是正整数",
                                            400);
-        co_await userService().update(c, *id, c.req().valid<UpdateUserBody>());
+        co_await userService().update(c, *id, c.req().validated<UpdateUserBody>());
         co_return c.json(service::common::operation(c, "更新成功"));
     }
 

@@ -28,9 +28,9 @@ class UserService {
     }
 
     ruvia::Task<UserPageDataDto> list(ruvia::Context& c, std::int64_t page, std::int64_t pageSize,
-                                     std::int64_t skip, const std::optional<std::string>& keyword,
-                                     bool paginated, std::optional<std::string_view> status,
-                                     std::optional<std::int64_t> deptId) {
+                                      std::int64_t skip, const std::optional<std::string>& keyword,
+                                      bool paginated, std::optional<std::string_view> status,
+                                      std::optional<std::int64_t> deptId) {
         auto db = c.db();
 
         std::string where = " WHERE u.deleted_at IS NULL";
@@ -79,8 +79,8 @@ class UserService {
         co_return result;
     }
 
-    ruvia::Task<ruvia::List<UserOptionDto>> listOptions(ruvia::Context& c,
-                                                      std::optional<std::string_view> keyword) {
+    ruvia::Task<ruvia::BoxedArray<UserOptionDto>>
+    listOptions(ruvia::Context& c, std::optional<std::string_view> keyword) {
         auto db = c.db();
         std::string sql =
             "SELECT id, username, nickname, phone, email FROM sys_user WHERE deleted_at IS NULL";
@@ -93,7 +93,7 @@ class UserService {
         }
         sql += " ORDER BY id ASC";
         const auto rs = co_await db.query(sql, params);
-        ruvia::List<UserOptionDto> out(c.resource());
+        ruvia::BoxedArray<UserOptionDto> out(c.resource());
         for (const auto& row : rs.rows()) {
             auto& item = out.emplace(c);
             item.id(static_cast<ruvia::Int64>(std::stoll(std::string(row[0].text()))));
@@ -150,20 +150,22 @@ class UserService {
             "INSERT INTO sys_user (username, password_hash, nickname, phone, email, "
             "                     dept_id, status, created_at, updated_at) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())",
-            service::common::dbParams(ruvia::DbValue{username}, ruvia::DbValue{hash},
-             body.nickname() ? ruvia::DbValue{body.nickname()->view()}
-                             : ruvia::DbValue{nullptr},
-             !phone.empty() ? ruvia::DbValue{phone} : ruvia::DbValue{nullptr},
-             !email.empty() ? ruvia::DbValue{email} : ruvia::DbValue{nullptr},
-             body.deptId() ? ruvia::DbValue{static_cast<std::int64_t>(*body.deptId())}
-                           : ruvia::DbValue{nullptr},
-             ruvia::DbValue{body.status() ? std::string(body.status()->view()) : "enabled"}));
-        const std::int64_t userId = static_cast<std::int64_t>(rs.lastInsertId());
+            service::common::dbParams(
+                ruvia::DbValue{username}, ruvia::DbValue{hash},
+                body.nickname() ? ruvia::DbValue{body.nickname()->view()} : ruvia::DbValue{nullptr},
+                !phone.empty() ? ruvia::DbValue{phone} : ruvia::DbValue{nullptr},
+                !email.empty() ? ruvia::DbValue{email} : ruvia::DbValue{nullptr},
+                body.deptId() ? ruvia::DbValue{static_cast<std::int64_t>(*body.deptId())}
+                              : ruvia::DbValue{nullptr},
+                ruvia::DbValue{body.status() ? body.status()->view()
+                                             : std::string_view{"enabled"}}));
+        const std::int64_t userId = static_cast<std::int64_t>(rs.lastInsertId().value_or(0));
 
         for (const auto roleId : *body.roleIds()) {
             (void)co_await tx.execute(
                 "INSERT IGNORE INTO sys_user_role (user_id, role_id) VALUES (?, ?)",
-                service::common::dbParams(ruvia::DbValue{userId}, ruvia::DbValue{static_cast<std::int64_t>(roleId)}));
+                service::common::dbParams(ruvia::DbValue{userId},
+                                          ruvia::DbValue{static_cast<std::int64_t>(roleId)}));
         }
         co_await tx.commit();
         co_return;
@@ -230,7 +232,8 @@ class UserService {
             for (const auto roleId : *body.roleIds()) {
                 (void)co_await tx.execute(
                     "INSERT IGNORE INTO sys_user_role (user_id, role_id) VALUES (?, ?)",
-                    service::common::dbParams(ruvia::DbValue{id}, ruvia::DbValue{static_cast<std::int64_t>(roleId)}));
+                    service::common::dbParams(ruvia::DbValue{id},
+                                              ruvia::DbValue{static_cast<std::int64_t>(roleId)}));
             }
         }
         co_await tx.commit();
@@ -294,7 +297,7 @@ class UserService {
     }
 
     ruvia::Task<void> checkPhoneUnique(ruvia::Context& c, const std::string& phone,
-                                      std::int64_t excludeId) {
+                                       std::int64_t excludeId) {
         if (phone.empty())
             co_return;
         auto db = c.db();
@@ -307,7 +310,7 @@ class UserService {
     }
 
     ruvia::Task<void> checkEmailUnique(ruvia::Context& c, const std::string& email,
-                                      std::int64_t excludeId) {
+                                       std::int64_t excludeId) {
         if (email.empty())
             co_return;
         auto db = c.db();
