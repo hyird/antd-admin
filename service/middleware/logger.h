@@ -44,9 +44,9 @@ inline void logInfo(std::string_view message) { writeLogLine(std::cout, "INFO", 
 
 inline void logError(std::string_view message) { writeLogLine(std::cerr, "ERROR", message); }
 
-// v0.1.0 removed the global App::use<Middleware>() hook, so request access logging
-// runs through App::onAccess. The callback fires once per terminal response with the
-// committed status, elapsed time, and connection metadata (all borrowed for the call).
+// Request access logging runs through App::onAccess. The callback fires once per
+// terminal response with the committed status, elapsed time, and connection metadata
+// (all borrowed for the call).
 inline void logAccess(const ruvia::AccessLogRecord& record) noexcept {
     try {
         const auto micros = record.durationMicros();

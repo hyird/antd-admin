@@ -195,8 +195,8 @@ class UserService {
 
         std::string set;
         std::vector<ruvia::DbValue> params;
-        // Kept at function scope: DbValue borrows its string, so the hash must
-        // outlive the UPDATE below (v0.1.0 DbValue is non-owning).
+        // Kept at function scope because DbValue borrows its string; the hash must
+        // outlive the UPDATE below.
         std::string passwordHash;
         auto append = [&](std::string_view col, ruvia::DbValue value) {
             if (!set.empty())

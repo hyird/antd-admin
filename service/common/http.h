@@ -16,8 +16,8 @@
 
 namespace service::common {
 
-// v0.1.0: request query/param/header accessors return std::optional<std::string_view>
-// (the old typed .toInt64()/.toStringView() helpers were removed), so parse ints here.
+// Request query/param/header accessors return std::optional<std::string_view>;
+// parse integer inputs strictly at the application boundary.
 inline std::optional<std::int64_t> parseInt64(std::optional<std::string_view> input) {
     if (!input || input->empty())
         return std::nullopt;
@@ -30,9 +30,8 @@ inline std::optional<std::int64_t> parseInt64(std::optional<std::string_view> in
     return std::nullopt;
 }
 
-// v0.1.0: DbHandle::query/execute take std::span<const ruvia::DbValue> and the
-// initializer_list overload was deleted. This builds an owning vector (which
-// converts to a const span) so call sites can pass an inline parameter list.
+// DbHandle::query/execute accept std::span<const ruvia::DbValue>. Build an owning
+// vector (which converts to a const span) for inline parameter lists.
 // The returned vector and any borrowed argument views live to the end of the
 // enclosing co_await full-expression, i.e. across the query's suspension.
 template <typename... Ts> inline std::vector<ruvia::DbValue> dbParams(Ts&&... values) {
