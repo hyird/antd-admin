@@ -8,7 +8,7 @@
 - **前端工具链**：Node.js 24 + Bun；React 19 / Vite 8 / Ant Design 6 /
   Tailwind 4 / TanStack Query / Zustand
 - **后端工具链**：C++23 / Ruvia `main@13dfb7f9`（core/http/web 三目标）/
-  asio / mimalloc / MariaDB / OpenSSL / ZLIB / Brotli / Zstd
+  asio / MariaDB / OpenSSL / ZLIB / Brotli / Zstd
 - **依赖锁文件**：前端使用 `bun.lock`；后端使用 `vcpkg.json`
 - **构建产物**：前端为单文件 `build/web/index.html`；后端为 `build/server`
 
