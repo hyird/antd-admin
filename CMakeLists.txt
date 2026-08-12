@@ -53,7 +53,7 @@ set(RUVIA_ENABLE_REDIS OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
     ruvia
     GIT_REPOSITORY https://github.com/hyird/Ruvia.git
-    GIT_TAG 13dfb7f9cafeb45ea30b5a17b590b807747079da # main, 2026-08-11
+    GIT_TAG 345c26a6b7d923f972031f410283b18b1e4c58f6 # main, 2026-08-12
 )
 FetchContent_MakeAvailable(ruvia)
 

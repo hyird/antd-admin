@@ -52,7 +52,7 @@ class UserService {
         }
 
         const auto countRs = co_await db.query("SELECT COUNT(*) FROM sys_user u" + where, params);
-        const std::int64_t total = std::stoll(std::string(countRs.rows().front()[0].text()));
+        const std::int64_t total = std::stoll(std::string(countRs.front()[0].value().value_or("")));
 
         std::string sql = "SELECT u.id, u.username, u.nickname, u.phone, u.email, u.dept_id, "
                           "       u.status, d.name AS dept_name "
@@ -64,14 +64,14 @@ class UserService {
         const auto rs = co_await db.query(sql, params);
 
         UserPageDataDto result(c);
-        result.total(static_cast<ruvia::Int64>(total))
-            .page(static_cast<ruvia::Int64>(page))
-            .pageSize(static_cast<ruvia::Int64>(pageSize))
-            .totalPages(static_cast<ruvia::Int64>(
+        result.set<"total">(static_cast<ruvia::Int64>(total))
+            .set<"page">(static_cast<ruvia::Int64>(page))
+            .set<"pageSize">(static_cast<ruvia::Int64>(pageSize))
+            .set<"totalPages">(static_cast<ruvia::Int64>(
                 paginated && pageSize > 0 ? (total + pageSize - 1) / pageSize : 1));
 
-        auto& list = result.listEnsure();
-        for (const auto& row : rs.rows()) {
+        auto& list = result.ensure<"list">();
+        for (const auto& row : rs) {
             auto& item = list.emplace(c);
             const auto userId = fillUserItem(item, row);
             co_await attachRoles(c, item, userId);
@@ -94,16 +94,17 @@ class UserService {
         sql += " ORDER BY id ASC";
         const auto rs = co_await db.query(sql, params);
         ruvia::BoxedArray<UserOptionDto> out(c.resource());
-        for (const auto& row : rs.rows()) {
+        for (const auto& row : rs) {
             auto& item = out.emplace(c);
-            item.id(static_cast<ruvia::Int64>(std::stoll(std::string(row[0].text()))));
-            item.username(row[1].text());
-            if (!row[2].isNull())
-                item.nickname(row[2].text());
-            if (!row[3].isNull())
-                item.phone(row[3].text());
-            if (!row[4].isNull())
-                item.email(row[4].text());
+            item.set<"id">(
+                static_cast<ruvia::Int64>(std::stoll(std::string(row[0].value().value_or("")))));
+            item.set<"username">(row[1].value().value_or(""));
+            if (row[2].value().has_value())
+                item.set<"nickname">(row[2].value().value_or(""));
+            if (row[3].value().has_value())
+                item.set<"phone">(row[3].value().value_or(""));
+            if (row[4].value().has_value())
+                item.set<"email">(row[4].value().value_or(""));
         }
         co_return out;
     }
@@ -116,24 +117,26 @@ class UserService {
             "FROM sys_user u LEFT JOIN sys_dept d ON u.dept_id = d.id "
             "WHERE u.id = ? AND u.deleted_at IS NULL LIMIT 1",
             service::common::dbParams(ruvia::DbValue{id}));
-        if (rs.rows().empty())
+        if (rs.empty())
             service::common::throwAppError(UserError::USER_NOT_FOUND);
 
         UserItemDto item(c);
-        const auto userId = fillUserItem(item, rs.rows().front());
+        const auto userId = fillUserItem(item, rs.front());
         co_await attachRoles(c, item, userId);
         co_return item;
     }
 
     ruvia::Task<void> create(ruvia::Context& c, const CreateUserBody& body) {
         auto db = c.db();
-        const std::string username(body.username()->view());
-        const std::string phone = body.phone() ? std::string(body.phone()->view()) : std::string{};
-        const std::string email = body.email() ? std::string(body.email()->view()) : std::string{};
+        const std::string username(body.get<"username">()->view());
+        const std::string phone =
+            body.get<"phone">() ? std::string(body.get<"phone">()->view()) : std::string{};
+        const std::string email =
+            body.get<"email">() ? std::string(body.get<"email">()->view()) : std::string{};
         const auto existing = co_await db.query(
             "SELECT id FROM sys_user WHERE username = ? AND deleted_at IS NULL LIMIT 1",
             service::common::dbParams(ruvia::DbValue{username}));
-        if (!existing.rows().empty())
+        if (!existing.empty())
             service::common::throwAppError(UserError::USERNAME_EXISTS);
 
         if (!phone.empty())
@@ -141,10 +144,10 @@ class UserService {
         if (!email.empty())
             co_await checkEmailUnique(c, email, 0);
 
-        if (!body.roleIds() || body.roleIds()->empty())
+        if (!body.get<"roleIds">() || body.get<"roleIds">()->empty())
             service::common::throwAppError(UserError::ROLE_REQUIRED);
 
-        const auto hash = service::utils::hashPassword(body.password()->view());
+        const auto hash = service::utils::hashPassword(body.get<"password">()->view());
         auto tx = co_await db.beginTransaction();
         const auto rs = co_await tx.execute(
             "INSERT INTO sys_user (username, password_hash, nickname, phone, email, "
@@ -152,16 +155,18 @@ class UserService {
             "VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())",
             service::common::dbParams(
                 ruvia::DbValue{username}, ruvia::DbValue{hash},
-                body.nickname() ? ruvia::DbValue{body.nickname()->view()} : ruvia::DbValue{nullptr},
+                body.get<"nickname">() ? ruvia::DbValue{body.get<"nickname">()->view()}
+                                       : ruvia::DbValue{nullptr},
                 !phone.empty() ? ruvia::DbValue{phone} : ruvia::DbValue{nullptr},
                 !email.empty() ? ruvia::DbValue{email} : ruvia::DbValue{nullptr},
-                body.deptId() ? ruvia::DbValue{static_cast<std::int64_t>(*body.deptId())}
-                              : ruvia::DbValue{nullptr},
-                ruvia::DbValue{body.status() ? body.status()->view()
-                                             : std::string_view{"enabled"}}));
+                body.get<"deptId">()
+                    ? ruvia::DbValue{static_cast<std::int64_t>(*body.get<"deptId">())}
+                    : ruvia::DbValue{nullptr},
+                ruvia::DbValue{body.get<"status">() ? body.get<"status">()->view()
+                                                    : std::string_view{"enabled"}}));
         const std::int64_t userId = static_cast<std::int64_t>(rs.lastInsertId().value_or(0));
 
-        for (const auto roleId : *body.roleIds()) {
+        for (const auto roleId : *body.get<"roleIds">()) {
             (void)co_await tx.execute(
                 "INSERT IGNORE INTO sys_user_role (user_id, role_id) VALUES (?, ?)",
                 service::common::dbParams(ruvia::DbValue{userId},
@@ -176,21 +181,23 @@ class UserService {
         const auto rs = co_await db.query(
             "SELECT username FROM sys_user WHERE id = ? AND deleted_at IS NULL LIMIT 1",
             service::common::dbParams(ruvia::DbValue{id}));
-        if (rs.rows().empty())
+        if (rs.empty())
             service::common::throwAppError(UserError::USER_NOT_FOUND);
-        const std::string username(rs.rows().front()[0].text());
-        if (username == "admin" && body.roleIds()) {
+        const std::string username(rs.front()[0].value().value_or(""));
+        if (username == "admin" && body.get<"roleIds">()) {
             service::common::throwAppError(UserError::ADMIN_ROLE_PROTECTED);
         }
 
-        const std::string phone = body.phone() ? std::string(body.phone()->view()) : std::string{};
-        const std::string email = body.email() ? std::string(body.email()->view()) : std::string{};
+        const std::string phone =
+            body.get<"phone">() ? std::string(body.get<"phone">()->view()) : std::string{};
+        const std::string email =
+            body.get<"email">() ? std::string(body.get<"email">()->view()) : std::string{};
         if (!phone.empty())
             co_await checkPhoneUnique(c, phone, id);
         if (!email.empty())
             co_await checkEmailUnique(c, email, id);
 
-        if (body.roleIds() && body.roleIds()->empty())
+        if (body.get<"roleIds">() && body.get<"roleIds">()->empty())
             service::common::throwAppError(UserError::ROLE_REQUIRED);
 
         std::string set;
@@ -205,18 +212,18 @@ class UserService {
             set += " = ?";
             params.emplace_back(std::move(value));
         };
-        if (body.nickname())
-            append("nickname", ruvia::DbValue{body.nickname()->view()});
-        if (body.phone())
+        if (body.get<"nickname">())
+            append("nickname", ruvia::DbValue{body.get<"nickname">()->view()});
+        if (body.get<"phone">())
             append("phone", ruvia::DbValue{phone});
-        if (body.email())
+        if (body.get<"email">())
             append("email", ruvia::DbValue{email});
-        if (body.deptId())
-            append("dept_id", ruvia::DbValue{static_cast<std::int64_t>(*body.deptId())});
-        if (body.status())
-            append("status", ruvia::DbValue{body.status()->view()});
-        if (body.password() && !body.password()->empty()) {
-            passwordHash = service::utils::hashPassword(body.password()->view());
+        if (body.get<"deptId">())
+            append("dept_id", ruvia::DbValue{static_cast<std::int64_t>(*body.get<"deptId">())});
+        if (body.get<"status">())
+            append("status", ruvia::DbValue{body.get<"status">()->view()});
+        if (body.get<"password">() && !body.get<"password">()->empty()) {
+            passwordHash = service::utils::hashPassword(body.get<"password">()->view());
             append("password_hash", ruvia::DbValue{passwordHash});
         }
         auto tx = co_await db.beginTransaction();
@@ -226,10 +233,10 @@ class UserService {
                 "UPDATE sys_user SET " + set + ", updated_at = NOW() WHERE id = ?", params);
         }
 
-        if (body.roleIds()) {
+        if (body.get<"roleIds">()) {
             (void)co_await tx.execute("DELETE FROM sys_user_role WHERE user_id = ?",
                                       service::common::dbParams(ruvia::DbValue{id}));
-            for (const auto roleId : *body.roleIds()) {
+            for (const auto roleId : *body.get<"roleIds">()) {
                 (void)co_await tx.execute(
                     "INSERT IGNORE INTO sys_user_role (user_id, role_id) VALUES (?, ?)",
                     service::common::dbParams(ruvia::DbValue{id},
@@ -237,7 +244,7 @@ class UserService {
             }
         }
         co_await tx.commit();
-        if (body.roleIds())
+        if (body.get<"roleIds">())
             service::middleware::permissionService().clearUserCache(id);
         co_return;
     }
@@ -247,9 +254,9 @@ class UserService {
         const auto rs = co_await db.query(
             "SELECT username FROM sys_user WHERE id = ? AND deleted_at IS NULL LIMIT 1",
             service::common::dbParams(ruvia::DbValue{id}));
-        if (rs.rows().empty())
+        if (rs.empty())
             service::common::throwAppError(UserError::USER_NOT_FOUND);
-        if (std::string(rs.rows().front()[0].text()) == "admin") {
+        if (std::string(rs.front()[0].value().value_or("")) == "admin") {
             service::common::throwAppError(UserError::ADMIN_DELETE_PROTECTED);
         }
         (void)co_await db.execute("UPDATE sys_user SET deleted_at = NOW() WHERE id = ?",
@@ -262,21 +269,22 @@ class UserService {
     UserService() = default;
 
     template <typename Row> static std::int64_t fillUserItem(UserItemDto& item, const Row& row) {
-        const std::int64_t userId = std::stoll(std::string(row[0].text()));
-        item.id(static_cast<ruvia::Int64>(userId));
-        item.username(row[1].text());
-        item.status(row[6].text());
-        if (!row[2].isNull())
-            item.nickname(row[2].text());
-        if (!row[3].isNull())
-            item.phone(row[3].text());
-        if (!row[4].isNull())
-            item.email(row[4].text());
-        if (!row[5].isNull()) {
-            item.deptId(static_cast<ruvia::Int64>(std::stoll(std::string(row[5].text()))));
+        const std::int64_t userId = std::stoll(std::string(row[0].value().value_or("")));
+        item.set<"id">(static_cast<ruvia::Int64>(userId));
+        item.set<"username">(row[1].value().value_or(""));
+        item.set<"status">(row[6].value().value_or(""));
+        if (row[2].value().has_value())
+            item.set<"nickname">(row[2].value().value_or(""));
+        if (row[3].value().has_value())
+            item.set<"phone">(row[3].value().value_or(""));
+        if (row[4].value().has_value())
+            item.set<"email">(row[4].value().value_or(""));
+        if (row[5].value().has_value()) {
+            item.set<"deptId">(
+                static_cast<ruvia::Int64>(std::stoll(std::string(row[5].value().value_or("")))));
         }
-        if (!row[7].isNull())
-            item.deptName(row[7].text());
+        if (row[7].value().has_value())
+            item.set<"deptName">(row[7].value().value_or(""));
         return userId;
     }
 
@@ -286,12 +294,13 @@ class UserService {
                                              "INNER JOIN sys_user_role ur ON r.id = ur.role_id "
                                              "WHERE ur.user_id = ? AND r.deleted_at IS NULL",
                                              service::common::dbParams(ruvia::DbValue{userId}));
-        auto& roleList = item.rolesEnsure();
-        for (const auto& rrow : roles.rows()) {
+        auto& roleList = item.ensure<"roles">();
+        for (const auto& rrow : roles) {
             auto& role = roleList.emplace(c);
-            role.id(static_cast<ruvia::Int64>(std::stoll(std::string(rrow[0].text()))));
-            role.name(rrow[1].text());
-            role.code(rrow[2].text());
+            role.set<"id">(
+                static_cast<ruvia::Int64>(std::stoll(std::string(rrow[0].value().value_or("")))));
+            role.set<"name">(rrow[1].value().value_or(""));
+            role.set<"code">(rrow[2].value().value_or(""));
         }
         co_return;
     }
@@ -304,7 +313,7 @@ class UserService {
         const auto rs = co_await db.query(
             "SELECT id FROM sys_user WHERE phone = ? AND deleted_at IS NULL AND id != ? LIMIT 1",
             service::common::dbParams(ruvia::DbValue{phone}, ruvia::DbValue{excludeId}));
-        if (!rs.rows().empty())
+        if (!rs.empty())
             service::common::throwAppError(UserError::PHONE_EXISTS);
         co_return;
     }
@@ -317,7 +326,7 @@ class UserService {
         const auto rs = co_await db.query(
             "SELECT id FROM sys_user WHERE email = ? AND deleted_at IS NULL AND id != ? LIMIT 1",
             service::common::dbParams(ruvia::DbValue{email}, ruvia::DbValue{excludeId}));
-        if (!rs.rows().empty())
+        if (!rs.empty())
             service::common::throwAppError(UserError::EMAIL_EXISTS);
         co_return;
     }

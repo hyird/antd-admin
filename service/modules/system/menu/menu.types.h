@@ -8,106 +8,72 @@
 
 namespace service::menu {
 
-struct CreateMenuBody final {
-    RUVIA_OPTIONAL_FIELD(name, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(path, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(icon, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(component, ruvia::String);
-    RUVIA_OPTIONAL_FIELD_NAME("parent_id", parentId, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD_NAME("sort_order", sortOrder, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD(type, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(status, ruvia::String);
-    RUVIA_OPTIONAL_FIELD_NAME("permission_code", permissionCode, ruvia::String);
-    RUVIA_OPTIONAL_FIELD_NAME("is_default", isDefault, ruvia::Bool);
-    RUVIA_MODEL(CreateMenuBody, name, path, icon, component, parentId, sortOrder, type, status,
-                permissionCode, isDefault);
-};
+RUVIA_REQUEST_MODEL(CreateMenuBody, RUVIA_OPTIONAL_FIELD(name, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD(path, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD(icon, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD(component, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD_NAME("parent_id", parentId, ruvia::Int64),
+                    RUVIA_OPTIONAL_FIELD_NAME("sort_order", sortOrder, ruvia::Int64),
+                    RUVIA_OPTIONAL_FIELD(type, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD(status, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD_NAME("permission_code", permissionCode, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD_NAME("is_default", isDefault, ruvia::Bool));
 
-struct UpdateMenuBody final {
-    RUVIA_OPTIONAL_FIELD(name, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(path, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(icon, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(component, ruvia::String);
-    RUVIA_OPTIONAL_FIELD_NAME("parent_id", parentId, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD_NAME("sort_order", sortOrder, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD(type, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(status, ruvia::String);
-    RUVIA_OPTIONAL_FIELD_NAME("permission_code", permissionCode, ruvia::String);
-    RUVIA_OPTIONAL_FIELD_NAME("is_default", isDefault, ruvia::Bool);
-    RUVIA_MODEL(UpdateMenuBody, name, path, icon, component, parentId, sortOrder, type, status,
-                permissionCode, isDefault);
-};
+RUVIA_REQUEST_MODEL(UpdateMenuBody, RUVIA_OPTIONAL_FIELD(name, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD(path, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD(icon, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD(component, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD_NAME("parent_id", parentId, ruvia::Int64),
+                    RUVIA_OPTIONAL_FIELD_NAME("sort_order", sortOrder, ruvia::Int64),
+                    RUVIA_OPTIONAL_FIELD(type, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD(status, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD_NAME("permission_code", permissionCode, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD_NAME("is_default", isDefault, ruvia::Bool));
 
-struct ReorderMenuItemBody final {
-    RUVIA_OPTIONAL_FIELD(id, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD_NAME("sort_order", sortOrder, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD_NAME("parent_id", parentId, ruvia::Int64);
-    RUVIA_MODEL(ReorderMenuItemBody, id, sortOrder, parentId);
-};
+RUVIA_REQUEST_MODEL(ReorderMenuItemBody, RUVIA_OPTIONAL_FIELD(id, ruvia::Int64),
+                    RUVIA_OPTIONAL_FIELD_NAME("sort_order", sortOrder, ruvia::Int64),
+                    RUVIA_OPTIONAL_FIELD_NAME("parent_id", parentId, ruvia::Int64));
 
-struct ReorderMenuBody final {
-    RUVIA_OPTIONAL_FIELD(items, ruvia::Array<ReorderMenuItemBody>);
-    RUVIA_MODEL(ReorderMenuBody, items);
-};
+RUVIA_REQUEST_MODEL(ReorderMenuBody,
+                    RUVIA_OPTIONAL_FIELD(items, ruvia::Array<ReorderMenuItemBody>));
 
-struct BatchCreateMenuButtonItemBody final {
-    RUVIA_OPTIONAL_FIELD(name, ruvia::String);
-    RUVIA_OPTIONAL_FIELD_NAME("permission_code", permissionCode, ruvia::String);
-    RUVIA_MODEL(BatchCreateMenuButtonItemBody, name, permissionCode);
-};
+RUVIA_REQUEST_MODEL(BatchCreateMenuButtonItemBody, RUVIA_OPTIONAL_FIELD(name, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD_NAME("permission_code", permissionCode, ruvia::String));
 
-struct BatchCreateMenuButtonsBody final {
-    RUVIA_OPTIONAL_FIELD_NAME("parent_id", parentId, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD(items, ruvia::Array<BatchCreateMenuButtonItemBody>);
-    RUVIA_MODEL(BatchCreateMenuButtonsBody, parentId, items);
-};
+RUVIA_REQUEST_MODEL(BatchCreateMenuButtonsBody,
+                    RUVIA_OPTIONAL_FIELD_NAME("parent_id", parentId, ruvia::Int64),
+                    RUVIA_OPTIONAL_FIELD(items, ruvia::Array<BatchCreateMenuButtonItemBody>));
 
-struct MenuDto final {
-    RUVIA_OPTIONAL_FIELD(id, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD(name, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(path, ruvia::String, RUVIA_OMIT_EMPTY);
-    RUVIA_OPTIONAL_FIELD(icon, ruvia::String, RUVIA_OMIT_EMPTY);
-    RUVIA_OPTIONAL_FIELD_NAME("parent_id", parentId, ruvia::Int64, RUVIA_EMIT_NULL);
-    RUVIA_OPTIONAL_FIELD_NAME("sort_order", sortOrder, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD(type, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(component, ruvia::String, RUVIA_OMIT_EMPTY);
-    RUVIA_OPTIONAL_FIELD(status, ruvia::String);
-    RUVIA_OPTIONAL_FIELD_NAME("permission_code", permissionCode, ruvia::String, RUVIA_OMIT_EMPTY);
-    RUVIA_OPTIONAL_FIELD_NAME("is_default", isDefault, ruvia::Bool);
-    RUVIA_OPTIONAL_FIELD_NAME("full_path", fullPath, ruvia::String, RUVIA_OMIT_EMPTY);
-    RUVIA_OPTIONAL_FIELD(children, ruvia::BoxedArray<MenuDto>, RUVIA_OMIT_EMPTY);
-    RUVIA_MODEL(MenuDto, id, name, path, icon, parentId, sortOrder, type, component, status,
-                permissionCode, isDefault, fullPath, children);
-};
+RUVIA_RESPONSE_MODEL(
+    MenuDto, RUVIA_OPTIONAL_FIELD(id, ruvia::Int64), RUVIA_OPTIONAL_FIELD(name, ruvia::String),
+    RUVIA_OPTIONAL_FIELD(path, ruvia::String, RUVIA_OMIT_EMPTY),
+    RUVIA_OPTIONAL_FIELD(icon, ruvia::String, RUVIA_OMIT_EMPTY),
+    RUVIA_OPTIONAL_FIELD_NAME("parent_id", parentId, ruvia::Int64, RUVIA_EMIT_NULL),
+    RUVIA_OPTIONAL_FIELD_NAME("sort_order", sortOrder, ruvia::Int64),
+    RUVIA_OPTIONAL_FIELD(type, ruvia::String),
+    RUVIA_OPTIONAL_FIELD(component, ruvia::String, RUVIA_OMIT_EMPTY),
+    RUVIA_OPTIONAL_FIELD(status, ruvia::String),
+    RUVIA_OPTIONAL_FIELD_NAME("permission_code", permissionCode, ruvia::String, RUVIA_OMIT_EMPTY),
+    RUVIA_OPTIONAL_FIELD_NAME("is_default", isDefault, ruvia::Bool),
+    RUVIA_OPTIONAL_FIELD_NAME("full_path", fullPath, ruvia::String, RUVIA_OMIT_EMPTY),
+    RUVIA_OPTIONAL_FIELD(children, ruvia::BoxedArray<MenuDto>, RUVIA_OMIT_EMPTY));
 
-struct MenuListResponse final {
-    RUVIA_OPTIONAL_FIELD(code, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD(message, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(data, ruvia::BoxedArray<MenuDto>);
-    RUVIA_MODEL(MenuListResponse, code, message, data);
-};
+RUVIA_RESPONSE_MODEL(MenuListResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::Int64),
+                     RUVIA_OPTIONAL_FIELD(message, ruvia::String),
+                     RUVIA_OPTIONAL_FIELD(data, ruvia::BoxedArray<MenuDto>));
 
-struct MenuPageDataDto final {
-    RUVIA_OPTIONAL_FIELD(list, ruvia::BoxedArray<MenuDto>);
-    RUVIA_OPTIONAL_FIELD(total, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD(page, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD_NAME("pageSize", pageSize, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD_NAME("totalPages", totalPages, ruvia::Int64);
-    RUVIA_MODEL(MenuPageDataDto, list, total, page, pageSize, totalPages);
-};
+RUVIA_RESPONSE_MODEL(MenuPageDataDto, RUVIA_OPTIONAL_FIELD(list, ruvia::BoxedArray<MenuDto>),
+                     RUVIA_OPTIONAL_FIELD(total, ruvia::Int64),
+                     RUVIA_OPTIONAL_FIELD(page, ruvia::Int64),
+                     RUVIA_OPTIONAL_FIELD_NAME("pageSize", pageSize, ruvia::Int64),
+                     RUVIA_OPTIONAL_FIELD_NAME("totalPages", totalPages, ruvia::Int64));
 
-struct MenuPageResponse final {
-    RUVIA_OPTIONAL_FIELD(code, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD(message, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(data, MenuPageDataDto);
-    RUVIA_MODEL(MenuPageResponse, code, message, data);
-};
+RUVIA_RESPONSE_MODEL(MenuPageResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::Int64),
+                     RUVIA_OPTIONAL_FIELD(message, ruvia::String),
+                     RUVIA_OPTIONAL_FIELD(data, MenuPageDataDto));
 
-struct MenuDetailResponse final {
-    RUVIA_OPTIONAL_FIELD(code, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD(message, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(data, MenuDto);
-    RUVIA_MODEL(MenuDetailResponse, code, message, data);
-};
+RUVIA_RESPONSE_MODEL(MenuDetailResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::Int64),
+                     RUVIA_OPTIONAL_FIELD(message, ruvia::String),
+                     RUVIA_OPTIONAL_FIELD(data, MenuDto));
 
 } // namespace service::menu

@@ -8,7 +8,9 @@
         "brotli",
         {
             "name": "libmariadb",
-            "default-features": false
+            "features": [
+                "openssl"
+            ]
         },
         "openssl",
         "zlib",

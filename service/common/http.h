@@ -57,11 +57,8 @@ struct AppErrorDef {
     std::uint16_t status{400};
 };
 
-struct ErrorResponse final {
-    RUVIA_OPTIONAL_FIELD(code, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD(message, ruvia::String);
-    RUVIA_MODEL(ErrorResponse, code, message);
-};
+RUVIA_RESPONSE_MODEL(ErrorResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::Int64),
+                     RUVIA_OPTIONAL_FIELD(message, ruvia::String));
 
 inline std::int64_t defaultBusinessErrorCode(std::uint16_t status) {
     switch (status) {
@@ -110,35 +107,35 @@ inline std::int64_t normalizeBusinessErrorCode(std::string_view code, std::uint1
 
 inline OperationResponse operation(ruvia::Context& c, std::string_view message) {
     OperationResponse response(c);
-    response.code(0).message(message);
+    response.set<"code">(0).set<"message">(message);
     return response;
 }
 
 template <typename ResponseT, typename DataT> inline ResponseT ok(ruvia::Context& c, DataT&& data) {
     ResponseT response(c);
-    response.code(0).message("ok").data(std::forward<DataT>(data));
+    response.set<"code">(0).set<"message">("ok").set<"data">(std::forward<DataT>(data));
     return response;
 }
 
 inline HealthResponse health(ruvia::Context& c) {
     HealthData data(c);
-    data.status("ok");
+    data.set<"status">("ok");
     HealthResponse response(c);
-    response.code(0).message("ok").data(std::move(data));
+    response.set<"code">(0).set<"message">("ok").set<"data">(std::move(data));
     return response;
 }
 
 inline CountResponse count(ruvia::Context& c, std::int64_t createdCount, std::string_view message) {
     CountData data(c);
-    data.createdCount(static_cast<ruvia::Int64>(createdCount));
+    data.set<"createdCount">(static_cast<ruvia::Int64>(createdCount));
     CountResponse response(c);
-    response.code(0).message(message).data(std::move(data));
+    response.set<"code">(0).set<"message">(message).set<"data">(std::move(data));
     return response;
 }
 
 inline ErrorResponse error(ruvia::Context& c, std::int64_t code, std::string_view message) {
     ErrorResponse response(c);
-    response.code(code).message(message);
+    response.set<"code">(code).set<"message">(message);
     return response;
 }
 

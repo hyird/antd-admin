@@ -75,7 +75,7 @@ void configureDocumentRoot(ruvia::App& app, const std::filesystem::path& runtime
 }
 
 ruvia::DbConfig dbConfigFromEnv(const ruvia::Env& env) {
-    ruvia::DbConfig config;
+    auto config = ruvia::DbConfig::mariaDb();
     config.host.assign(env.get("DB_HOST").value_or("127.0.0.1"));
     config.port = static_cast<std::uint16_t>(env.get<int>("DB_PORT").value_or(3306));
     config.username.assign(env.get("DB_USERNAME").value_or("root"));

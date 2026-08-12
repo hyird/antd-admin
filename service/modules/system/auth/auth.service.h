@@ -94,8 +94,8 @@ class AuthService {
     }
 
     ruvia::Task<LoginResultDto> login(ruvia::Context& c, const LoginBody& req) {
-        const std::string username(req.username()->view());
-        const std::string password(req.password()->view());
+        const std::string username(req.get<"username">()->view());
+        const std::string password(req.get<"password">()->view());
 
         if (rateLimitService().isLocked(username)) {
             const auto remaining = rateLimitService().remainingLockSeconds(username);
@@ -110,7 +110,7 @@ class AuthService {
             co_await db.query("SELECT id, username, password_hash, nickname, status "
                               "FROM sys_user WHERE username = ? AND deleted_at IS NULL LIMIT 1",
                               service::common::dbParams(ruvia::DbValue{username}));
-        if (users.rows().empty()) {
+        if (users.empty()) {
             const int failureCount = rateLimitService().recordFailure(username);
             const int remaining = 5 - failureCount;
             if (remaining > 0) {
@@ -121,12 +121,14 @@ class AuthService {
             service::common::throwAppError(AuthError::TOO_MANY_ATTEMPTS);
         }
 
-        const auto& row = users.rows().front();
-        const std::int64_t userId =
-            row[0].text().empty() ? 0 : std::stoll(std::string(row[0].text()));
-        const std::string passwordHash(row[2].text());
-        const std::string nickname = row[3].isNull() ? std::string{} : std::string(row[3].text());
-        const std::string status(row[4].text());
+        const auto& row = users.front();
+        const std::int64_t userId = row[0].value().value_or("").empty()
+                                        ? 0
+                                        : std::stoll(std::string(row[0].value().value_or("")));
+        const std::string passwordHash(row[2].value().value_or(""));
+        const std::string nickname =
+            !row[3].value().has_value() ? std::string{} : std::string(row[3].value().value_or(""));
+        const std::string status(row[4].value().value_or(""));
 
         if (!service::utils::comparePassword(password, passwordHash)) {
             const int failureCount = rateLimitService().recordFailure(username);
@@ -146,14 +148,14 @@ class AuthService {
         const service::core::JwtPayload payload{userId, username, 0, 0};
         auto user = co_await buildUserInfo(c, userId, username, nickname, status);
         LoginResultDto result(c);
-        result.token(service::utils::signAccessToken(payload))
-            .refreshToken(service::utils::signRefreshToken(payload))
-            .user(std::move(user));
+        result.set<"token">(service::utils::signAccessToken(payload))
+            .set<"refreshToken">(service::utils::signRefreshToken(payload))
+            .set<"user">(std::move(user));
         co_return result;
     }
 
     ruvia::Task<LoginResultDto> refresh(ruvia::Context& c, const RefreshBody& req) {
-        const std::string refreshToken(req.refreshToken()->view());
+        const std::string refreshToken(req.get<"refreshToken">()->view());
         if (refreshToken.empty())
             service::common::throwAppError(AuthError::UNAUTHORIZED);
         service::core::JwtPayload payload;
@@ -168,22 +170,23 @@ class AuthService {
             co_await db.query("SELECT id, username, nickname, status "
                               "FROM sys_user WHERE id = ? AND deleted_at IS NULL LIMIT 1",
                               service::common::dbParams(ruvia::DbValue{payload.user_id}));
-        if (users.rows().empty())
+        if (users.empty())
             service::common::throwAppError(AuthError::USER_NOT_FOUND);
-        const auto& row = users.rows().front();
-        const std::int64_t userId = std::stoll(std::string(row[0].text()));
-        const std::string username(row[1].text());
-        const std::string nickname = row[2].isNull() ? std::string{} : std::string(row[2].text());
-        const std::string status(row[3].text());
+        const auto& row = users.front();
+        const std::int64_t userId = std::stoll(std::string(row[0].value().value_or("")));
+        const std::string username(row[1].value().value_or(""));
+        const std::string nickname =
+            !row[2].value().has_value() ? std::string{} : std::string(row[2].value().value_or(""));
+        const std::string status(row[3].value().value_or(""));
         if (status == "disabled")
             service::common::throwAppError(AuthError::USER_DISABLED);
 
         const service::core::JwtPayload next{userId, username, 0, 0};
         auto user = co_await buildUserInfo(c, userId, username, nickname, status);
         LoginResultDto result(c);
-        result.token(service::utils::signAccessToken(next))
-            .refreshToken(service::utils::signRefreshToken(next))
-            .user(std::move(user));
+        result.set<"token">(service::utils::signAccessToken(next))
+            .set<"refreshToken">(service::utils::signRefreshToken(next))
+            .set<"user">(std::move(user));
         co_return result;
     }
 
@@ -192,12 +195,13 @@ class AuthService {
         const auto users = co_await db.query("SELECT username, nickname, status FROM sys_user "
                                              "WHERE id = ? AND deleted_at IS NULL LIMIT 1",
                                              service::common::dbParams(ruvia::DbValue{userId}));
-        if (users.rows().empty())
+        if (users.empty())
             service::common::throwAppError(AuthError::USER_NOT_FOUND);
-        const auto& row = users.rows().front();
-        const std::string username(row[0].text());
-        const std::string nickname = row[1].isNull() ? std::string{} : std::string(row[1].text());
-        const std::string status(row[2].text());
+        const auto& row = users.front();
+        const std::string username(row[0].value().value_or(""));
+        const std::string nickname =
+            !row[1].value().has_value() ? std::string{} : std::string(row[1].value().value_or(""));
+        const std::string status(row[2].value().value_or(""));
         if (status == "disabled")
             service::common::throwAppError(AuthError::USER_DISABLED);
         co_return co_await buildUserInfo(c, userId, username, nickname, status);
@@ -213,14 +217,15 @@ class AuthService {
                                           "WHERE ur.user_id = ? AND r.deleted_at IS NULL",
                                           service::common::dbParams(ruvia::DbValue{userId}));
         bool isSuperadmin = false;
-        auto& roles = info.rolesEnsure();
-        for (const auto& row : rs.rows()) {
+        auto& roles = info.ensure<"roles">();
+        for (const auto& row : rs) {
             auto& role = roles.emplace_back(c);
-            role.id(static_cast<ruvia::Int64>(std::stoll(std::string(row[0].text()))));
+            role.set<"id">(
+                static_cast<ruvia::Int64>(std::stoll(std::string(row[0].value().value_or("")))));
 
-            const auto code = row[2].text();
-            role.name(row[1].text());
-            role.code(code);
+            const auto code = row[2].value().value_or("");
+            role.set<"name">(row[1].value().value_or(""));
+            role.set<"code">(code);
             if (code == service::common::kSuperAdminRoleCode)
                 isSuperadmin = true;
         }
@@ -234,7 +239,7 @@ class AuthService {
             "       permission_code, is_default FROM sys_menu "
             "WHERE deleted_at IS NULL AND status = 'enabled' "
             "ORDER BY `order` ASC, id ASC");
-        co_return menu::MenuService::flatFromRows(c, rs.rows());
+        co_return menu::MenuService::flatFromRows(c, rs);
     }
 
     ruvia::Task<ruvia::BoxedArray<menu::MenuDto>> getUserRoleMenus(ruvia::Context& c,
@@ -250,7 +255,7 @@ class AuthService {
             "  AND m.deleted_at IS NULL AND m.status = 'enabled' "
             "ORDER BY m.`order` ASC, m.id ASC",
             service::common::dbParams(ruvia::DbValue{userId}));
-        co_return menu::MenuService::flatFromRows(c, rs.rows());
+        co_return menu::MenuService::flatFromRows(c, rs);
     }
 
     ruvia::Task<AuthUserInfoDto> buildUserInfo(ruvia::Context& c, std::int64_t userId,
@@ -258,17 +263,17 @@ class AuthService {
                                                const std::string& nickname,
                                                const std::string& status) {
         AuthUserInfoDto info(c);
-        info.id(static_cast<ruvia::Int64>(userId))
-            .username(username)
-            .nickname(nickname)
-            .status(status);
+        info.set<"id">(static_cast<ruvia::Int64>(userId))
+            .set<"username">(username)
+            .set<"nickname">(nickname)
+            .set<"status">(status);
         const bool isSuperadmin = co_await loadUserRoles(c, info, userId);
         if (isSuperadmin) {
             auto menus = co_await getAllMenus(c);
-            info.menus(std::move(menus));
+            info.set<"menus">(std::move(menus));
         } else {
             auto menus = co_await getUserRoleMenus(c, userId);
-            info.menus(std::move(menus));
+            info.set<"menus">(std::move(menus));
         }
         co_return info;
     }

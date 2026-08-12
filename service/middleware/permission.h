@@ -92,11 +92,11 @@ class PermissionService {
                                              "INNER JOIN sys_user_role ur ON r.id = ur.role_id "
                                              "WHERE ur.user_id = ? AND r.deleted_at IS NULL",
                                              service::common::dbParams(userId));
-        for (const auto& row : roles.rows()) {
+        for (const auto& row : roles) {
             if (row.size() < 2)
                 continue;
-            if (row[1].text() == "enabled" &&
-                row[0].text() == service::common::kSuperAdminRoleCode) {
+            if (row[1].value().value_or("") == "enabled" &&
+                row[0].value().value_or("") == service::common::kSuperAdminRoleCode) {
                 snap.is_superadmin = true;
             }
         }
@@ -115,10 +115,10 @@ class PermissionService {
             "  AND m.deleted_at IS NULL AND m.status = 'enabled' "
             "  AND m.permission_code IS NOT NULL AND m.permission_code != ''",
             service::common::dbParams(userId));
-        for (const auto& row : perms.rows()) {
-            if (row.empty() || row[0].isNull())
+        for (const auto& row : perms) {
+            if (row.empty() || !row[0].value().has_value())
                 continue;
-            snap.permissions.emplace(row[0].text());
+            snap.permissions.emplace(row[0].value().value_or(""));
         }
 
         {

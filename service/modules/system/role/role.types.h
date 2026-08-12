@@ -7,84 +7,54 @@
 
 namespace service::role {
 
-struct CreateRoleBody final {
-    RUVIA_OPTIONAL_FIELD(code, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(name, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(status, ruvia::String);
-    RUVIA_OPTIONAL_FIELD_NAME("menu_ids", menuIds, ruvia::Array<ruvia::Int64>);
-    RUVIA_MODEL(CreateRoleBody, code, name, status, menuIds);
-};
+RUVIA_REQUEST_MODEL(CreateRoleBody, RUVIA_OPTIONAL_FIELD(code, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD(name, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD(status, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD_NAME("menu_ids", menuIds, ruvia::Array<ruvia::Int64>));
 
-struct UpdateRoleBody final {
-    RUVIA_OPTIONAL_FIELD(code, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(name, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(status, ruvia::String);
-    RUVIA_OPTIONAL_FIELD_NAME("menu_ids", menuIds, ruvia::Array<ruvia::Int64>);
-    RUVIA_MODEL(UpdateRoleBody, code, name, status, menuIds);
-};
+RUVIA_REQUEST_MODEL(UpdateRoleBody, RUVIA_OPTIONAL_FIELD(code, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD(name, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD(status, ruvia::String),
+                    RUVIA_OPTIONAL_FIELD_NAME("menu_ids", menuIds, ruvia::Array<ruvia::Int64>));
 
-struct RoleItemDto final {
-    RUVIA_OPTIONAL_FIELD(id, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD(name, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(code, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(status, ruvia::String);
-    RUVIA_OPTIONAL_FIELD_NAME("menu_ids", menuIds, ruvia::Array<ruvia::Int64>, RUVIA_OMIT_EMPTY);
-    RUVIA_MODEL(RoleItemDto, id, name, code, status, menuIds);
-};
+RUVIA_RESPONSE_MODEL(
+    RoleItemDto, RUVIA_OPTIONAL_FIELD(id, ruvia::Int64), RUVIA_OPTIONAL_FIELD(name, ruvia::String),
+    RUVIA_OPTIONAL_FIELD(code, ruvia::String), RUVIA_OPTIONAL_FIELD(status, ruvia::String),
+    RUVIA_OPTIONAL_FIELD_NAME("menu_ids", menuIds, ruvia::Array<ruvia::Int64>, RUVIA_OMIT_EMPTY));
 
-struct RoleMenuDto final {
-    RUVIA_OPTIONAL_FIELD(id, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD(name, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(type, ruvia::String);
-    RUVIA_OPTIONAL_FIELD_NAME("parent_id", parentId, ruvia::Int64, RUVIA_EMIT_NULL);
-    RUVIA_MODEL(RoleMenuDto, id, name, type, parentId);
-};
+RUVIA_RESPONSE_MODEL(RoleMenuDto, RUVIA_OPTIONAL_FIELD(id, ruvia::Int64),
+                     RUVIA_OPTIONAL_FIELD(name, ruvia::String),
+                     RUVIA_OPTIONAL_FIELD(type, ruvia::String),
+                     RUVIA_OPTIONAL_FIELD_NAME("parent_id", parentId, ruvia::Int64,
+                                               RUVIA_EMIT_NULL));
 
-struct RoleDetailDto final {
-    RUVIA_OPTIONAL_FIELD(id, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD(name, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(code, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(status, ruvia::String);
-    RUVIA_OPTIONAL_FIELD_NAME("menu_ids", menuIds, ruvia::Array<ruvia::Int64>);
-    RUVIA_OPTIONAL_FIELD(menus, ruvia::Array<RoleMenuDto>);
-    RUVIA_MODEL(RoleDetailDto, id, name, code, status, menuIds, menus);
-};
+RUVIA_RESPONSE_MODEL(RoleDetailDto, RUVIA_OPTIONAL_FIELD(id, ruvia::Int64),
+                     RUVIA_OPTIONAL_FIELD(name, ruvia::String),
+                     RUVIA_OPTIONAL_FIELD(code, ruvia::String),
+                     RUVIA_OPTIONAL_FIELD(status, ruvia::String),
+                     RUVIA_OPTIONAL_FIELD_NAME("menu_ids", menuIds, ruvia::Array<ruvia::Int64>),
+                     RUVIA_OPTIONAL_FIELD(menus, ruvia::Array<RoleMenuDto>));
 
-struct RoleOptionDto final {
-    RUVIA_OPTIONAL_FIELD(id, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD(name, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(code, ruvia::String);
-    RUVIA_MODEL(RoleOptionDto, id, name, code);
-};
+RUVIA_RESPONSE_MODEL(RoleOptionDto, RUVIA_OPTIONAL_FIELD(id, ruvia::Int64),
+                     RUVIA_OPTIONAL_FIELD(name, ruvia::String),
+                     RUVIA_OPTIONAL_FIELD(code, ruvia::String));
 
-struct RolePageDataDto final {
-    RUVIA_OPTIONAL_FIELD(list, ruvia::BoxedArray<RoleItemDto>);
-    RUVIA_OPTIONAL_FIELD(total, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD(page, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD_NAME("pageSize", pageSize, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD_NAME("totalPages", totalPages, ruvia::Int64);
-    RUVIA_MODEL(RolePageDataDto, list, total, page, pageSize, totalPages);
-};
+RUVIA_RESPONSE_MODEL(RolePageDataDto, RUVIA_OPTIONAL_FIELD(list, ruvia::BoxedArray<RoleItemDto>),
+                     RUVIA_OPTIONAL_FIELD(total, ruvia::Int64),
+                     RUVIA_OPTIONAL_FIELD(page, ruvia::Int64),
+                     RUVIA_OPTIONAL_FIELD_NAME("pageSize", pageSize, ruvia::Int64),
+                     RUVIA_OPTIONAL_FIELD_NAME("totalPages", totalPages, ruvia::Int64));
 
-struct RolePageResponse final {
-    RUVIA_OPTIONAL_FIELD(code, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD(message, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(data, RolePageDataDto);
-    RUVIA_MODEL(RolePageResponse, code, message, data);
-};
+RUVIA_RESPONSE_MODEL(RolePageResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::Int64),
+                     RUVIA_OPTIONAL_FIELD(message, ruvia::String),
+                     RUVIA_OPTIONAL_FIELD(data, RolePageDataDto));
 
-struct RoleDetailResponse final {
-    RUVIA_OPTIONAL_FIELD(code, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD(message, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(data, RoleDetailDto);
-    RUVIA_MODEL(RoleDetailResponse, code, message, data);
-};
+RUVIA_RESPONSE_MODEL(RoleDetailResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::Int64),
+                     RUVIA_OPTIONAL_FIELD(message, ruvia::String),
+                     RUVIA_OPTIONAL_FIELD(data, RoleDetailDto));
 
-struct RoleOptionsResponse final {
-    RUVIA_OPTIONAL_FIELD(code, ruvia::Int64);
-    RUVIA_OPTIONAL_FIELD(message, ruvia::String);
-    RUVIA_OPTIONAL_FIELD(data, ruvia::BoxedArray<RoleOptionDto>);
-    RUVIA_MODEL(RoleOptionsResponse, code, message, data);
-};
+RUVIA_RESPONSE_MODEL(RoleOptionsResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::Int64),
+                     RUVIA_OPTIONAL_FIELD(message, ruvia::String),
+                     RUVIA_OPTIONAL_FIELD(data, ruvia::BoxedArray<RoleOptionDto>));
 
 } // namespace service::role

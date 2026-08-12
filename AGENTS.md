@@ -7,7 +7,7 @@
 
 - **前端工具链**：Node.js 24 + Bun；React 19 / Vite 8 / Ant Design 6 /
   Tailwind 4 / TanStack Query / Zustand
-- **后端工具链**：C++23 / Ruvia `main@13dfb7f9`（core/http/web 三目标）/
+- **后端工具链**：C++23 / Ruvia `main@345c26a6`（core/http/web 三目标）/
   asio / MariaDB / OpenSSL / ZLIB / Brotli / Zstd
 - **依赖锁文件**：前端使用 `bun.lock`；后端使用 `vcpkg.json`
 - **构建产物**：前端为单文件 `build/web/index.html`；后端为 `build/server`
@@ -73,11 +73,16 @@ commit 的短 SHA。更新时必须：
 
 当前 Ruvia API 基线：
 
-- 请求与响应模型都在 `struct` 内以 `RUVIA_MODEL(...)` 声明；
+- 请求模型使用 `RUVIA_REQUEST_MODEL(...)`，响应模型使用 `RUVIA_RESPONSE_MODEL(...)`；
+  两种角色不得互相嵌套或混用于解析、序列化；
+- 字段使用 `RUVIA_REQUIRED_FIELD(...)` / `RUVIA_OPTIONAL_FIELD(...)` 声明，通过
+  `get<"field">()` / `set<"field">()` / `ensure<"field">()` / `reset<"field">()` 访问；
 - 校验后的 JSON 通过 `c.req().validated<T>()` 读取；
 - DTO 对象数组使用 `ruvia::BoxedArray<T>`，标量数组按 Ruvia 类型系统使用
   `ruvia::Array<T>`；
 - 请求级数据使用 `c.bindRequestState(value)` 绑定，并通过 `c.requestState<T>()` 读取；
+- MariaDB 配置使用 `ruvia::DbConfig::mariaDb()` 显式选择驱动；`query()` 结果直接作为
+  `ruvia::DbRows` 容器使用，字段通过 `value()` 或 `as<T>()` 读取；
 - HTTP 状态使用 `ruvia::HttpStatusCode` 和 `ruvia::http_status::*`，不把裸整数直接当作
   框架状态类型；
 - 服务监听通过 `App::setListeners()` / `setWorkersPerListener()` 配置，错误与访问日志使用
@@ -209,8 +214,8 @@ service/modules/<domain>/<module>/
 
 - **Controller 注册**：使用 `RUVIA_CONTROLLER_GROUP(...)` 与
   `RUVIA_ROUTES_BEGIN/END` 静态注册路由。
-- **请求校验**：DTO 用 `RUVIA_MODEL`，schema 用 `RUVIA_VALIDATE_JSON`，controller 通过
-  `c.req().validated<T>()` 获取校验结果。
+- **请求校验**：请求 DTO 用 `RUVIA_REQUEST_MODEL`，响应 DTO 用 `RUVIA_RESPONSE_MODEL`，
+  schema 用 `RUVIA_VALIDATE_JSON`，controller 通过 `c.req().validated<T>()` 获取校验结果。
 - **查询与路径参数**：Ruvia accessor 返回 `std::optional<std::string_view>`；整数统一通过项目
   公共严格解析函数转换。
 - **响应**：Ruvia DTO 统一输出 `{ code, message, data }`；分页字段为
@@ -220,8 +225,9 @@ service/modules/<domain>/<module>/
 - **权限缓存**：权限服务按用户缓存 60 秒；会改变权限投影的写操作完成后必须清空相关缓存。
 - **错误处理**：业务通过 `throwAppError()` 抛 `ruvia::HttpError`，全局 error callback 输出统一
   JSON 错误壳并保留强类型 HTTP status。
-- **数据库**：启动时执行迁移并通过 `app.useDb()` 注入连接；查询使用 `query()`，写入使用
-  `execute()`，多步写操作使用 transaction。参数容器必须拥有跨 `co_await` 所需的生命周期。
+- **数据库**：启动时执行迁移并通过 `app.useDb()` 注入连接；查询使用 `query()` 并直接遍历
+  返回的 `DbRows`，写入使用 `execute()`，多步写操作使用 transaction。字段通过 `value()` 或
+  `as<T>()` 读取；参数容器必须拥有跨 `co_await` 所需的生命周期。
 - **静态站点**：只有可执行文件旁存在 `web/` 目录时才调用 `setDocumentRoot()`。SPA fallback
   只处理非 API、非文件型的 GET/HEAD 请求。
 
