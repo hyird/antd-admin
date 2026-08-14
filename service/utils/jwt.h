@@ -1,7 +1,9 @@
 #pragma once
 
+#include <charconv>
 #include <chrono>
 #include <cstdint>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -39,7 +41,7 @@ namespace service::jwt_detail {
 
 inline std::string accessSecret() {
     auto secret = ruvia::app().env().get("JWT_SECRET");
-    if (!secret) {
+    if (!secret || secret->empty()) {
         throw std::runtime_error("JWT_SECRET environment variable is required");
     }
     return std::string(*secret);
@@ -47,17 +49,25 @@ inline std::string accessSecret() {
 
 inline std::string refreshSecret() {
     auto secret = ruvia::app().env().get("JWT_REFRESH_SECRET");
-    return secret ? std::string(*secret) : accessSecret();
+    if (!secret) {
+        return accessSecret();
+    }
+    if (secret->empty()) {
+        throw std::runtime_error("JWT_REFRESH_SECRET must not be empty");
+    }
+    return std::string(*secret);
 }
 
-inline std::chrono::seconds parseDuration(std::string_view value, std::chrono::seconds fallback) {
-    if (value.empty())
-        return fallback;
-    const char suffix = value.back();
-    std::string number(value);
+inline std::chrono::seconds parseDuration(std::string_view value, std::string_view configName) {
+    if (value.empty()) {
+        throw std::runtime_error(std::string(configName) + " must not be empty");
+    }
+
+    std::string_view number = value;
     std::int64_t multiplier = 1;
-    if (suffix == 's' || suffix == 'm' || suffix == 'h' || suffix == 'd') {
-        number = value.substr(0, value.size() - 1);
+    const char suffix = value.back();
+    if (suffix < '0' || suffix > '9') {
+        number.remove_suffix(1);
         switch (suffix) {
         case 's':
             multiplier = 1;
@@ -72,24 +82,26 @@ inline std::chrono::seconds parseDuration(std::string_view value, std::chrono::s
             multiplier = 60 * 60 * 24;
             break;
         default:
-            break;
+            throw std::runtime_error(std::string(configName) + " must use an s, m, h, or d suffix");
         }
     }
-    try {
-        return std::chrono::seconds(std::stoll(number) * multiplier);
-    } catch (...) {
-        return fallback;
+
+    std::int64_t count = 0;
+    const auto [end, error] = std::from_chars(number.data(), number.data() + number.size(), count);
+    if (error != std::errc{} || end != number.data() + number.size() || count <= 0 ||
+        count > std::numeric_limits<std::int64_t>::max() / multiplier) {
+        throw std::runtime_error(std::string(configName) + " must be a positive duration");
     }
+    return std::chrono::seconds(count * multiplier);
 }
 
 inline std::chrono::seconds accessExpiresIn() {
-    return parseDuration(ruvia::app().env().get("JWT_EXPIRES_IN").value_or("1d"),
-                         std::chrono::seconds(60 * 60 * 24));
+    return parseDuration(ruvia::app().env().get("JWT_EXPIRES_IN").value_or("1d"), "JWT_EXPIRES_IN");
 }
 
 inline std::chrono::seconds refreshExpiresIn() {
     return parseDuration(ruvia::app().env().get("JWT_REFRESH_EXPIRES_IN").value_or("7d"),
-                         std::chrono::seconds(60 * 60 * 24 * 7));
+                         "JWT_REFRESH_EXPIRES_IN");
 }
 
 inline std::string sign(const service::core::JwtPayload& payload, const std::string& secret,
@@ -149,6 +161,13 @@ inline service::core::JwtPayload verify(const std::string& token, const std::str
 } // namespace service::jwt_detail
 
 namespace service::utils {
+
+inline void validateJwtConfiguration() {
+    (void)jwt_detail::accessSecret();
+    (void)jwt_detail::refreshSecret();
+    (void)jwt_detail::accessExpiresIn();
+    (void)jwt_detail::refreshExpiresIn();
+}
 
 inline std::string signAccessToken(const service::core::JwtPayload& payload) {
     return jwt_detail::sign(payload, jwt_detail::accessSecret(), jwt_detail::accessExpiresIn());

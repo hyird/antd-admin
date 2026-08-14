@@ -63,7 +63,7 @@ class RoleService {
 
         auto& list = result.ensure<"list">();
         for (const auto& row : rs) {
-            auto& item = list.emplace(c);
+            auto& item = list.emplace_back(c);
             const auto id = std::stoll(std::string(row[0].value().value_or("")));
             const auto code = row[2].value().value_or("");
             item.set<"id">(static_cast<ruvia::Int64>(id));
@@ -126,14 +126,14 @@ class RoleService {
         co_return out;
     }
 
-    ruvia::Task<ruvia::BoxedArray<RoleOptionDto>> listAllEnabled(ruvia::Context& c) {
+    ruvia::Task<ruvia::Array<RoleOptionDto>> listAllEnabled(ruvia::Context& c) {
         auto db = c.db();
         const auto rs =
             co_await db.query("SELECT id, name, code FROM sys_role "
                               "WHERE status = 'enabled' AND deleted_at IS NULL ORDER BY id ASC");
-        ruvia::BoxedArray<RoleOptionDto> out(c.resource());
+        ruvia::Array<RoleOptionDto> out(c.allocator<RoleOptionDto>());
         for (const auto& row : rs) {
-            auto& item = out.emplace(c);
+            auto& item = out.emplace_back(c);
             item.set<"id">(
                 static_cast<ruvia::Int64>(std::stoll(std::string(row[0].value().value_or("")))));
             item.set<"name">(row[1].value().value_or(""));

@@ -4,13 +4,12 @@ import { Breadcrumb, Dropdown } from 'antd';
 import { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import DynamicIcon from '@/components/DynamicIcon';
+import type { NavigationTreeItem } from '@/config/navigation.types';
 import { useAuthStore } from '@/store/authStore';
-import type { Menu } from '@/pages/system/menu/menu.types';
 import { buildMenuTree } from '@/utils/tree';
-import { resolveMenuIconName } from '@/utils/icon';
 
 interface BreadcrumbItemData {
-    item: Menu.TreeItem;
+    item: NavigationTreeItem;
     isLast: boolean;
 }
 
@@ -19,15 +18,15 @@ export default function AppBreadcrumb() {
     const navigate = useNavigate();
     const { user } = useAuthStore();
 
-    const menuTree = useMemo<Menu.TreeItem[]>(() => {
+    const menuTree = useMemo<NavigationTreeItem[]>(() => {
         const menus = user?.menus || [];
         return buildMenuTree(menus);
     }, [user?.menus]);
 
     const pathMap = useMemo(() => {
-        const map = new Map<string, Menu.TreeItem[]>();
+        const map = new Map<string, NavigationTreeItem[]>();
 
-        const traverse = (items: Menu.TreeItem[], parents: Menu.TreeItem[] = []) => {
+        const traverse = (items: NavigationTreeItem[], parents: NavigationTreeItem[] = []) => {
             for (const item of items) {
                 if (item.full_path) {
                     map.set(item.full_path, [...parents, item]);
@@ -78,7 +77,7 @@ export default function AppBreadcrumb() {
 
     const renderBreadcrumbItem = (data: BreadcrumbItemData) => {
         const { item, isLast } = data;
-        const iconName = resolveMenuIconName(item);
+        const iconName = item.icon;
 
         const pageChildren =
             item.children?.filter((child) => child.type === 'page' && child.full_path) || [];
@@ -86,9 +85,7 @@ export default function AppBreadcrumb() {
         if (pageChildren.length > 0) {
             const menuItems: MenuProps['items'] = pageChildren.map((child) => ({
                 key: child.id,
-                icon: resolveMenuIconName(child) ? (
-                    <DynamicIcon name={resolveMenuIconName(child)} />
-                ) : null,
+                icon: child.icon ? <DynamicIcon name={child.icon} /> : null,
                 label: child.name,
                 disabled: location.pathname === child.full_path,
                 onClick: () => {

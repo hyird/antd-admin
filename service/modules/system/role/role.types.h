@@ -39,11 +39,11 @@ RUVIA_RESPONSE_MODEL(RoleOptionDto, RUVIA_OPTIONAL_FIELD(id, ruvia::Int64),
                      RUVIA_OPTIONAL_FIELD(name, ruvia::String),
                      RUVIA_OPTIONAL_FIELD(code, ruvia::String));
 
-RUVIA_RESPONSE_MODEL(RolePageDataDto, RUVIA_OPTIONAL_FIELD(list, ruvia::BoxedArray<RoleItemDto>),
+RUVIA_RESPONSE_MODEL(RolePageDataDto, RUVIA_OPTIONAL_FIELD(list, ruvia::Array<RoleItemDto>),
                      RUVIA_OPTIONAL_FIELD(total, ruvia::Int64),
                      RUVIA_OPTIONAL_FIELD(page, ruvia::Int64),
-                     RUVIA_OPTIONAL_FIELD_NAME("pageSize", pageSize, ruvia::Int64),
-                     RUVIA_OPTIONAL_FIELD_NAME("totalPages", totalPages, ruvia::Int64));
+                     RUVIA_OPTIONAL_FIELD_NAME("page_size", pageSize, ruvia::Int64),
+                     RUVIA_OPTIONAL_FIELD_NAME("total_pages", totalPages, ruvia::Int64));
 
 RUVIA_RESPONSE_MODEL(RolePageResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::Int64),
                      RUVIA_OPTIONAL_FIELD(message, ruvia::String),
@@ -55,6 +55,6 @@ RUVIA_RESPONSE_MODEL(RoleDetailResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::Int64
 
 RUVIA_RESPONSE_MODEL(RoleOptionsResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::Int64),
                      RUVIA_OPTIONAL_FIELD(message, ruvia::String),
-                     RUVIA_OPTIONAL_FIELD(data, ruvia::BoxedArray<RoleOptionDto>));
+                     RUVIA_OPTIONAL_FIELD(data, ruvia::Array<RoleOptionDto>));
 
 } // namespace service::role

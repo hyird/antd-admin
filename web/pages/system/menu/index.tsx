@@ -55,17 +55,17 @@ import DynamicIcon from '@/components/DynamicIcon';
 import { FormModal } from '@/components/FormModal';
 import { PageContainer } from '@/components/PageContainer';
 import { StatusTag } from '@/components/StatusTag';
-import { getPageConfig, getRegisteredPages, getRegisteredPermissions } from '@/pages';
+import { findPageConfig, pageCatalog, permissionCatalog } from '@/config/page.catalog';
 import { useDebounceFn } from '@/hooks/useDebounceFn';
 import { usePermissions } from '@/hooks/usePermission';
-import { loginKeys } from '@/pages/login/login.service';
+import { loginKeys } from '@/pages/auth/login/login.service';
 import { batchCreateButtons, create, getTree, remove, reorder, update } from './menu.api';
 import { useMenuList } from './menu.service';
 import { menuQueryKeys } from './menu.types';
 import type { Menu } from './menu.types';
 import { MenuTypeMap } from './menu.types';
 import { filterMenuTree, flattenTree, getDescendantIds, getPathSegment } from '../../../utils/tree';
-import { appIconMap, resolveMenuIconName } from '../../../utils/icon';
+import { appIconMap } from '../../../utils/icon';
 
 const { Search } = Input;
 
@@ -318,7 +318,7 @@ const SystemMenuPage = () => {
 
     const pageSelectOptions = useMemo(
         () =>
-            getRegisteredPages().map((page) => ({
+            pageCatalog.map((page) => ({
                 label: `${page.name} (${page.component})`,
                 value: page.component,
                 description: page.description,
@@ -342,15 +342,15 @@ const SystemMenuPage = () => {
 
     const availablePermissions = useMemo(() => {
         if (parentType !== 'page' || watchType !== 'button') {
-            return getRegisteredPermissions();
+            return permissionCatalog;
         }
 
         const parentMenu = watchParentId ? menuMap[watchParentId] : undefined;
         if (!parentMenu?.component) {
-            return getRegisteredPermissions();
+            return permissionCatalog;
         }
 
-        const pageConfig = getPageConfig(parentMenu.component);
+        const pageConfig = findPageConfig(parentMenu.component);
         if (!pageConfig?.permissions) {
             return [];
         }
@@ -515,7 +515,7 @@ const SystemMenuPage = () => {
             codes: string[];
         }) => {
             const pageConfig = parentPage.component
-                ? getPageConfig(parentPage.component)
+                ? findPageConfig(parentPage.component)
                 : undefined;
             if (!pageConfig?.permissions) return;
 
@@ -567,7 +567,7 @@ const SystemMenuPage = () => {
 
     const targetPagePermissions = useMemo(() => {
         if (!permTargetPage?.component) return [];
-        const pageConfig = getPageConfig(permTargetPage.component);
+        const pageConfig = findPageConfig(permTargetPage.component);
         if (!pageConfig?.permissions) return [];
 
         const existingCodes = new Set(
@@ -676,7 +676,7 @@ const SystemMenuPage = () => {
             title: '图标',
             dataIndex: 'icon',
             render: (_icon: string | undefined, record) => {
-                const icon = resolveMenuIconName(record);
+                const icon = record.icon;
                 return icon ? (
                     <Space>
                         <DynamicIcon name={icon} />

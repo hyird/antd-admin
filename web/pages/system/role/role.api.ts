@@ -3,8 +3,9 @@
  */
 
 import type { Role } from './role.types';
-import type { PaginatedResult } from '@/utils/types';
-import { appendQueryParams } from '@/utils/query';
+import { normalizePaginatedResponse } from '@/utils/pagination.response';
+import type { PaginatedResponse } from '@/utils/pagination.types';
+import { appendQueryParams } from '@/utils/query.params';
 import request from '@/utils/http';
 
 const ENDPOINTS = {
@@ -13,8 +14,11 @@ const ENDPOINTS = {
     ALL: '/api/roles/all',
 } as const;
 
-export function getList(params?: Role.Query) {
-    return request.get<PaginatedResult<Role.Item>>(appendQueryParams(ENDPOINTS.BASE, params));
+export async function getList(params?: Role.Query) {
+    const response = await request.get<PaginatedResponse<Role.Item>>(
+        appendQueryParams(ENDPOINTS.BASE, params)
+    );
+    return normalizePaginatedResponse(response);
 }
 
 export function getDetail(id: number) {

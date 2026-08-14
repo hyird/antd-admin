@@ -2,7 +2,7 @@
 
 #include <ruvia/web/Controller.h>
 
-#include "service/modules/system/auth/auth.types.h"
+#include "service/modules/auth/login/login.types.h"
 
 namespace service::auth {
 

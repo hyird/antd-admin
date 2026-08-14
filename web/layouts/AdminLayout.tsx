@@ -12,12 +12,12 @@ import { lazy, Suspense, useDeferredValue, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useOutlet } from 'react-router-dom';
 import { AnimatePresence, domAnimation, LazyMotion, m } from 'framer-motion';
 import { APP_NAME } from '@/config/app';
-import { useLogout, useCurrentUser } from '@/pages/login';
+import type { NavigationTreeItem } from '@/config/navigation.types';
+import { useLogout, useCurrentUser } from '@/pages/auth/login';
 import { useAuthStore } from '@/store/authStore';
 import { useTabsStore } from '@/store/tabsStore';
-import type { MenuTreeItem } from '@/pages/system/menu/menu.types';
 import { buildMenuTree } from '@/utils/tree';
-import { renderMenuIcon } from '@/utils/icon';
+import { renderIcon } from '@/utils/icon';
 import { fastTransition, slideUpVariants } from '@/utils/animations';
 
 const { Header, Sider, Content } = Layout;
@@ -47,11 +47,11 @@ function PageTransition() {
     );
 }
 
-function isDisplayMenuItem(type: MenuTreeItem['type']) {
+function isDisplayMenuItem(type: NavigationTreeItem['type']) {
     return type === 'menu' || type === 'page';
 }
 
-function buildMenuItems(items: MenuTreeItem[]): ItemType[] {
+function buildMenuItems(items: NavigationTreeItem[]): ItemType[] {
     return items
         .filter((item) => isDisplayMenuItem(item.type))
         .map((item) => {
@@ -59,7 +59,7 @@ function buildMenuItems(items: MenuTreeItem[]): ItemType[] {
             const key = item.full_path || item.path || `menu-${item.id}`;
             const baseItem = {
                 key,
-                icon: renderMenuIcon(item),
+                icon: renderIcon(item.icon),
                 label: item.name,
             };
 
@@ -119,7 +119,7 @@ export default function AdminLayout() {
     // 有 token 但完全没有 user 缓存时才显示 loading
     const isInitialLoading = !!token && !user;
 
-    const menuTree = useMemo<MenuTreeItem[]>(() => {
+    const menuTree = useMemo<NavigationTreeItem[]>(() => {
         const menus = user?.menus || [];
         return buildMenuTree(menus);
     }, [user?.menus]);

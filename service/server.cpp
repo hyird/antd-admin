@@ -21,12 +21,12 @@
 #include "service/middleware/logger.h"
 
 // 业务控制器（RUVIA_CONTROLLER_GROUP 在静态阶段把路由表注册到 ruvia::app()）。
-#include "service/modules/system/auth/auth.controller.h"
+#include "service/modules/auth/login/login.controller.h"
 #include "service/modules/system/dept/dept.controller.h"
 #include "service/modules/system/menu/menu.controller.h"
 #include "service/modules/system/role/role.controller.h"
 #include "service/modules/system/user/user.controller.h"
-#include "service/modules/system/user/user.service.h"
+#include "service/utils/jwt.h"
 
 namespace {
 
@@ -134,8 +134,21 @@ ruvia::Task<ruvia::HttpResponse> handleError(ruvia::Context& c, ruvia::HttpError
 
     const auto status = info.status();
     if (status.isServerError()) {
-        service::middleware::logError(std::string("Unhandled error: ") +
-                                      std::string(info.message()));
+        std::string diagnostic;
+        if (const auto exception = c.exception()) {
+            try {
+                std::rethrow_exception(exception);
+            } catch (const std::exception& error) {
+                diagnostic = error.what();
+            } catch (...) {
+                diagnostic = "non-standard exception";
+            }
+        }
+        if (diagnostic.empty()) {
+            diagnostic = info.message().empty() ? std::string(ruvia::httpReasonPhrase(status))
+                                                : std::string(info.message());
+        }
+        service::middleware::logError("Unhandled error: " + diagnostic);
     }
     c.status(status);
     co_return c.json(service::common::error(
@@ -172,6 +185,7 @@ int main(int argc, char* argv[]) {
     try {
         auto& app = ruvia::app();
         app.loadDotenv();
+        service::utils::validateJwtConfiguration();
         configureDocumentRoot(app, executableDir(argc > 0 ? argv[0] : nullptr));
         configureDatabase(app);
         configureHttpServer(app);

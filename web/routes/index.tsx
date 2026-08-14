@@ -1,4 +1,3 @@
-import '@/pages';
 import { type ComponentType, type ReactNode, lazy, useMemo, useRef } from 'react';
 import {
     createHashRouter,
@@ -12,12 +11,12 @@ import {
 import { Button, Result } from 'antd';
 import { AnimatePresence, domAnimation, LazyMotion, m } from 'framer-motion';
 import { fadeVariants, pageTransition } from '@/utils/animations';
-import { getComponentLoaderMap } from '@/pages';
+import { pageComponentLoaders } from '@/config/page.catalog';
 import { useDynamicRoutes } from '@/hooks/useDynamicRoutes';
 import { useInitAuth } from '@/hooks/useInitAuth';
 import { useAuthStore } from '@/store/authStore';
 import { APP_NAME, getAppTitle } from '@/config/app';
-import type { Menu } from '@/pages/system/menu/menu.types';
+import type { NavigationItem } from '@/config/navigation.types';
 
 function AuthGuard() {
     const token = useAuthStore((s) => s.token);
@@ -55,7 +54,7 @@ function RootTransition() {
     );
 }
 
-function FallbackPage({ menu }: { menu: Menu.Item }) {
+function FallbackPage({ menu }: { menu: NavigationItem }) {
     const navigate = useNavigate();
     return (
         <Result
@@ -80,13 +79,13 @@ function FallbackPage({ menu }: { menu: Menu.Item }) {
 }
 
 // 固定的页面
-const LoginPage = lazy(() => import('@/pages/login'));
+const LoginPage = lazy(() => import('@/pages/auth/login'));
 const AdminLayout = lazy(() => import('@/layouts/AdminLayout'));
-const HomePage = lazy(() => import('@/pages/home'));
+const HomePage = lazy(() => import('@/pages/home/dashboard'));
 
 // 从统一注册中心获取组件映射
-const componentMap: Record<string, () => Promise<{ default: ComponentType<unknown> }>> =
-    getComponentLoaderMap();
+const componentMap: Readonly<Record<string, () => Promise<{ default: ComponentType<unknown> }>>> =
+    pageComponentLoaders;
 
 // 懒加载缓存
 const lazyCache = new Map<string, ComponentType<unknown>>();
@@ -103,7 +102,7 @@ function getLazyComponent(name: string): ComponentType<unknown> | null {
     return lazyCache.get(name)!;
 }
 
-function getRouteComponent(menu: Menu.Item): ReactNode {
+function getRouteComponent(menu: NavigationItem): ReactNode {
     if (menu.component) {
         const Component = getLazyComponent(menu.component);
         if (Component) {

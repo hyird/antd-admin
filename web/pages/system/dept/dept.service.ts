@@ -6,7 +6,7 @@ import { type UseQueryOptions, useQuery } from '@tanstack/react-query';
 import type { TreeSelectProps } from 'antd';
 import { useMemo } from 'react';
 import { useSaveMutation } from '@/hooks/useMutation';
-import type { PaginatedResult } from '@/utils/types';
+import type { PaginatedResult } from '@/utils/pagination.types';
 import type { Dept } from './dept.types';
 import { create, getDetail, getList, getTree, update } from './dept.api';
 import { deptQueryKeys } from './dept.types';

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useCurrentUser } from '@/pages/login';
+import { useCurrentUser } from '@/pages/auth/login';
 import { SUPERADMIN_ROLE_CODE } from '@/config/app';
 
 function usePermissionState() {

@@ -3,8 +3,9 @@
  */
 
 import type { Dept } from './dept.types';
-import type { PaginatedResult } from '@/utils/types';
-import { appendQueryParams } from '@/utils/query';
+import { normalizePaginatedResponse } from '@/utils/pagination.response';
+import type { PaginatedResponse } from '@/utils/pagination.types';
+import { appendQueryParams } from '@/utils/query.params';
 import request from '@/utils/http';
 
 /** API 端点 */
@@ -15,8 +16,11 @@ const ENDPOINTS = {
 } as const;
 
 /** 获取部门列表 */
-export function getList(params?: Dept.Query) {
-    return request.get<PaginatedResult<Dept.Item>>(appendQueryParams(ENDPOINTS.BASE, params));
+export async function getList(params?: Dept.Query) {
+    const response = await request.get<PaginatedResponse<Dept.Item>>(
+        appendQueryParams(ENDPOINTS.BASE, params)
+    );
+    return normalizePaginatedResponse(response);
 }
 
 /** 获取部门树 */

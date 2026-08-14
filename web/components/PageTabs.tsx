@@ -9,9 +9,9 @@ import type { CSSProperties } from 'react';
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { APP_NAME, getAppTitle } from '@/config/app';
+import type { NavigationTreeItem } from '@/config/navigation.types';
 import { useAuthStore } from '@/store/authStore';
 import { HOME_TAB, useTabsStore } from '@/store/tabsStore';
-import type { Menu } from '@/pages/system/menu/menu.types';
 import { buildMenuTree } from '@/utils/tree';
 
 function SortableTab({ node }: { node: React.ReactElement }) {
@@ -45,7 +45,7 @@ export default function PageTabs() {
     // 激活的标签会与实际页面错位。
     const prevPathRef = useRef<string>('');
 
-    const menuTree = useMemo<Menu.TreeItem[]>(() => {
+    const menuTree = useMemo<NavigationTreeItem[]>(() => {
         const menus = user?.menus || [];
         return buildMenuTree(menus);
     }, [user?.menus]);
@@ -53,7 +53,7 @@ export default function PageTabs() {
     const pathTitleMap = useMemo<Map<string, string>>(() => {
         const map = new Map<string, string>();
 
-        const traverse = (items: Menu.TreeItem[]) => {
+        const traverse = (items: NavigationTreeItem[]) => {
             for (const item of items) {
                 if (item.full_path && item.type === 'page') {
                     map.set(item.full_path, item.name);

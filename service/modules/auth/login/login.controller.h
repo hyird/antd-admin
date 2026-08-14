@@ -8,8 +8,8 @@
 
 #include "service/common/http.h"
 #include "service/middleware/auth.h"
-#include "service/modules/system/auth/auth.schema.h"
-#include "service/modules/system/auth/auth.service.h"
+#include "service/modules/auth/login/login.schema.h"
+#include "service/modules/auth/login/login.service.h"
 
 namespace service::auth {
 

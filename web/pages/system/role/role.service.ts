@@ -5,7 +5,7 @@
 import { type UseQueryOptions, useQuery } from '@tanstack/react-query';
 import type { Role } from './role.types';
 import { roleQueryKeys } from './role.types';
-import type { PaginatedResult } from '@/utils/types';
+import type { PaginatedResult } from '@/utils/pagination.types';
 import { useMutationWithMessage, useSaveMutation } from '@/hooks/useMutation';
 import { create, getAll, getDetail, getList, remove, update } from './role.api';
 

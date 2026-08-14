@@ -1,4 +1,4 @@
-import { useCurrentUser } from '@/pages/login';
+import { useCurrentUser } from '@/pages/auth/login';
 import { useAuthStore } from '@/store/authStore';
 
 /**

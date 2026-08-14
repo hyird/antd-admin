@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { pageParamsSchema } from '@/utils/types';
+import { pageParamsSchema } from '@/utils/pagination.schema';
 
 export const createDeptSchema = z.object({
     name: z.string().min(1, '部门名称不能为空').max(100, '部门名称最多100个字符'),

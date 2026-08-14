@@ -72,15 +72,15 @@ class UserService {
 
         auto& list = result.ensure<"list">();
         for (const auto& row : rs) {
-            auto& item = list.emplace(c);
+            auto& item = list.emplace_back(c);
             const auto userId = fillUserItem(item, row);
             co_await attachRoles(c, item, userId);
         }
         co_return result;
     }
 
-    ruvia::Task<ruvia::BoxedArray<UserOptionDto>>
-    listOptions(ruvia::Context& c, std::optional<std::string_view> keyword) {
+    ruvia::Task<ruvia::Array<UserOptionDto>> listOptions(ruvia::Context& c,
+                                                         std::optional<std::string_view> keyword) {
         auto db = c.db();
         std::string sql =
             "SELECT id, username, nickname, phone, email FROM sys_user WHERE deleted_at IS NULL";
@@ -93,9 +93,9 @@ class UserService {
         }
         sql += " ORDER BY id ASC";
         const auto rs = co_await db.query(sql, params);
-        ruvia::BoxedArray<UserOptionDto> out(c.resource());
+        ruvia::Array<UserOptionDto> out(c.allocator<UserOptionDto>());
         for (const auto& row : rs) {
-            auto& item = out.emplace(c);
+            auto& item = out.emplace_back(c);
             item.set<"id">(
                 static_cast<ruvia::Int64>(std::stoll(std::string(row[0].value().value_or("")))));
             item.set<"username">(row[1].value().value_or(""));
@@ -296,7 +296,7 @@ class UserService {
                                              service::common::dbParams(ruvia::DbValue{userId}));
         auto& roleList = item.ensure<"roles">();
         for (const auto& rrow : roles) {
-            auto& role = roleList.emplace(c);
+            auto& role = roleList.emplace_back(c);
             role.set<"id">(
                 static_cast<ruvia::Int64>(std::stoll(std::string(rrow[0].value().value_or("")))));
             role.set<"name">(rrow[1].value().value_or(""));

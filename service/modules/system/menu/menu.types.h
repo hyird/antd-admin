@@ -65,8 +65,8 @@ RUVIA_RESPONSE_MODEL(MenuListResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::Int64),
 RUVIA_RESPONSE_MODEL(MenuPageDataDto, RUVIA_OPTIONAL_FIELD(list, ruvia::BoxedArray<MenuDto>),
                      RUVIA_OPTIONAL_FIELD(total, ruvia::Int64),
                      RUVIA_OPTIONAL_FIELD(page, ruvia::Int64),
-                     RUVIA_OPTIONAL_FIELD_NAME("pageSize", pageSize, ruvia::Int64),
-                     RUVIA_OPTIONAL_FIELD_NAME("totalPages", totalPages, ruvia::Int64));
+                     RUVIA_OPTIONAL_FIELD_NAME("page_size", pageSize, ruvia::Int64),
+                     RUVIA_OPTIONAL_FIELD_NAME("total_pages", totalPages, ruvia::Int64));
 
 RUVIA_RESPONSE_MODEL(MenuPageResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::Int64),
                      RUVIA_OPTIONAL_FIELD(message, ruvia::String),

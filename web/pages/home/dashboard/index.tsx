@@ -1,7 +1,7 @@
 import { Card, Col, Row, Statistic, Typography } from 'antd';
 import { useMemo } from 'react';
 import { PageContainer } from '@/components/PageContainer';
-import { useCurrentUser } from '@/pages/login';
+import { useCurrentUser } from '@/pages/auth/login';
 
 const { Title, Paragraph, Text } = Typography;
 

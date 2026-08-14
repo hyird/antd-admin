@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
+import type { NavigationItem } from '@/config/navigation.types';
 import { useAuthStore } from '@/store/authStore';
-import type { Menu } from '@/pages/system/menu/menu.types';
 
 interface DynamicRoutesResult {
-    pageMenus: Menu.Item[];
+    pageMenus: NavigationItem[];
     defaultPath: string;
     isLoading: boolean;
 }
@@ -17,7 +17,7 @@ export function useDynamicRoutes(): DynamicRoutesResult {
     const token = useAuthStore((s) => s.token);
 
     const { pageMenus, defaultPath } = useMemo(() => {
-        const menus: Menu.Item[] = user?.menus ?? [];
+        const menus: NavigationItem[] = user?.menus ?? [];
 
         const pages = menus.filter(
             (m) => m.type === 'page' && m.component && m.path && m.path.trim().length > 0

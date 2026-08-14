@@ -3,8 +3,9 @@
  */
 
 import type { Menu } from './menu.types';
-import type { PaginatedResult } from '@/utils/types';
-import { appendQueryParams } from '@/utils/query';
+import { normalizePaginatedResponse } from '@/utils/pagination.response';
+import type { PaginatedResponse } from '@/utils/pagination.types';
+import { appendQueryParams } from '@/utils/query.params';
 import request from '@/utils/http';
 
 /** API 端点 */
@@ -16,8 +17,11 @@ const ENDPOINTS = {
 } as const;
 
 /** 获取菜单列表 */
-export function getList(params?: Menu.Query) {
-    return request.get<PaginatedResult<Menu.Item>>(appendQueryParams(ENDPOINTS.BASE, params));
+export async function getList(params?: Menu.Query) {
+    const response = await request.get<PaginatedResponse<Menu.Item>>(
+        appendQueryParams(ENDPOINTS.BASE, params)
+    );
+    return normalizePaginatedResponse(response);
 }
 
 /** 获取菜单树 */

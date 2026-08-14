@@ -2,6 +2,8 @@
  * 通用树构建工具
  */
 
+import type { NavigationItem, NavigationTreeItem } from '@/config/navigation.types';
+
 /** 树节点基础接口 */
 export interface TreeNode {
     id: number;
@@ -297,17 +299,15 @@ export function getAncestorPath<T extends TreeNode>(tree: T[], nodeId: number): 
 
 // ============ 菜单专用函数 ============
 
-import type { Menu } from '@/pages/system/menu/menu.types';
-
-const filteredMenuTreeCache = new WeakMap<Menu.Item[], Menu.TreeItem[]>();
-const fullMenuTreeCache = new WeakMap<Menu.Item[], Menu.TreeItem[]>();
+const filteredMenuTreeCache = new WeakMap<NavigationItem[], NavigationTreeItem[]>();
+const fullMenuTreeCache = new WeakMap<NavigationItem[], NavigationTreeItem[]>();
 
 /**
  * 将平铺的菜单列表构建成树形结构
  * @param menus 菜单列表
  * @param filterButton 是否过滤掉 button 类型，默认 true
  */
-export function buildMenuTree(menus: Menu.Item[], filterButton = true): Menu.TreeItem[] {
+export function buildMenuTree(menus: NavigationItem[], filterButton = true): NavigationTreeItem[] {
     const cache = filterButton ? filteredMenuTreeCache : fullMenuTreeCache;
     const cachedTree = cache.get(menus);
     if (cachedTree) {
@@ -315,10 +315,14 @@ export function buildMenuTree(menus: Menu.Item[], filterButton = true): Menu.Tre
     }
 
     const items = filterButton ? menus.filter((m) => m.type !== 'button') : menus;
-    const tree = buildTree(items, { sortBy: 'order' }) as Menu.TreeItem[];
+    const tree = buildTree(items, { sortBy: 'order' }) as NavigationTreeItem[];
 
     // 计算完整路径
-    const computeFullPath = (nodes: Menu.TreeItem[], parentPath = '', path = new Set<number>()) => {
+    const computeFullPath = (
+        nodes: NavigationTreeItem[],
+        parentPath = '',
+        path = new Set<number>()
+    ) => {
         for (const node of nodes) {
             if (path.has(node.id)) continue;
             const nextPath = new Set(path);
@@ -349,8 +353,8 @@ export function buildMenuTree(menus: Menu.Item[], filterButton = true): Menu.Tre
  * @param tree 菜单树
  * @param keyword 关键词
  */
-export function filterMenuTree(tree: Menu.TreeItem[], keyword: string): Menu.TreeItem[] {
-    return filterTree(tree, keyword, ['name', 'path']) as Menu.TreeItem[];
+export function filterMenuTree(tree: NavigationTreeItem[], keyword: string): NavigationTreeItem[] {
+    return filterTree(tree, keyword, ['name', 'path']) as NavigationTreeItem[];
 }
 
 /**
@@ -359,8 +363,8 @@ export function filterMenuTree(tree: Menu.TreeItem[], keyword: string): Menu.Tre
  * @param menuMap 菜单映射表
  */
 export function getPathSegment(
-    record: Menu.TreeItem,
-    menuMap: Map<number, Menu.TreeItem> | Record<number, Menu.TreeItem>
+    record: NavigationTreeItem,
+    menuMap: Map<number, NavigationTreeItem> | Record<number, NavigationTreeItem>
 ): string {
     const fullPath = (record.full_path || record.path || '').trim();
     if (!fullPath) return '';
@@ -378,60 +382,4 @@ export function getPathSegment(
         return seg.replace(/^\/+/, '');
     }
     return fullPath.replace(/^\/+/, '');
-}
-
-// ============ 深度比较 ============
-
-export function deepEqual(a: unknown, b: unknown): boolean {
-    if (a === b) return true;
-    if (typeof a !== typeof b) return false;
-    if (a == null || b == null) return false;
-    if (typeof a !== 'object') {
-        if (Number.isNaN(a) && Number.isNaN(b)) return true;
-        return false;
-    }
-    const objA = a as object;
-    const objB = b as object;
-    if (objA.constructor !== objB.constructor) return false;
-    if (objA instanceof Date && objB instanceof Date) {
-        return objA.getTime() === objB.getTime();
-    }
-    if (objA instanceof RegExp && objB instanceof RegExp) {
-        return objA.source === objB.source && objA.flags === objB.flags;
-    }
-    if (objA instanceof Map && objB instanceof Map) {
-        if (objA.size !== objB.size) return false;
-        for (const [key, value] of objA) {
-            if (!objB.has(key) || !deepEqual(value, objB.get(key))) {
-                return false;
-            }
-        }
-        return true;
-    }
-    if (objA instanceof Set && objB instanceof Set) {
-        if (objA.size !== objB.size) return false;
-        for (const value of objA) {
-            let found = false;
-            for (const bValue of objB) {
-                if (deepEqual(value, bValue)) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) return false;
-        }
-        return true;
-    }
-    if (Array.isArray(objA) && Array.isArray(objB)) {
-        if (objA.length !== objB.length) return false;
-        return objA.every((item, index) => deepEqual(item, objB[index]));
-    }
-    const recordA = objA as Record<string, unknown>;
-    const recordB = objB as Record<string, unknown>;
-    const keysA = Object.keys(recordA);
-    const keysB = Object.keys(recordB);
-    if (keysA.length !== keysB.length) return false;
-    return keysA.every((key) => {
-        return key in recordB && deepEqual(recordA[key], recordB[key]);
-    });
 }

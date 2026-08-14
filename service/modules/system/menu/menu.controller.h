@@ -30,9 +30,7 @@ class MenuController final : public ruvia::Controller<MenuController> {
   private:
     ruvia::Task<ruvia::HttpResponse> list(ruvia::Context& c) {
         co_await service::middleware::requirePermission(c, "system:menu:query");
-        auto pageSize = service::common::parseInt64(c.req().query("pageSize"));
-        if (!pageSize)
-            pageSize = service::common::parseInt64(c.req().query("page_size"));
+        const auto pageSize = service::common::parseInt64(c.req().query("page_size"));
         const auto [page, pageSizeValue, skip, keyword, paginated] =
             service::common::normalizePagination(service::common::parseInt64(c.req().query("page")),
                                                  pageSize, c.req().query("keyword"));

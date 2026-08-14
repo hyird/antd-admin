@@ -6,7 +6,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { App } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
-import { deepEqual } from '@/utils/tree';
+import { deepEqual } from '@/utils/equality';
 import type { Auth } from './login.types';
 import { fetchCurrentUser, login, logout } from './login.api';
 

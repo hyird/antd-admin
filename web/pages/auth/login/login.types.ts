@@ -2,8 +2,7 @@
  * 登录相关类型定义
  */
 
-import type { Menu } from '../system/menu/menu.types';
-import type { Role } from '../system/role/role.types';
+import type { NavigationItem } from '@/config/navigation.types';
 
 // ============ JWT 相关 ============
 
@@ -40,8 +39,14 @@ export interface UserInfo {
     username: string;
     nickname?: string;
     status: string;
-    roles: Role.Option[];
-    menus: Menu.Item[];
+    roles: AuthRoleInfo[];
+    menus: NavigationItem[];
+}
+
+export interface AuthRoleInfo {
+    id: number;
+    name: string;
+    code: string;
 }
 
 export namespace Auth {

@@ -7,7 +7,7 @@
 
 - **前端工具链**：Node.js 24 + Bun；React 19 / Vite 8 / Ant Design 6 /
   Tailwind 4 / TanStack Query / Zustand
-- **后端工具链**：C++23 / Ruvia `main@345c26a6`（core/http/web 三目标）/
+- **后端工具链**：C++23 / Ruvia `main@ee067028`（core/http/web 三目标）/
   asio / MariaDB / OpenSSL / ZLIB / Brotli / Zstd
 - **依赖锁文件**：前端使用 `bun.lock`；后端使用 `vcpkg.json`
 - **构建产物**：前端为单文件 `build/web/index.html`；后端为 `build/server`
@@ -75,16 +75,20 @@ commit 的短 SHA。更新时必须：
 
 - 请求模型使用 `RUVIA_REQUEST_MODEL(...)`，响应模型使用 `RUVIA_RESPONSE_MODEL(...)`；
   两种角色不得互相嵌套或混用于解析、序列化；
+- `fromJson()` / `fromForm()` 只接受请求模型，`toJson()` / `Context::json()` 只接受响应
+  模型；运行时形状不得绕过模型边界拼装动态 JSON；
 - 字段使用 `RUVIA_REQUIRED_FIELD(...)` / `RUVIA_OPTIONAL_FIELD(...)` 声明，通过
   `get<"field">()` / `set<"field">()` / `ensure<"field">()` / `reset<"field">()` 访问；
 - 校验后的 JSON 通过 `c.req().validated<T>()` 读取；
-- DTO 对象数组使用 `ruvia::BoxedArray<T>`，标量数组按 Ruvia 类型系统使用
-  `ruvia::Array<T>`；
+- 普通运行时集合使用 `ruvia::Array<T>`；只有 DTO 直接或间接递归包含自身，或确实需要
+  独立对象存储语义时才使用 `ruvia::BoxedArray<T>`，不得仅因元素是 DTO 就改用 boxed 容器；
 - 请求级数据使用 `c.bindRequestState(value)` 绑定，并通过 `c.requestState<T>()` 读取；
 - MariaDB 配置使用 `ruvia::DbConfig::mariaDb()` 显式选择驱动；`query()` 结果直接作为
   `ruvia::DbRows` 容器使用，字段通过 `value()` 或 `as<T>()` 读取；
 - HTTP 状态使用 `ruvia::HttpStatusCode` 和 `ruvia::http_status::*`，不把裸整数直接当作
   框架状态类型；
+- 校验错误通过 `HttpErrorInfo::validationIssues()` 暴露的强类型 `ValidationIssue` 集合读取，
+  不依赖预序列化的错误详情 JSON；
 - 服务监听通过 `App::setListeners()` / `setWorkersPerListener()` 配置，错误与访问日志使用
   `onError()` / `onAccess()` 回调。
 
@@ -101,10 +105,13 @@ commit 的短 SHA。更新时必须：
 | `WORKER_THREADS` | 每个 Ruvia listener 的 worker 数；默认 2 |
 | `DB_HOST` / `DB_PORT` | MariaDB 地址；默认 `127.0.0.1:3306` |
 | `DB_USERNAME` / `DB_PASSWORD` / `DB_DATABASE` | MariaDB 凭证与数据库名 |
-| `JWT_SECRET` | 签发和验证 access token 的密钥，认证流程必填 |
+| `JWT_SECRET` | 签发和验证 access token 的密钥，服务启动必填 |
 | `JWT_REFRESH_SECRET` | refresh token 密钥；缺省复用 `JWT_SECRET` |
 | `JWT_EXPIRES_IN` | access token 时效，如 `1d`、`2h` |
 | `JWT_REFRESH_EXPIRES_IN` | refresh token 时效 |
+
+JWT 时效只接受正整数秒数，或带 `s`、`m`、`h`、`d` 后缀的正整数。服务启动时严格校验
+JWT 密钥和时效配置；配置错误直接终止启动，不静默使用回退值。
 
 服务启动时通过 Ruvia `DbMigrator` 执行编译进二进制的 schema 迁移。默认角色、账户、
 菜单和权限由幂等迁移创建；`GET /api/health` 只返回健康状态，不承担初始化副作用。
@@ -218,8 +225,9 @@ service/modules/<domain>/<module>/
   schema 用 `RUVIA_VALIDATE_JSON`，controller 通过 `c.req().validated<T>()` 获取校验结果。
 - **查询与路径参数**：Ruvia accessor 返回 `std::optional<std::string_view>`；整数统一通过项目
   公共严格解析函数转换。
-- **响应**：Ruvia DTO 统一输出 `{ code, message, data }`；分页字段为
-  `data.list / total / page / pageSize / totalPages`。
+- **响应**：Ruvia DTO 统一输出 `{ code, message, data }`；分页 wire 字段为
+  `data.list / total / page / page_size / total_pages`。前端内部可以使用 `pageSize` / `totalPages`，
+  但必须在 `*.api.ts` 序列化边界完成转换。
 - **认证**：受保护 controller 挂 `AuthMiddleware`。JWT 验证结果通过 request state 传递，
   权限检查使用 `co_await requirePermission(c, "<permission-code>")`。
 - **权限缓存**：权限服务按用户缓存 60 秒；会改变权限投影的写操作完成后必须清空相关缓存。
@@ -254,8 +262,8 @@ service/modules/<domain>/<module>/
 
 - **找不到 Ruvia**：CMake 通过 FetchContent 拉取 `hyird/Ruvia` 的固定 commit。先确认网络，
   再确认 `CMakeLists.txt` 的完整 SHA 与上游 `main` 目标一致。
-- **JWT_SECRET 未设置**：当前 JWT helper 在认证流程首次使用密钥时拒绝继续；部署前必须在
-  可执行文件旁的 `.env` 中配置，不能依赖开发默认值。
+- **JWT_SECRET 未设置**：服务启动时会拒绝继续；部署前必须在可执行文件旁的 `.env` 中配置，
+  不能依赖开发默认值。JWT 时效格式错误同样会终止启动。
 - **OpenSSL 未找到**：Ruvia TLS/JWT 和密码 PBKDF2 都依赖 OpenSSL，确认 vcpkg manifest
   依赖已安装。
 - **建表**：无需手动执行 SQL；启动时执行 `service/config/schema.h` 中的 Ruvia migrations，

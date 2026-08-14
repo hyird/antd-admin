@@ -2,8 +2,13 @@
  * 菜单管理类型定义
  */
 
-import type { PageParams } from '@/utils/types';
-import { createQueryKeys } from '@/utils/query';
+import type { PageParams } from '@/utils/pagination.types';
+import { createQueryKeys } from '@/utils/query.keys';
+import type {
+    NavigationItem,
+    NavigationItemType,
+    NavigationTreeItem,
+} from '@/config/navigation.types';
 
 // ============ QueryKeys ============
 
@@ -17,28 +22,13 @@ export const menuQueryKeys = {
 
 // ============ 枚举/状态类型 ============
 
-export type MenuType = 'menu' | 'page' | 'button';
+export type MenuType = NavigationItemType;
 export type MenuStatus = 'enabled' | 'disabled';
 
 // ============ 列表项/详情类型 ============
 
-export interface MenuItem {
-    id: number;
-    name: string;
-    path?: string | null;
-    component?: string;
-    icon?: string;
-    parent_id?: number | null;
-    sort_order: number;
-    type: MenuType;
-    status: MenuStatus;
-    permission_code?: string;
-}
-
-export interface MenuTreeItem extends MenuItem {
-    children?: MenuTreeItem[];
-    full_path?: string;
-}
+export type MenuItem = NavigationItem;
+export type MenuTreeItem = NavigationTreeItem;
 
 // ============ 查询参数 ============
 

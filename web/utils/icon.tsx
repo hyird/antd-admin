@@ -1,7 +1,6 @@
 import type { ComponentType, CSSProperties, ReactNode } from 'react';
 import * as AntIcons from '@ant-design/icons';
 import DynamicIcon from '@/components/DynamicIcon';
-import type { Menu } from '@/pages/system/menu/menu.types';
 
 type IconComp = ComponentType<{ style?: CSSProperties; className?: string }>;
 
@@ -27,17 +26,7 @@ export function isAppIconName(name?: string): name is AppIconName {
     return name in appIconMap;
 }
 
-export function resolveMenuIconName(
-    menu: Pick<Menu.Item, 'type' | 'component' | 'icon'>
-): string | undefined {
-    return menu.icon;
-}
-
 export function renderIcon(iconName?: string): ReactNode {
     if (!iconName) return undefined;
     return <DynamicIcon name={iconName} />;
-}
-
-export function renderMenuIcon(menu: Pick<Menu.Item, 'type' | 'component' | 'icon'>): ReactNode {
-    return renderIcon(resolveMenuIconName(menu));
 }

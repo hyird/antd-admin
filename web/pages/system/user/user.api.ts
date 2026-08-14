@@ -3,8 +3,9 @@
  */
 
 import type { User } from './user.types';
-import type { PaginatedResult } from '@/utils/types';
-import { appendQueryParams } from '@/utils/query';
+import { normalizePaginatedResponse } from '@/utils/pagination.response';
+import type { PaginatedResponse } from '@/utils/pagination.types';
+import { appendQueryParams } from '@/utils/query.params';
 import request from '@/utils/http';
 
 const ENDPOINTS = {
@@ -13,8 +14,11 @@ const ENDPOINTS = {
     OPTIONS: '/api/users/options',
 } as const;
 
-export function getList(params?: User.Query) {
-    return request.get<PaginatedResult<User.Item>>(appendQueryParams(ENDPOINTS.BASE, params));
+export async function getList(params?: User.Query) {
+    const response = await request.get<PaginatedResponse<User.Item>>(
+        appendQueryParams(ENDPOINTS.BASE, params)
+    );
+    return normalizePaginatedResponse(response);
 }
 
 export function getDetail(id: number) {

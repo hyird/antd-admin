@@ -2,9 +2,9 @@
  * 角色管理类型定义
  */
 
-import type { PageParams } from '@/utils/types';
+import type { PageParams } from '@/utils/pagination.types';
 import type { Menu } from '../menu/menu.types';
-import { createQueryKeys } from '@/utils/query';
+import { createQueryKeys } from '@/utils/query.keys';
 
 // ============ QueryKeys ============
 
