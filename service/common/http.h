@@ -44,8 +44,11 @@ struct AppErrorDef {
     std::uint16_t status{400};
 };
 
-RUVIA_MODEL(ErrorResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::int64),
-            RUVIA_OPTIONAL_FIELD(message, ruvia::string));
+RUVIA_MODEL(
+    ErrorResponse,
+    RUVIA_OPTIONAL_FIELD(code, ruvia::int64),
+    RUVIA_OPTIONAL_FIELD(message, ruvia::string)
+);
 
 inline std::int64_t defaultBusinessErrorCode(std::uint16_t status) {
     switch (status) {
@@ -85,7 +88,8 @@ inline std::int64_t normalizeBusinessErrorCode(std::string_view code, std::uint1
 [[noreturn]] inline void throwAppError(const AppErrorDef& def) {
     const auto code = std::to_string(def.code);
     throw ruvia::http_error(
-        {.status_ = ruvia::http_status_code{def.status}, .code_ = code, .message_ = def.message});
+        {.status_ = ruvia::http_status_code{def.status}, .code_ = code, .message_ = def.message}
+    );
 }
 
 [[noreturn]] inline void throwAppError(std::int64_t code, std::string message,
@@ -99,7 +103,8 @@ inline OperationResponse operation(std::string_view message) {
     return response;
 }
 
-template <typename ResponseT, typename DataT> inline ResponseT ok(DataT&& data) {
+template <typename ResponseT, typename DataT>
+inline ResponseT ok(DataT&& data) {
     ResponseT response;
     response.set<"code">(0).set<"message">("ok").set<"data">(std::forward<DataT>(data));
     return response;

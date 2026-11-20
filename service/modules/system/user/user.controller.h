@@ -32,18 +32,22 @@ class UserController final {
         const auto [page, pageSizeValue, skip, keyword, paginated] =
             service::common::normalizePagination(
                 service::common::parseInt64(c.request().query("page")), pageSize,
-                c.request().query("keyword"));
+                c.request().query("keyword")
+            );
         co_return c.json(service::common::ok<UserPageResponse>(co_await userService().list(
             c, page, pageSizeValue, skip, keyword, paginated, c.request().query("status"),
-            service::common::parseInt64(c.request().query("dept_id")))));
+            service::common::parseInt64(c.request().query("dept_id"))
+        )));
     }
 
     ruvia::task<ruvia::http_response> options(ruvia::context& c) {
         co_await service::middleware::requireAnyPermission(
             c, {"system:user:query", "system:user:add", "system:user:edit", "system:dept:query",
-                "system:dept:add", "system:dept:edit"});
+                "system:dept:add", "system:dept:edit"}
+        );
         co_return c.json(service::common::ok<UserOptionsResponse>(
-            co_await userService().listOptions(c, c.request().query("keyword"))));
+            co_await userService().listOptions(c, c.request().query("keyword"))
+        ));
     }
 
     ruvia::task<ruvia::http_response> detail(ruvia::context& c) {
@@ -53,7 +57,8 @@ class UserController final {
             service::common::throwAppError(service::common::kValidationErrorCode, "id 必须是正整数",
                                            400);
         co_return c.json(
-            service::common::ok<UserDetailResponse>(co_await userService().getById(c, *id)));
+            service::common::ok<UserDetailResponse>(co_await userService().getById(c, *id))
+        );
     }
 
     ruvia::task<ruvia::http_response> create(ruvia::context& c) {

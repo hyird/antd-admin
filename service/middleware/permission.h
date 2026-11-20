@@ -104,7 +104,8 @@ class PermissionService {
                       "ur")
                 .where(storage::UserRole::column<"user_id">("ur").to_expr() ==
                            db_expr::value(userId) &&
-                       storage::Role::column<"deleted_at">("r").to_expr().is_null()));
+                       storage::Role::column<"deleted_at">("r").to_expr().is_null())
+        );
         for (const auto& row : roles) {
             if (row.size() < 2)
                 continue;
@@ -143,7 +144,8 @@ class PermissionService {
                        storage::Menu::column<"deleted_at">("m").to_expr().is_null() &&
                        storage::Menu::column<"status">("m").to_expr() == "enabled" &&
                        storage::Menu::column<"permission_code">("m").to_expr().is_not_null() &&
-                       storage::Menu::column<"permission_code">("m").to_expr() != ""));
+                       storage::Menu::column<"permission_code">("m").to_expr() != "")
+        );
         for (const auto& row : perms) {
             if (row.empty() || !row[0].value().has_value())
                 continue;

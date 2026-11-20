@@ -154,8 +154,10 @@ ruvia::task<ruvia::http_response> handleError(ruvia::context& c, ruvia::http_err
             : issues.front().message();
     co_return c.json(
         service::common::error(
-            service::common::normalizeBusinessErrorCode(info.code(), status.value()), message),
-        {.status_ = status});
+            service::common::normalizeBusinessErrorCode(info.code(), status.value()), message
+        ),
+        {.status_ = status}
+    );
 }
 
 ruvia::task<ruvia::http_response> handleNotFound(ruvia::context& c) {

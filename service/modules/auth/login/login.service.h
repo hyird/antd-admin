@@ -108,7 +108,8 @@ class AuthService {
             const auto minutes = (remaining + 59) / 60;
             service::common::throwAppError(
                 AuthError::TOO_MANY_ATTEMPTS.code,
-                "登录失败次数过多，请" + std::to_string(minutes) + "分钟后再试", 429);
+                "登录失败次数过多，请" + std::to_string(minutes) + "分钟后再试", 429
+            );
         }
 
         auto db = c.db();
@@ -122,14 +123,16 @@ class AuthService {
                 .from(storage::User::table_name())
                 .where(storage::User::column<"username">().to_expr() == username &&
                        storage::User::column<"deleted_at">().to_expr().is_null())
-                .limit(1));
+                .limit(1)
+        );
         if (users.empty()) {
             const int failureCount = rateLimitService().recordFailure(username);
             const int remaining = 5 - failureCount;
             if (remaining > 0) {
                 service::common::throwAppError(
                     AuthError::PASSWORD_INCORRECT.code,
-                    "用户名或密码错误，还剩" + std::to_string(remaining) + "次尝试机会", 401);
+                    "用户名或密码错误，还剩" + std::to_string(remaining) + "次尝试机会", 401
+                );
             }
             service::common::throwAppError(AuthError::TOO_MANY_ATTEMPTS);
         }
@@ -149,7 +152,8 @@ class AuthService {
             if (remaining > 0) {
                 service::common::throwAppError(
                     AuthError::PASSWORD_INCORRECT.code,
-                    "用户名或密码错误，还剩" + std::to_string(remaining) + "次尝试机会", 401);
+                    "用户名或密码错误，还剩" + std::to_string(remaining) + "次尝试机会", 401
+                );
             }
             service::common::throwAppError(AuthError::TOO_MANY_ATTEMPTS);
         }
@@ -188,7 +192,8 @@ class AuthService {
                 .from(storage::User::table_name())
                 .where(storage::User::column<"id">().to_expr() == payload.user_id &&
                        storage::User::column<"deleted_at">().to_expr().is_null())
-                .limit(1));
+                .limit(1)
+        );
         if (users.empty())
             service::common::throwAppError(AuthError::USER_NOT_FOUND);
         const auto& row = users.front();
@@ -248,13 +253,15 @@ class AuthService {
                           storage::UserRole::column<"role_id">("ur").to_expr(),
                       "ur")
                 .where(storage::UserRole::column<"user_id">("ur").to_expr() == userId &&
-                       storage::Role::column<"deleted_at">("r").to_expr().is_null()));
+                       storage::Role::column<"deleted_at">("r").to_expr().is_null())
+        );
         bool isSuperadmin = false;
         auto& roles = info.ensure<"roles">();
         for (const auto& row : rs) {
             auto& role = roles.emplace_back();
             role.set<"id">(
-                static_cast<ruvia::int64>(std::stoll(std::string(row[0].value().value_or("")))));
+                static_cast<ruvia::int64>(std::stoll(std::string(row[0].value().value_or(""))))
+            );
 
             const auto code = row[2].value().value_or("");
             role.set<"name">(row[1].value().value_or(""));
@@ -301,7 +308,8 @@ class AuthService {
                        storage::Menu::column<"deleted_at">("m").to_expr().is_null() &&
                        storage::Menu::column<"status">("m").to_expr() == "enabled")
                 .order_by(storage::Menu::column<"order">("m").to_expr())
-                .add_order_by(storage::Menu::column<"id">("m").to_expr()));
+                .add_order_by(storage::Menu::column<"id">("m").to_expr())
+        );
         co_return menu::MenuService::flatFromRows(rs);
     }
 

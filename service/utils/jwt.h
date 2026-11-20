@@ -109,7 +109,8 @@ inline std::string sign(const service::core::JwtPayload& payload, const std::str
     const std::array claims{ruvia::jwt_claim_view{"user_id", subject},
                             ruvia::jwt_claim_view{"username", payload.username}};
     return ruvia::sign_jwt(
-        {.secret_ = secret, .subject_ = subject, .expires_in_ = expiresIn, .claims_ = claims});
+        {.secret_ = secret, .subject_ = subject, .expires_in_ = expiresIn, .claims_ = claims}
+    );
 }
 
 inline service::core::JwtPayload verify(const std::string& token, const std::string& secret) {

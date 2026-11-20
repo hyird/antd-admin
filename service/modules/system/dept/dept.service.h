@@ -75,7 +75,8 @@ class DeptService {
             .set<"page">(static_cast<ruvia::int64>(page))
             .set<"pageSize">(static_cast<ruvia::int64>(pageSize))
             .set<"totalPages">(static_cast<ruvia::int64>(
-                paginated && pageSize > 0 ? (total + pageSize - 1) / pageSize : 1));
+                paginated && pageSize > 0 ? (total + pageSize - 1) / pageSize : 1
+            ));
 
         auto& list = result.ensure<"list">();
         for (const auto& row : rs) {
@@ -121,7 +122,8 @@ class DeptService {
                 .from(storage::Department::table_name())
                 .where(storage::Department::column<"id">().to_expr() == id &&
                        storage::Department::column<"deleted_at">().to_expr().is_null())
-                .limit(1));
+                .limit(1)
+        );
         if (rs.empty())
             service::common::throwAppError(DeptError::NOT_FOUND);
 
@@ -142,7 +144,8 @@ class DeptService {
                     .from(storage::Department::table_name())
                     .where(storage::Department::column<"code">().to_expr() == *code &&
                            storage::Department::column<"deleted_at">().to_expr().is_null())
-                    .limit(1));
+                    .limit(1)
+            );
             if (!exist.empty())
                 service::common::throwAppError(DeptError::CODE_EXISTS);
         }
@@ -154,7 +157,8 @@ class DeptService {
                     .where(storage::Department::column<"id">().to_expr() ==
                                static_cast<std::int64_t>(*body.get<"parentId">()) &&
                            storage::Department::column<"deleted_at">().to_expr().is_null())
-                    .limit(1));
+                    .limit(1)
+            );
             if (parent.empty())
                 service::common::throwAppError(DeptError::NOT_FOUND);
         }
@@ -170,19 +174,24 @@ class DeptService {
                      db_expr::value(
                          body.get<"parentId">()
                              ? ruvia::db_value{static_cast<std::int64_t>(*body.get<"parentId">())}
-                             : ruvia::db_value{nullptr}),
+                             : ruvia::db_value{nullptr}
+                     ),
                      db_expr::value(
                          ruvia::db_value{body.get<"sortOrder">()
                                              ? static_cast<std::int64_t>(*body.get<"sortOrder">())
-                                             : 0}),
+                                             : 0}
+                     ),
                      db_expr::value(
                          body.get<"leaderId">()
                              ? ruvia::db_value{static_cast<std::int64_t>(*body.get<"leaderId">())}
-                             : ruvia::db_value{nullptr}),
+                             : ruvia::db_value{nullptr}
+                     ),
                      db_expr::value(ruvia::db_value{body.get<"status">()
                                                         ? body.get<"status">()->view()
                                                         : std::string_view{"enabled"}}),
-                     db_expr::now(), db_expr::now()}));
+                     db_expr::now(), db_expr::now()}
+                )
+        );
         co_return;
     }
 
@@ -195,7 +204,8 @@ class DeptService {
                 .from(storage::Department::table_name())
                 .where(storage::Department::column<"id">().to_expr() == id &&
                        storage::Department::column<"deleted_at">().to_expr().is_null())
-                .limit(1));
+                .limit(1)
+        );
         if (rs.empty())
             service::common::throwAppError(DeptError::NOT_FOUND);
         const std::string currentCode = !rs.front()[1].value().has_value()
@@ -213,7 +223,8 @@ class DeptService {
                     .where(storage::Department::column<"code">().to_expr() == *code &&
                            storage::Department::column<"id">().to_expr() != id &&
                            storage::Department::column<"deleted_at">().to_expr().is_null())
-                    .limit(1));
+                    .limit(1)
+            );
             if (!exist.empty())
                 service::common::throwAppError(DeptError::CODE_EXISTS);
         }
@@ -229,7 +240,8 @@ class DeptService {
                         .from(storage::Department::table_name())
                         .where(storage::Department::column<"id">().to_expr() == parentId &&
                                storage::Department::column<"deleted_at">().to_expr().is_null())
-                        .limit(1));
+                        .limit(1)
+                );
                 if (parent.empty())
                     service::common::throwAppError(DeptError::NOT_FOUND);
                 if (co_await isAncestorDescendant(c, id, parentId)) {
@@ -263,7 +275,8 @@ class DeptService {
                     .update(storage::Department::table_name())
                     .set(changes)
                     .set("updated_at", db_expr::now())
-                    .where(storage::Department::column<"id">().to_expr() == id));
+                    .where(storage::Department::column<"id">().to_expr() == id)
+            );
         }
         co_return;
     }
@@ -276,7 +289,8 @@ class DeptService {
                 .from(storage::Department::table_name())
                 .where(storage::Department::column<"id">().to_expr() == id &&
                        storage::Department::column<"deleted_at">().to_expr().is_null())
-                .limit(1));
+                .limit(1)
+        );
         if (rs.empty())
             service::common::throwAppError(DeptError::NOT_FOUND);
 
@@ -285,7 +299,8 @@ class DeptService {
                 .select(db_expr::count())
                 .from(storage::Department::table_name())
                 .where(storage::Department::column<"parent_id">().to_expr() == id &&
-                       storage::Department::column<"deleted_at">().to_expr().is_null()));
+                       storage::Department::column<"deleted_at">().to_expr().is_null())
+        );
         if (std::stoll(std::string(child.front()[0].value().value_or(""))) > 0) {
             service::common::throwAppError(DeptError::HAS_CHILDREN);
         }
@@ -295,7 +310,8 @@ class DeptService {
                 .select(db_expr::count())
                 .from(storage::User::table_name())
                 .where(storage::User::column<"dept_id">().to_expr() == id &&
-                       storage::User::column<"deleted_at">().to_expr().is_null()));
+                       storage::User::column<"deleted_at">().to_expr().is_null())
+        );
         if (std::stoll(std::string(users.front()[0].value().value_or(""))) > 0) {
             service::common::throwAppError(DeptError::HAS_USERS);
         }
@@ -328,7 +344,8 @@ class DeptService {
                 .select({storage::Department::column<"id">().to_expr(),
                          storage::Department::column<"parent_id">().to_expr()})
                 .from(storage::Department::table_name())
-                .where(storage::Department::column<"deleted_at">().to_expr().is_null()));
+                .where(storage::Department::column<"deleted_at">().to_expr().is_null())
+        );
         std::unordered_map<std::int64_t, std::vector<std::int64_t>> children;
         for (const auto& row : rs) {
             if (!row[1].value().has_value())
@@ -352,7 +369,8 @@ class DeptService {
         co_return false;
     }
 
-    template <typename Row> static DeptRecord rowToRecord(const Row& row) {
+    template <typename Row>
+    static DeptRecord rowToRecord(const Row& row) {
         DeptRecord item;
         item.id = std::stoll(std::string(row[0].value().value_or("")));
         item.name = row[1].value().value_or("");
@@ -367,7 +385,8 @@ class DeptService {
         return item;
     }
 
-    template <typename Rows> static std::vector<DeptRecord> rowsToRecords(const Rows& rows) {
+    template <typename Rows>
+    static std::vector<DeptRecord> rowsToRecords(const Rows& rows) {
         std::vector<DeptRecord> out;
         out.reserve(rows.size());
         for (const auto& row : rows)

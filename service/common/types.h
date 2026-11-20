@@ -43,17 +43,34 @@ inline auto normalizePagination(std::optional<std::int64_t> pageInput,
     return std::tuple{page, size, (page - 1) * size, std::move(keyword), paginated};
 }
 
-RUVIA_MODEL(OperationResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::int64),
-            RUVIA_OPTIONAL_FIELD(message, ruvia::string));
+RUVIA_MODEL(
+    OperationResponse,
+    RUVIA_OPTIONAL_FIELD(code, ruvia::int64),
+    RUVIA_OPTIONAL_FIELD(message, ruvia::string)
+);
 
-RUVIA_MODEL(HealthData, RUVIA_OPTIONAL_FIELD(status, ruvia::string));
+RUVIA_MODEL(
+    HealthData,
+    RUVIA_OPTIONAL_FIELD(status, ruvia::string)
+);
 
-RUVIA_MODEL(HealthResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::int64),
-            RUVIA_OPTIONAL_FIELD(message, ruvia::string), RUVIA_OPTIONAL_FIELD(data, HealthData));
+RUVIA_MODEL(
+    HealthResponse,
+    RUVIA_OPTIONAL_FIELD(code, ruvia::int64),
+    RUVIA_OPTIONAL_FIELD(message, ruvia::string),
+    RUVIA_OPTIONAL_FIELD(data, HealthData)
+);
 
-RUVIA_MODEL(CountData, RUVIA_OPTIONAL_FIELD_NAME("created_count", createdCount, ruvia::int64));
+RUVIA_MODEL(
+    CountData,
+    RUVIA_OPTIONAL_FIELD_NAME("created_count", createdCount, ruvia::int64)
+);
 
-RUVIA_MODEL(CountResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::int64),
-            RUVIA_OPTIONAL_FIELD(message, ruvia::string), RUVIA_OPTIONAL_FIELD(data, CountData));
+RUVIA_MODEL(
+    CountResponse,
+    RUVIA_OPTIONAL_FIELD(code, ruvia::int64),
+    RUVIA_OPTIONAL_FIELD(message, ruvia::string),
+    RUVIA_OPTIONAL_FIELD(data, CountData)
+);
 
 } // namespace service::common

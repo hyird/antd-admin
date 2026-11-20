@@ -32,16 +32,19 @@ class RoleController final {
         const auto [page, pageSizeValue, skip, keyword, paginated] =
             service::common::normalizePagination(
                 service::common::parseInt64(c.request().query("page")), pageSize,
-                c.request().query("keyword"));
+                c.request().query("keyword")
+            );
         co_return c.json(service::common::ok<RolePageResponse>(co_await roleService().list(
-            c, page, pageSizeValue, skip, keyword, paginated, c.request().query("status"))));
+            c, page, pageSizeValue, skip, keyword, paginated, c.request().query("status")
+        )));
     }
 
     ruvia::task<ruvia::http_response> listAll(ruvia::context& c) {
         co_await service::middleware::requireAnyPermission(c,
                                                            {"system:user:add", "system:user:edit"});
         co_return c.json(
-            service::common::ok<RoleOptionsResponse>(co_await roleService().listAllEnabled(c)));
+            service::common::ok<RoleOptionsResponse>(co_await roleService().listAllEnabled(c))
+        );
     }
 
     ruvia::task<ruvia::http_response> detail(ruvia::context& c) {
@@ -51,7 +54,8 @@ class RoleController final {
             service::common::throwAppError(service::common::kValidationErrorCode, "id 必须是正整数",
                                            400);
         co_return c.json(
-            service::common::ok<RoleDetailResponse>(co_await roleService().getById(c, *id)));
+            service::common::ok<RoleDetailResponse>(co_await roleService().getById(c, *id))
+        );
     }
 
     ruvia::task<ruvia::http_response> create(ruvia::context& c) {

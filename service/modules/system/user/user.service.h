@@ -82,7 +82,8 @@ class UserService {
             .set<"page">(static_cast<ruvia::int64>(page))
             .set<"pageSize">(static_cast<ruvia::int64>(pageSize))
             .set<"totalPages">(static_cast<ruvia::int64>(
-                paginated && pageSize > 0 ? (total + pageSize - 1) / pageSize : 1));
+                paginated && pageSize > 0 ? (total + pageSize - 1) / pageSize : 1
+            ));
 
         auto& list = result.ensure<"list">();
         for (const auto& row : rs) {
@@ -118,7 +119,8 @@ class UserService {
         for (const auto& row : rs) {
             auto& item = out.emplace_back();
             item.set<"id">(
-                static_cast<ruvia::int64>(std::stoll(std::string(row[0].value().value_or("")))));
+                static_cast<ruvia::int64>(std::stoll(std::string(row[0].value().value_or(""))))
+            );
             item.set<"username">(row[1].value().value_or(""));
             if (row[2].value().has_value())
                 item.set<"nickname">(row[2].value().value_or(""));
@@ -149,7 +151,8 @@ class UserService {
                       "d")
                 .where(storage::User::column<"id">("u").to_expr() == id &&
                        storage::User::column<"deleted_at">("u").to_expr().is_null())
-                .limit(1));
+                .limit(1)
+        );
         if (rs.empty())
             service::common::throwAppError(UserError::USER_NOT_FOUND);
 
@@ -172,7 +175,8 @@ class UserService {
                 .from(storage::User::table_name())
                 .where(storage::User::column<"username">().to_expr() == username &&
                        storage::User::column<"deleted_at">().to_expr().is_null())
-                .limit(1));
+                .limit(1)
+        );
         if (!existing.empty())
             service::common::throwAppError(UserError::USERNAME_EXISTS);
 
@@ -203,11 +207,13 @@ class UserService {
                          db_expr::value(
                              body.get<"deptId">()
                                  ? ruvia::db_value{static_cast<std::int64_t>(*body.get<"deptId">())}
-                                 : ruvia::db_value{nullptr}),
+                                 : ruvia::db_value{nullptr}
+                         ),
                          db_expr::value(ruvia::db_value{body.get<"status">()
                                                             ? body.get<"status">()->view()
                                                             : std::string_view{"enabled"}}),
-                         db_expr::now(), db_expr::now()}));
+                         db_expr::now(), db_expr::now()})
+        );
         const std::int64_t userId = static_cast<std::int64_t>(rs.last_insert_id().value_or(0));
 
         for (const auto roleId : body.get<"roleIds">()) {
@@ -216,7 +222,8 @@ class UserService {
             relation.set<"role_id">(static_cast<std::int64_t>(roleId));
             const std::array<ruvia::borrowed_text, 1> duplicateKey{"user_id"};
             (void)co_await tx.repository<storage::UserRole>().upsert(
-                relation, {.update_columns_ = duplicateKey, .any_unique_key_ = true});
+                relation, {.update_columns_ = duplicateKey, .any_unique_key_ = true}
+            );
         }
         co_await tx.commit();
         co_return;
@@ -281,14 +288,16 @@ class UserService {
             (void)co_await tx.execute(
                 ruvia::db_query{}
                     .delete_from(storage::UserRole::table_name())
-                    .where(storage::UserRole::column<"user_id">().to_expr() == id));
+                    .where(storage::UserRole::column<"user_id">().to_expr() == id)
+            );
             for (const auto roleId : *body.get<"roleIds">()) {
                 storage::UserRole relation;
                 relation.set<"user_id">(id);
                 relation.set<"role_id">(static_cast<std::int64_t>(roleId));
                 const std::array<ruvia::borrowed_text, 1> duplicateKey{"user_id"};
                 (void)co_await tx.repository<storage::UserRole>().upsert(
-                    relation, {.update_columns_ = duplicateKey, .any_unique_key_ = true});
+                    relation, {.update_columns_ = duplicateKey, .any_unique_key_ = true}
+                );
             }
         }
         co_await tx.commit();
@@ -322,7 +331,8 @@ class UserService {
   private:
     UserService() = default;
 
-    template <typename Row> static std::int64_t fillUserItem(UserItemDto& item, const Row& row) {
+    template <typename Row>
+    static std::int64_t fillUserItem(UserItemDto& item, const Row& row) {
         const std::int64_t userId = std::stoll(std::string(row[0].value().value_or("")));
         item.set<"id">(static_cast<ruvia::int64>(userId));
         item.set<"username">(row[1].value().value_or(""));
@@ -335,7 +345,8 @@ class UserService {
             item.set<"email">(row[4].value().value_or(""));
         if (row[5].value().has_value()) {
             item.set<"deptId">(
-                static_cast<ruvia::int64>(std::stoll(std::string(row[5].value().value_or("")))));
+                static_cast<ruvia::int64>(std::stoll(std::string(row[5].value().value_or(""))))
+            );
         }
         if (row[7].value().has_value())
             item.set<"deptName">(row[7].value().value_or(""));
@@ -355,12 +366,14 @@ class UserService {
                           storage::UserRole::column<"role_id">("ur").to_expr(),
                       "ur")
                 .where(storage::UserRole::column<"user_id">("ur").to_expr() == userId &&
-                       storage::Role::column<"deleted_at">("r").to_expr().is_null()));
+                       storage::Role::column<"deleted_at">("r").to_expr().is_null())
+        );
         auto& roleList = item.ensure<"roles">();
         for (const auto& rrow : roles) {
             auto& role = roleList.emplace_back();
             role.set<"id">(
-                static_cast<ruvia::int64>(std::stoll(std::string(rrow[0].value().value_or("")))));
+                static_cast<ruvia::int64>(std::stoll(std::string(rrow[0].value().value_or(""))))
+            );
             role.set<"name">(rrow[1].value().value_or(""));
             role.set<"code">(rrow[2].value().value_or(""));
         }
@@ -379,7 +392,8 @@ class UserService {
                 .where(storage::User::column<"phone">().to_expr() == phone &&
                        storage::User::column<"deleted_at">().to_expr().is_null() &&
                        storage::User::column<"id">().to_expr() != excludeId)
-                .limit(1));
+                .limit(1)
+        );
         if (!rs.empty())
             service::common::throwAppError(UserError::PHONE_EXISTS);
         co_return;
@@ -397,7 +411,8 @@ class UserService {
                 .where(storage::User::column<"email">().to_expr() == email &&
                        storage::User::column<"deleted_at">().to_expr().is_null() &&
                        storage::User::column<"id">().to_expr() != excludeId)
-                .limit(1));
+                .limit(1)
+        );
         if (!rs.empty())
             service::common::throwAppError(UserError::EMAIL_EXISTS);
         co_return;

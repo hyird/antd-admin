@@ -34,7 +34,8 @@ class MenuService {
         return svc;
     }
 
-    template <typename Rows> static ruvia::boxed_array<MenuDto> flatFromRows(const Rows& rows) {
+    template <typename Rows>
+    static ruvia::boxed_array<MenuDto> flatFromRows(const Rows& rows) {
         return buildFlatList(rowsToRecords(rows));
     }
 
@@ -87,7 +88,8 @@ class MenuService {
             .set<"page">(static_cast<ruvia::int64>(page))
             .set<"pageSize">(static_cast<ruvia::int64>(pageSize))
             .set<"totalPages">(static_cast<ruvia::int64>(
-                paginated && pageSize > 0 ? (total + pageSize - 1) / pageSize : 1));
+                paginated && pageSize > 0 ? (total + pageSize - 1) / pageSize : 1
+            ));
 
         auto& list = result.ensure<"list">();
         for (const auto& row : rs) {
@@ -143,7 +145,8 @@ class MenuService {
                        storage::Menu::column<"status">().to_expr() == "enabled")
                 .order_by(storage::Menu::column<"order">().to_expr())
                 .add_order_by(storage::Menu::column<"id">().to_expr())
-                .cache({.id_ = kEnabledMenuCacheId}));
+                .cache({.id_ = kEnabledMenuCacheId})
+        );
         co_return flatFromRows(rs);
     }
 
@@ -187,7 +190,8 @@ class MenuService {
                     .from(storage::Menu::table_name())
                     .where(storage::Menu::column<"id">().to_expr() ==
                                static_cast<std::int64_t>(*body.get<"parentId">()) &&
-                           storage::Menu::column<"deleted_at">().to_expr().is_null()));
+                           storage::Menu::column<"deleted_at">().to_expr().is_null())
+            );
             if (prs.empty())
                 service::common::throwAppError(MenuError::MENU_PARENT_NOT_FOUND);
             parentType = std::string(prs.front()[0].value().value_or(""));
@@ -205,7 +209,8 @@ class MenuService {
                 ruvia::db_query{}
                     .update(storage::Menu::table_name())
                     .set("is_default", db_expr::value(0))
-                    .where(storage::Menu::column<"is_default">().to_expr() == 1));
+                    .where(storage::Menu::column<"is_default">().to_expr() == 1)
+            );
         }
 
         (void)co_await tx.execute(
@@ -226,11 +231,13 @@ class MenuService {
                      db_expr::value(
                          body.get<"parentId">()
                              ? ruvia::db_value{static_cast<std::int64_t>(*body.get<"parentId">())}
-                             : ruvia::db_value{nullptr}),
+                             : ruvia::db_value{nullptr}
+                     ),
                      db_expr::value(
                          ruvia::db_value{body.get<"sortOrder">()
                                              ? static_cast<std::int64_t>(*body.get<"sortOrder">())
-                                             : 0}),
+                                             : 0}
+                     ),
                      db_expr::value(ruvia::db_value{type}),
                      db_expr::value(ruvia::db_value{body.get<"status">()
                                                         ? body.get<"status">()->view()
@@ -239,7 +246,9 @@ class MenuService {
                                         ? ruvia::db_value{body.get<"permissionCode">()->view()}
                                         : ruvia::db_value{nullptr}),
                      db_expr::value(ruvia::db_value{static_cast<std::int64_t>(isDefault ? 1 : 0)}),
-                     db_expr::now(), db_expr::now()}));
+                     db_expr::now(), db_expr::now()}
+                )
+        );
         co_await tx.commit();
         service::middleware::permissionService().clearAllCache();
         co_await clearEnabledMenuCache(db);
@@ -277,7 +286,8 @@ class MenuService {
                     .select(storage::Menu::column<"type">().to_expr())
                     .from(storage::Menu::table_name())
                     .where(storage::Menu::column<"id">().to_expr() == *newParentId &&
-                           storage::Menu::column<"deleted_at">().to_expr().is_null()));
+                           storage::Menu::column<"deleted_at">().to_expr().is_null())
+            );
             if (prs.empty())
                 service::common::throwAppError(MenuError::MENU_PARENT_NOT_FOUND);
             checkParentChildType(std::string(prs.front()[0].value().value_or("")), newType);
@@ -326,7 +336,8 @@ class MenuService {
                 ruvia::db_query{}
                     .update(storage::Menu::table_name())
                     .set("is_default", db_expr::value(0))
-                    .where(storage::Menu::column<"is_default">().to_expr() == 1));
+                    .where(storage::Menu::column<"is_default">().to_expr() == 1)
+            );
         }
         if (!changes.empty()) {
             (void)co_await tx.execute(ruvia::db_query{}
@@ -378,18 +389,21 @@ class MenuService {
             (void)co_await tx.execute(
                 ruvia::db_query{}
                     .delete_from(storage::RoleMenu::table_name())
-                    .where(menuId == id || ruvia::db_predicate::exists(matchingButton)));
+                    .where(menuId == id || ruvia::db_predicate::exists(matchingButton))
+            );
             (void)co_await tx.execute(
                 ruvia::db_query{}
                     .update(storage::Menu::table_name())
                     .set("deleted_at", db_expr::now())
                     .set("updated_at", db_expr::now())
-                    .where(storage::Menu::column<"id">().to_expr() == id || pageButtons));
+                    .where(storage::Menu::column<"id">().to_expr() == id || pageButtons)
+            );
         } else {
             (void)co_await tx.execute(
                 ruvia::db_query{}
                     .delete_from(storage::RoleMenu::table_name())
-                    .where(storage::RoleMenu::column<"menu_id">().to_expr() == id));
+                    .where(storage::RoleMenu::column<"menu_id">().to_expr() == id)
+            );
             (void)co_await tx.execute(ruvia::db_query{}
                                           .update(storage::Menu::table_name())
                                           .set("deleted_at", db_expr::now())
@@ -415,7 +429,8 @@ class MenuService {
                                       static_cast<std::int64_t>(item.get<"sortOrder">())}))
                     .set("updated_at", db_expr::now())
                     .where(storage::Menu::column<"id">().to_expr() ==
-                           static_cast<std::int64_t>(item.get<"id">())));
+                           static_cast<std::int64_t>(item.get<"id">()))
+            );
         }
         co_await tx.commit();
         service::middleware::permissionService().clearAllCache();
@@ -431,7 +446,8 @@ class MenuService {
                 .select(storage::Menu::column<"type">().to_expr())
                 .from(storage::Menu::table_name())
                 .where(storage::Menu::column<"id">().to_expr() == parentId &&
-                       storage::Menu::column<"deleted_at">().to_expr().is_null()));
+                       storage::Menu::column<"deleted_at">().to_expr().is_null())
+        );
         if (prs.empty())
             service::common::throwAppError(MenuError::MENU_PARENT_NOT_FOUND);
         if (std::string(prs.front()[0].value().value_or("")) != "page") {
@@ -451,16 +467,19 @@ class MenuService {
                            storage::Menu::column<"type">().to_expr() == "button" &&
                            storage::Menu::column<"permission_code">().to_expr() == permissionCode &&
                            storage::Menu::column<"deleted_at">().to_expr().is_null())
-                    .limit(1));
+                    .limit(1)
+            );
             if (!exists.empty())
                 continue;
             const auto maxRs = co_await tx.query(
                 ruvia::db_query{}
                     .select(
                         db_expr::coalesce({db_expr::max(storage::Menu::column<"order">().to_expr()),
-                                           db_expr::value(0)}))
+                                           db_expr::value(0)})
+                    )
                     .from(storage::Menu::table_name())
-                    .where(storage::Menu::column<"parent_id">().to_expr() == parentId));
+                    .where(storage::Menu::column<"parent_id">().to_expr() == parentId)
+            );
             const std::int64_t maxOrder =
                 std::stoll(std::string(maxRs.front()[0].value().value_or("")));
             (void)co_await tx.execute(
@@ -473,7 +492,8 @@ class MenuService {
                              db_expr::value("enabled"),
                              db_expr::value(ruvia::db_value{permissionCode}),
                              db_expr::value(ruvia::db_value{maxOrder + 1}), db_expr::now(),
-                             db_expr::now()}));
+                             db_expr::now()})
+            );
             ++created;
         }
         co_await tx.commit();
@@ -527,7 +547,8 @@ class MenuService {
                 .select({storage::Menu::column<"id">().to_expr(),
                          storage::Menu::column<"parent_id">().to_expr()})
                 .from(storage::Menu::table_name())
-                .where(storage::Menu::column<"deleted_at">().to_expr().is_null()));
+                .where(storage::Menu::column<"deleted_at">().to_expr().is_null())
+        );
         std::unordered_map<std::int64_t, std::vector<std::int64_t>> children;
         for (const auto& row : rs) {
             if (!row[1].value().has_value())
@@ -552,7 +573,8 @@ class MenuService {
         co_return false;
     }
 
-    template <typename Row> static MenuRecord rowToRecord(const Row& row) {
+    template <typename Row>
+    static MenuRecord rowToRecord(const Row& row) {
         MenuRecord item;
         item.id = std::stoll(std::string(row[0].value().value_or("")));
         item.name = row[1].value().value_or("");
@@ -573,7 +595,8 @@ class MenuService {
         return item;
     }
 
-    template <typename Rows> static std::vector<MenuRecord> rowsToRecords(const Rows& rows) {
+    template <typename Rows>
+    static std::vector<MenuRecord> rowsToRecords(const Rows& rows) {
         std::vector<MenuRecord> out;
         out.reserve(rows.size());
         for (const auto& row : rows)

@@ -17,7 +17,8 @@ RUVIA_DB_ENTITY(
     RUVIA_DB_COLUMN(leader_id, std::int64_t, ruvia::db_column_options{.nullable_ = true}),
     RUVIA_DB_COLUMN(status, std::string), RUVIA_DB_COLUMN(created_at, std::string),
     RUVIA_DB_COLUMN(updated_at, std::string),
-    RUVIA_DB_COLUMN(deleted_at, std::string, ruvia::db_column_options{.nullable_ = true}))
+    RUVIA_DB_COLUMN(deleted_at, std::string, ruvia::db_column_options{.nullable_ = true})
+)
 
 RUVIA_DB_ENTITY(
     Menu, "sys_menu",
@@ -32,7 +33,8 @@ RUVIA_DB_ENTITY(
     RUVIA_DB_COLUMN(permission_code, std::string, ruvia::db_column_options{.nullable_ = true}),
     RUVIA_DB_COLUMN(is_default, bool), RUVIA_DB_COLUMN(created_at, std::string),
     RUVIA_DB_COLUMN(updated_at, std::string),
-    RUVIA_DB_COLUMN(deleted_at, std::string, ruvia::db_column_options{.nullable_ = true}))
+    RUVIA_DB_COLUMN(deleted_at, std::string, ruvia::db_column_options{.nullable_ = true})
+)
 
 RUVIA_DB_ENTITY(Role, "sys_role",
                 RUVIA_DB_COLUMN(id, std::int64_t, ruvia::db_column_options{.primary_key_ = true}),

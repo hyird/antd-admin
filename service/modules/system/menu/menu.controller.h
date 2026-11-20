@@ -34,17 +34,21 @@ class MenuController final {
         const auto [page, pageSizeValue, skip, keyword, paginated] =
             service::common::normalizePagination(
                 service::common::parseInt64(c.request().query("page")), pageSize,
-                c.request().query("keyword"));
+                c.request().query("keyword")
+            );
         co_return c.json(service::common::ok<MenuPageResponse>(co_await menuService().list(
             c, page, pageSizeValue, skip, keyword, paginated, c.request().query("status"),
-            service::common::parseInt64(c.request().query("parent_id")))));
+            service::common::parseInt64(c.request().query("parent_id"))
+        )));
     }
 
     ruvia::task<ruvia::http_response> tree(ruvia::context& c) {
         co_await service::middleware::requireAnyPermission(
-            c, {"system:menu:query", "system:role:perm"});
+            c, {"system:menu:query", "system:role:perm"}
+        );
         co_return c.json(service::common::ok<MenuListResponse>(
-            co_await menuService().getTree(c, c.request().query("status"))));
+            co_await menuService().getTree(c, c.request().query("status"))
+        ));
     }
 
     ruvia::task<ruvia::http_response> detail(ruvia::context& c) {
@@ -54,7 +58,8 @@ class MenuController final {
             service::common::throwAppError(service::common::kValidationErrorCode, "id 必须是正整数",
                                            400);
         co_return c.json(
-            service::common::ok<MenuDetailResponse>(co_await menuService().getDetail(c, *id)));
+            service::common::ok<MenuDetailResponse>(co_await menuService().getDetail(c, *id))
+        );
     }
 
     ruvia::task<ruvia::http_response> create(ruvia::context& c) {
@@ -82,7 +87,8 @@ class MenuController final {
     ruvia::task<ruvia::http_response> batchButtons(ruvia::context& c) {
         co_await service::middleware::requirePermission(c, "system:menu:add");
         const int created = co_await menuService().batchCreateButtons(
-            c, c.request().validated<BatchCreateMenuButtonsBody>());
+            c, c.request().validated<BatchCreateMenuButtonsBody>()
+        );
         co_return c.json(service::common::count(created, "创建成功"));
     }
 

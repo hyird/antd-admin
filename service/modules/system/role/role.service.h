@@ -68,7 +68,8 @@ class RoleService {
             .set<"page">(static_cast<ruvia::int64>(page))
             .set<"pageSize">(static_cast<ruvia::int64>(pageSize))
             .set<"totalPages">(static_cast<ruvia::int64>(
-                paginated && pageSize > 0 ? (total + pageSize - 1) / pageSize : 1));
+                paginated && pageSize > 0 ? (total + pageSize - 1) / pageSize : 1
+            ));
 
         auto& list = result.ensure<"list">();
         for (const auto& row : rs) {
@@ -105,7 +106,8 @@ class RoleService {
         const auto& row = rs.front();
         RoleDetailDto out;
         out.set<"id">(
-            static_cast<ruvia::int64>(std::stoll(std::string(row[0].value().value_or("")))));
+            static_cast<ruvia::int64>(std::stoll(std::string(row[0].value().value_or(""))))
+        );
         out.set<"name">(row[1].value().value_or(""));
         out.set<"code">(row[2].value().value_or(""));
         out.set<"status">(row[3].value().value_or(""));
@@ -125,7 +127,8 @@ class RoleService {
                           .from(storage::Menu::table_name(), "m")
                           .where(storage::Menu::column<"deleted_at">("m").to_expr().is_null())
                           .order_by(storage::Menu::column<"order">("m").to_expr())
-                          .add_order_by(storage::Menu::column<"id">("m").to_expr()))
+                          .add_order_by(storage::Menu::column<"id">("m").to_expr())
+                  )
                 : co_await db.query(
                       ruvia::db_query{}
                           .select({storage::Menu::column<"id">("m").to_expr(),
@@ -140,7 +143,8 @@ class RoleService {
                           .where(storage::RoleMenu::column<"role_id">("rm").to_expr() == id &&
                                  storage::Menu::column<"deleted_at">("m").to_expr().is_null())
                           .order_by(storage::Menu::column<"order">("m").to_expr())
-                          .add_order_by(storage::Menu::column<"id">("m").to_expr()));
+                          .add_order_by(storage::Menu::column<"id">("m").to_expr())
+                  );
         for (const auto& mrow : mrs) {
             const auto mid = std::stoll(std::string(mrow[0].value().value_or("")));
             menuIds.emplace_back(static_cast<ruvia::int64>(mid));
@@ -151,7 +155,8 @@ class RoleService {
             menu.set<"type">(mrow[2].value().value_or(""));
             if (mrow[3].value().has_value()) {
                 menu.set<"parentId">(static_cast<ruvia::int64>(
-                    std::stoll(std::string(mrow[3].value().value_or("")))));
+                    std::stoll(std::string(mrow[3].value().value_or("")))
+                ));
             }
             menus.push_back(std::move(menu));
         }
@@ -174,7 +179,8 @@ class RoleService {
         for (const auto& row : rs) {
             auto& item = out.emplace_back();
             item.set<"id">(
-                static_cast<ruvia::int64>(std::stoll(std::string(row[0].value().value_or("")))));
+                static_cast<ruvia::int64>(std::stoll(std::string(row[0].value().value_or(""))))
+            );
             item.set<"name">(row[1].value().value_or(""));
             item.set<"code">(row[2].value().value_or(""));
         }
@@ -204,7 +210,8 @@ class RoleService {
                              {"name", "code", "status", "created_at", "updated_at"})
                 .values({db_expr::value(ruvia::db_value{name}),
                          db_expr::value(ruvia::db_value{code}),
-                         db_expr::value(ruvia::db_value{status}), db_expr::now(), db_expr::now()}));
+                         db_expr::value(ruvia::db_value{status}), db_expr::now(), db_expr::now()})
+        );
         const std::int64_t roleId = static_cast<std::int64_t>(rs.last_insert_id().value_or(0));
 
         if (code != service::common::kSuperAdminRoleCode) {
@@ -250,7 +257,8 @@ class RoleService {
                     .where(storage::Role::column<"code">().to_expr() == *code &&
                            storage::Role::column<"id">().to_expr() != id &&
                            storage::Role::column<"deleted_at">().to_expr().is_null())
-                    .limit(1));
+                    .limit(1)
+            );
             if (!existsRs.empty())
                 service::common::throwAppError(RoleError::CODE_EXISTS);
             append("code", ruvia::db_value{*code});
@@ -273,7 +281,8 @@ class RoleService {
                 (void)co_await tx.execute(
                     ruvia::db_query{}
                         .delete_from(storage::RoleMenu::table_name())
-                        .where(storage::RoleMenu::column<"role_id">().to_expr() == id));
+                        .where(storage::RoleMenu::column<"role_id">().to_expr() == id)
+                );
             } else {
                 co_await syncRoleMenus(tx, id, body.get<"menuIds">());
             }
@@ -323,7 +332,8 @@ class RoleService {
             ruvia::db_query{}
                 .select(storage::RoleMenu::column<"menu_id">().to_expr())
                 .from(storage::RoleMenu::table_name())
-                .where(storage::RoleMenu::column<"role_id">().to_expr() == roleId));
+                .where(storage::RoleMenu::column<"role_id">().to_expr() == roleId)
+        );
         std::vector<std::int64_t> ids;
         ids.reserve(rs.size());
         for (const auto& row : rs) {
@@ -366,7 +376,8 @@ class RoleService {
         (void)co_await tx.execute(
             ruvia::db_query{}
                 .delete_from(storage::RoleMenu::table_name())
-                .where(storage::RoleMenu::column<"role_id">().to_expr() == roleId));
+                .where(storage::RoleMenu::column<"role_id">().to_expr() == roleId)
+        );
         if (!menuIds)
             co_return;
         for (const auto menuId : *menuIds) {
@@ -375,7 +386,8 @@ class RoleService {
             relation.set<"menu_id">(static_cast<std::int64_t>(menuId));
             const std::array<ruvia::borrowed_text, 1> duplicateKey{"role_id"};
             (void)co_await tx.repository<storage::RoleMenu>().upsert(
-                relation, {.update_columns_ = duplicateKey, .any_unique_key_ = true});
+                relation, {.update_columns_ = duplicateKey, .any_unique_key_ = true}
+            );
         }
         co_return;
     }
