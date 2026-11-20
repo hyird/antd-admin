@@ -1,29 +1,43 @@
 #pragma once
 
-#include <ruvia/web/Controller.h>
+#include <string_view>
 
-#include "service/modules/system/user/user.types.h"
+#include <model.h>
 
 namespace service::user {
 
-class CreateUserValidator final : public ruvia::Middleware<CreateUserValidator> {
-    RUVIA_VALIDATE_JSON(CreateUserBody,
-                        RUVIA_RULE(username, RUVIA_REQUIRED("用户名不能为空"),
-                                   RUVIA_MIN(2, "用户名长度需在 2 - 50 之间"),
-                                   RUVIA_MAX(50, "用户名长度需在 2 - 50 之间")),
-                        RUVIA_RULE(password, RUVIA_REQUIRED("密码不能为空"),
-                                   RUVIA_MIN(6, "密码长度需在 6 - 100 之间"),
-                                   RUVIA_MAX(100, "密码长度需在 6 - 100 之间")),
-                        RUVIA_RULE(phone, RUVIA_CUSTOM("手机号格式不正确", isPhoneNumber)),
-                        RUVIA_RULE(email, RUVIA_EMAIL("邮箱格式不正确")),
-                        RUVIA_RULE_NAME("role_ids", roleIds, RUVIA_REQUIRED("至少选择一个角色"),
-                                        RUVIA_MIN(1, "至少选择一个角色")))
-};
+inline bool isPhoneNumber(std::string_view value) {
+    if (value.size() != 11 || value[0] != '1' || value[1] < '3' || value[1] > '9')
+        return false;
+    for (const char ch : value.substr(2)) {
+        if (ch < '0' || ch > '9')
+            return false;
+    }
+    return true;
+}
 
-class UpdateUserValidator final : public ruvia::Middleware<UpdateUserValidator> {
-    RUVIA_VALIDATE_JSON(UpdateUserBody,
-                        RUVIA_RULE(phone, RUVIA_CUSTOM("手机号格式不正确", isPhoneNumber)),
-                        RUVIA_RULE(email, RUVIA_EMAIL("邮箱格式不正确")))
-};
+RUVIA_MODEL(CreateUserBody,
+            RUVIA_REQUIRED_FIELD(username, ruvia::string,
+                                 RUVIA_MIN(2, "用户名长度需在 2 - 50 之间"),
+                                 RUVIA_MAX(50, "用户名长度需在 2 - 50 之间")),
+            RUVIA_REQUIRED_FIELD(password, ruvia::string, RUVIA_MIN(6, "密码长度需在 6 - 100 之间"),
+                                 RUVIA_MAX(100, "密码长度需在 6 - 100 之间")),
+            RUVIA_OPTIONAL_FIELD(nickname, ruvia::string),
+            RUVIA_OPTIONAL_FIELD(phone, ruvia::string,
+                                 RUVIA_CUSTOM(isPhoneNumber, "手机号格式不正确")),
+            RUVIA_OPTIONAL_FIELD(email, ruvia::string, RUVIA_EMAIL("邮箱格式不正确")),
+            RUVIA_OPTIONAL_FIELD_NAME("dept_id", deptId, ruvia::int64),
+            RUVIA_OPTIONAL_FIELD(status, ruvia::string),
+            RUVIA_REQUIRED_FIELD_NAME("role_ids", roleIds, ruvia::array<ruvia::int64>,
+                                      RUVIA_MIN(1, "至少选择一个角色")));
+
+RUVIA_MODEL(UpdateUserBody, RUVIA_OPTIONAL_FIELD(nickname, ruvia::string),
+            RUVIA_OPTIONAL_FIELD(phone, ruvia::string,
+                                 RUVIA_CUSTOM(isPhoneNumber, "手机号格式不正确")),
+            RUVIA_OPTIONAL_FIELD(email, ruvia::string, RUVIA_EMAIL("邮箱格式不正确")),
+            RUVIA_OPTIONAL_FIELD_NAME("dept_id", deptId, ruvia::int64),
+            RUVIA_OPTIONAL_FIELD(status, ruvia::string),
+            RUVIA_OPTIONAL_FIELD(password, ruvia::string),
+            RUVIA_OPTIONAL_FIELD_NAME("role_ids", roleIds, ruvia::array<ruvia::int64>));
 
 } // namespace service::user

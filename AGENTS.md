@@ -7,8 +7,8 @@
 
 - **前端工具链**：Node.js 24 + Bun；React 19 / Vite 8 / Ant Design 6 /
   Tailwind 4 / TanStack Query / Zustand
-- **后端工具链**：C++23 / Ruvia `main@ee067028`（core/http/web 三目标）/
-  asio / MariaDB / OpenSSL / ZLIB / Brotli / Zstd
+- **后端工具链**：C++23 / CMake 3.28+ / Ruvia `main@4d279eb5`（core/http/web 三目标）/
+  Asio / MariaDB / Redis / mimalloc / nghttp2 / OpenSSL / ZLIB / Brotli / Zstd
 - **依赖锁文件**：前端使用 `bun.lock`；后端使用 `vcpkg.json`
 - **构建产物**：前端为单文件 `build/web/index.html`；后端为 `build/server`
 
@@ -71,49 +71,48 @@ commit 的短 SHA。更新时必须：
 4. 更新本节和项目概览中的 commit，格式化全部项目 C++ 代码；
 5. 至少完成前端 lint/typecheck/build/format 检查和后端 Release 构建。
 
-当前 Ruvia API 基线：
+当前 Ruvia API 基线为 `main@4d279eb5`。
 
-- 请求模型使用 `RUVIA_REQUEST_MODEL(...)`，响应模型使用 `RUVIA_RESPONSE_MODEL(...)`；
-  两种角色不得互相嵌套或混用于解析、序列化；
-- `fromJson()` / `fromForm()` 只接受请求模型，`toJson()` / `Context::json()` 只接受响应
-  模型；运行时形状不得绕过模型边界拼装动态 JSON；
+- 请求、响应分别定义 `RUVIA_MODEL(...)`。请求通过 `ruvia::json_body<T>` 校验并从
+  `c.request().validated<T>()` 读取，响应通过 `c.json(model)` 序列化。直接转换使用
+  `ruvia::from_json<T>()` 和 `ruvia::to_json()`。保持请求和响应 DTO 的职责边界。
 - 字段使用 `RUVIA_REQUIRED_FIELD(...)` / `RUVIA_OPTIONAL_FIELD(...)` 声明，通过
-  `get<"field">()` / `set<"field">()` / `ensure<"field">()` / `reset<"field">()` 访问；
-- 校验后的 JSON 通过 `c.req().validated<T>()` 读取；
-- 普通运行时集合使用 `ruvia::Array<T>`；只有 DTO 直接或间接递归包含自身，或确实需要
-  独立对象存储语义时才使用 `ruvia::BoxedArray<T>`，不得仅因元素是 DTO 就改用 boxed 容器；
-- 请求级数据使用 `c.bindRequestState(value)` 绑定，并通过 `c.requestState<T>()` 读取；
-- MariaDB 配置使用 `ruvia::DbConfig::mariaDb()` 显式选择驱动；`query()` 结果直接作为
-  `ruvia::DbRows` 容器使用，字段通过 `value()` 或 `as<T>()` 读取；
-- HTTP 状态使用 `ruvia::HttpStatusCode` 和 `ruvia::http_status::*`，不把裸整数直接当作
-  框架状态类型；
-- 校验错误通过 `HttpErrorInfo::validationIssues()` 暴露的强类型 `ValidationIssue` 集合读取，
-  不依赖预序列化的错误详情 JSON；
-- 服务监听通过 `App::setListeners()` / `setWorkersPerListener()` 配置，错误与访问日志使用
-  `onError()` / `onAccess()` 回调。
+  `get<"field">()` / `set<"field">()` / `ensure<"field">()` / `reset<"field">()` 访问。
+- 普通集合使用 `ruvia::array<T>`。递归 DTO 或需要独立对象存储语义的集合使用
+  `ruvia::boxed_array<T>`。
+- 请求级数据使用 `c.bind_request_state(value)` 绑定，并通过 `c.request_state<T>()` 读取。
+- 通过 `ruvia::db_config::driver_` 显式选择 MariaDB。持久化映射使用 `RUVIA_DB_ENTITY`，
+  业务读写使用 Ruvia repository 或以实体列构造的 `ruvia::db_query`。
+- HTTP 状态使用 `ruvia::http_status_code` 和 `ruvia::http_status::*`。校验错误通过
+  `ruvia::http_error_info::validation_issues()` 读取。
+- 服务监听通过 `application::listen()` 和 `workers()` 配置，应用使用 `on_error()` 封装错误响应。
 
 业务辅助函数可以继续存在，但框架升级必须修改调用点，不得扩展第二套过渡 API。
 
 ## 环境配置
 
 复制 `.env.example` 到项目根目录 `.env`。CMake 会把它同步到后端可执行文件目录，
-`app.loadDotenv()` 从可执行文件同目录读取 `.env`。
+`app.load_dotenv()` 从可执行文件同目录读取 `.env`。
 
 | 变量 | 说明 |
 | --- | --- |
 | `HOST` / `PORT` | 监听地址；默认 `0.0.0.0:1102` |
-| `WORKER_THREADS` | 每个 Ruvia listener 的 worker 数；默认 2 |
+| `WORKER_THREADS` | Ruvia 应用的 worker 数，默认 2 |
 | `DB_HOST` / `DB_PORT` | MariaDB 地址；默认 `127.0.0.1:3306` |
 | `DB_USERNAME` / `DB_PASSWORD` / `DB_DATABASE` | MariaDB 凭证与数据库名 |
-| `JWT_SECRET` | 签发和验证 access token 的密钥，服务启动必填 |
-| `JWT_REFRESH_SECRET` | refresh token 密钥；缺省复用 `JWT_SECRET` |
+| `DB_TLS` | 启用 MariaDB TLS 和主机身份校验，默认 `false` |
+| `REDIS_HOST` / `REDIS_PORT` | Redis 地址，默认 `127.0.0.1:6379` |
+| `REDIS_USERNAME` / `REDIS_PASSWORD` / `REDIS_DATABASE` | Redis 可选凭证与数据库编号，默认数据库为 `0` |
+| `REDIS_TLS` | 启用 Redis TLS 和主机身份校验，默认 `false` |
+| `JWT_SECRET` | 签发和验证 access token 的密钥，服务启动必填，至少 32 字节 |
+| `JWT_REFRESH_SECRET` | refresh token 密钥，至少 32 字节，缺省复用 `JWT_SECRET` |
 | `JWT_EXPIRES_IN` | access token 时效，如 `1d`、`2h` |
 | `JWT_REFRESH_EXPIRES_IN` | refresh token 时效 |
 
 JWT 时效只接受正整数秒数，或带 `s`、`m`、`h`、`d` 后缀的正整数。服务启动时严格校验
 JWT 密钥和时效配置；配置错误直接终止启动，不静默使用回退值。
 
-服务启动时通过 Ruvia `DbMigrator` 执行编译进二进制的 schema 迁移。默认角色、账户、
+服务启动时通过 Ruvia `db_migrator` 执行编译进二进制的 schema 迁移。默认角色、账户、
 菜单和权限由幂等迁移创建；`GET /api/health` 只返回健康状态，不承担初始化副作用。
 
 ## 目录与组织原则
@@ -135,8 +134,8 @@ web/
 
 service/
 ├── common/                            # 通用 HTTP、响应、错误与数据库辅助
-├── config/                            # 进程配置与 schema 迁移
-├── middleware/                        # 认证、权限与日志中间件
+├── config/                            # 进程配置、共享 ORM 实体与 schema 迁移
+├── middleware/                        # 认证与权限中间件
 ├── modules/<domain>/<module>/         # 后端业务模块；按下文模板新增
 ├── utils/                             # 无状态后端工具
 └── server.cpp                         # 唯一翻译单元与进程装配入口
@@ -195,10 +194,10 @@ web/pages/<domain>/<module>/
 
 ```text
 service/modules/<domain>/<module>/
-├── <module>.types.h        # Ruvia 请求/响应 DTO
-├── <module>.schema.h       # RUVIA_VALIDATE_JSON 校验器
+├── <module>.types.h        # Ruvia 响应 DTO
+├── <module>.schema.h       # 带字段校验规则的 Ruvia 请求模型
 ├── <module>.error.h        # AppErrorDef 领域错误
-├── <module>.service.h      # 业务用例、SQL、事务与 DTO 组装
+├── <module>.service.h      # 业务用例、ORM、事务与 DTO 组装
 └── <module>.controller.h   # 路由注册和 HTTP 参数边界
 ```
 
@@ -207,7 +206,7 @@ service/modules/<domain>/<module>/
 - `*.controller.h` 只做路由、中间件、查询/路径参数解析、请求 DTO 读取和响应封装；业务规则放入
   service。
 - `*.schema.h` 只定义请求校验；`*.types.h` 只定义 DTO，不执行 I/O。
-- `*.service.h` 是当前持久化与业务边界：通过 `c.db()` 执行 SQL，需要原子性时显式开启事务。
+- `*.service.h` 持有持久化与业务逻辑，通过 `c.db()` 使用 ORM，需要原子性时显式开启事务。
 - `*.error.h` 只维护稳定的领域错误码、HTTP 状态和用户消息。
 - `service/modules/<domain>/<module>/` 除模板列出的 `<module>.types.h`、
   `<module>.schema.h`、`<module>.error.h`、`<module>.service.h`、
@@ -221,8 +220,8 @@ service/modules/<domain>/<module>/
 
 - **Controller 注册**：使用 `RUVIA_CONTROLLER_GROUP(...)` 与
   `RUVIA_ROUTES_BEGIN/END` 静态注册路由。
-- **请求校验**：请求 DTO 用 `RUVIA_REQUEST_MODEL`，响应 DTO 用 `RUVIA_RESPONSE_MODEL`，
-  schema 用 `RUVIA_VALIDATE_JSON`，controller 通过 `c.req().validated<T>()` 获取校验结果。
+- **请求校验**：请求和响应分别用 `RUVIA_MODEL` 声明，controller 用 `ruvia::json_body<T>`
+  绑定请求模型，通过 `c.request().validated<T>()` 获取校验结果。
 - **查询与路径参数**：Ruvia accessor 返回 `std::optional<std::string_view>`；整数统一通过项目
   公共严格解析函数转换。
 - **响应**：Ruvia DTO 统一输出 `{ code, message, data }`；分页 wire 字段为
@@ -231,12 +230,13 @@ service/modules/<domain>/<module>/
 - **认证**：受保护 controller 挂 `AuthMiddleware`。JWT 验证结果通过 request state 传递，
   权限检查使用 `co_await requirePermission(c, "<permission-code>")`。
 - **权限缓存**：权限服务按用户缓存 60 秒；会改变权限投影的写操作完成后必须清空相关缓存。
-- **错误处理**：业务通过 `throwAppError()` 抛 `ruvia::HttpError`，全局 error callback 输出统一
+  超级管理员的登录菜单列表通过 Ruvia 查询缓存存入 Redis，菜单写入提交后使该缓存失效。
+- **错误处理**：业务通过 `throwAppError()` 抛 `ruvia::http_error`，全局 error callback 输出统一
   JSON 错误壳并保留强类型 HTTP status。
-- **数据库**：启动时执行迁移并通过 `app.useDb()` 注入连接；查询使用 `query()` 并直接遍历
-  返回的 `DbRows`，写入使用 `execute()`，多步写操作使用 transaction。字段通过 `value()` 或
-  `as<T>()` 读取；参数容器必须拥有跨 `co_await` 所需的生命周期。
-- **静态站点**：只有可执行文件旁存在 `web/` 目录时才调用 `setDocumentRoot()`。SPA fallback
+- **数据库**：启动时执行迁移，通过 `app.db()` 和 `app.redis()` 注入连接。共享表映射放在
+  `service/config/entities.h`，业务使用实体、repository 和 `db_query` 构造查询或写入。
+  多步写操作使用 `begin_transaction()`。已有迁移 SQL 由 `db_migrator` 按校验和验证。
+- **静态站点**：只有可执行文件旁存在 `web/` 目录时才调用 `document_root()`。SPA fallback
   只处理非 API、非文件型的 GET/HEAD 请求。
 
 ## 前端构建约束

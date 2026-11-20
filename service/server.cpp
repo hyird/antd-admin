@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <chrono>
 #include <exception>
 #include <filesystem>
 #include <iostream>
@@ -6,19 +7,19 @@
 #include <system_error>
 #include <utility>
 
-#include <ruvia/core/Task.h>
-#include <ruvia/http/HttpKnownMethod.h>
-#include <ruvia/http/HttpStatus.h>
-#include <ruvia/web/App.h>
-#include <ruvia/web/Context.h>
-#include <ruvia/web/Controller.h>
-#include <ruvia/web/Error.h>
-#include <ruvia/web/db/Db.h>
-#include <ruvia/web/db/DbMigration.h>
+#include <task.h>
+#include <http_request.h>
+#include <http_status.h>
+#include <app.h>
+#include <context.h>
+#include <controller.h>
+#include <http_error.h>
+#include <db_executor.h>
+#include <db_migration.h>
+#include <redis_executor.h>
 
 #include "service/common/http.h"
 #include "service/config/schema.h"
-#include "service/middleware/logger.h"
 
 // 业务控制器（RUVIA_CONTROLLER_GROUP 在静态阶段把路由表注册到 ruvia::app()）。
 #include "service/modules/auth/login/login.controller.h"
@@ -61,45 +62,57 @@ std::filesystem::path& webRootPath() {
     return path;
 }
 
-void configureDocumentRoot(ruvia::App& app, const std::filesystem::path& runtimeDir) {
+void configureDocumentRoot(ruvia::application& app, const std::filesystem::path& runtimeDir) {
     auto webRoot = runtimeDir / "web";
     if (!std::filesystem::is_directory(webRoot))
         return;
 
-    ruvia::DocumentRootConfig config;
-    config.root = std::move(webRoot);
-    config.staticOptions.indexFile = "index.html";
-    config.staticOptions.cacheControl = "public, max-age=3600";
-    webRootPath() = config.root;
-    app.setDocumentRoot(std::move(config));
+    ruvia::document_root_config config;
+    config.root_ = std::move(webRoot);
+    config.static_options_.cache_control_ = "public, max-age=3600";
+    webRootPath() = config.root_;
+    app.document_root(std::move(config));
 }
 
-ruvia::DbConfig dbConfigFromEnv(const ruvia::Env& env) {
-    auto config = ruvia::DbConfig::mariaDb();
-    config.host.assign(env.get("DB_HOST").value_or("127.0.0.1"));
-    config.port = static_cast<std::uint16_t>(env.get<int>("DB_PORT").value_or(3306));
-    config.username.assign(env.get("DB_USERNAME").value_or("root"));
-    config.password.assign(env.get("DB_PASSWORD").value_or(""));
-    config.database.assign(env.get("DB_DATABASE").value_or("antd_admin"));
+ruvia::db_config dbConfigFromEnv(const ruvia::env& env) {
+    ruvia::db_config config{.driver_ = ruvia::db_driver::mariadb};
+    config.host_.assign(env.get("DB_HOST").value_or("127.0.0.1"));
+    config.port_ = ruvia::port_number{env.get<int>("DB_PORT").value_or(3306)};
+    config.username_.assign(env.get("DB_USERNAME").value_or("root"));
+    config.password_.assign(env.get("DB_PASSWORD").value_or(""));
+    config.database_.assign(env.get("DB_DATABASE").value_or("antd_admin"));
+    if (!env.get<bool>("DB_TLS").value_or(false))
+        config.tls_.mode_ = ruvia::client_tls_mode::disabled;
     return config;
 }
 
-void logMigrationReport(const ruvia::DbMigrationReport& report) {
-    service::middleware::logInfo(
-        "DB migrations applied=" + std::to_string(report.applied().size()) +
-        ", skipped=" + std::to_string(report.skipped().size()));
+ruvia::redis_config redisConfigFromEnv(const ruvia::env& env) {
+    ruvia::redis_config config;
+    config.host_.assign(env.get("REDIS_HOST").value_or("127.0.0.1"));
+    config.port_ = ruvia::port_number{env.get<int>("REDIS_PORT").value_or(6379)};
+    config.username_.assign(env.get("REDIS_USERNAME").value_or(""));
+    config.password_.assign(env.get("REDIS_PASSWORD").value_or(""));
+    config.database_ = env.get<std::uint32_t>("REDIS_DATABASE").value_or(0);
+    if (!env.get<bool>("REDIS_TLS").value_or(false))
+        config.tls_.mode_ = ruvia::client_tls_mode::disabled;
+    return config;
 }
 
-void configureDatabase(ruvia::App& app) {
+void configureDatabase(ruvia::application& app) {
     auto dbConfig = dbConfigFromEnv(app.env());
-    ruvia::DbMigrationOptions migrationOptions;
-    migrationOptions.table = "cyra_schema_migrations";
-    logMigrationReport(
-        ruvia::DbMigrator::migrate(dbConfig, service::config::kSchemaMigrations, migrationOptions));
-    app.useDb(std::move(dbConfig));
+    ruvia::db_migrator::run(dbConfig, service::config::kSchemaMigrations,
+                            {.table_ = "cyra_schema_migrations"});
+    auto cachePrefix = "antd-admin:" + dbConfig.host_ + ':' +
+                       std::to_string(dbConfig.port_->value()) + ':' + dbConfig.database_;
+    app.redis({.config_ = redisConfigFromEnv(app.env())})
+        .db({.config_ = std::move(dbConfig),
+             .query_cache_ = ruvia::db_query_cache_registration{
+                 .policy_ = {.duration_ = std::chrono::seconds(60),
+                             .ignore_errors_ = true,
+                             .key_prefix_ = std::move(cachePrefix)}}});
 }
 
-ServerSettings serverSettingsFromEnv(const ruvia::Env& env) {
+ServerSettings serverSettingsFromEnv(const ruvia::env& env) {
     return {
         .host = std::string(env.get("HOST").value_or("0.0.0.0")),
         .port = static_cast<std::uint16_t>(env.get<int>("PORT").value_or(1102)),
@@ -107,14 +120,14 @@ ServerSettings serverSettingsFromEnv(const ruvia::Env& env) {
     };
 }
 
-bool isSpaFallbackRequest(ruvia::Context& c, ruvia::HttpErrorInfo info) {
-    if (info.status() != ruvia::http_status::kNotFound || webRootPath().empty())
+bool isSpaFallbackRequest(ruvia::context& c, ruvia::http_error_info info) {
+    if (info.status() != ruvia::http_status::not_found || webRootPath().empty())
         return false;
-    if (c.req().knownMethod() != ruvia::HttpKnownMethod::kGet &&
-        c.req().knownMethod() != ruvia::HttpKnownMethod::kHead)
+    if (c.request().known_method() != ruvia::http_known_method::get &&
+        c.request().known_method() != ruvia::http_known_method::head)
         return false;
 
-    auto path = c.req().path();
+    auto path = c.request().path();
     if (path.starts_with("/api/") || path == "/api")
         return false;
     if (path.starts_with("/assets/"))
@@ -126,65 +139,58 @@ bool isSpaFallbackRequest(ruvia::Context& c, ruvia::HttpErrorInfo info) {
     return lastSegment.find('.') == std::string_view::npos;
 }
 
-// 与 ruvia::HttpErrorHandler 签名匹配；运行时把业务 HttpError 转成统一响应 DTO。
-ruvia::Task<ruvia::HttpResponse> handleError(ruvia::Context& c, ruvia::HttpErrorInfo info) {
+// 与 ruvia::http_error_handler 签名匹配；运行时把业务 HttpError 转成统一响应 DTO。
+ruvia::task<ruvia::http_response> handleError(ruvia::context& c, ruvia::http_error_info info) {
     if (isSpaFallbackRequest(c, info)) {
-        co_return c.file(webRootPath() / "index.html", "text/html; charset=utf-8");
+        const auto index = webRootPath() / "index.html";
+        co_return co_await c.file({.path_ = index, .content_type_ = "text/html; charset=utf-8"});
     }
 
     const auto status = info.status();
-    if (status.isServerError()) {
-        std::string diagnostic;
-        if (const auto exception = c.exception()) {
-            try {
-                std::rethrow_exception(exception);
-            } catch (const std::exception& error) {
-                diagnostic = error.what();
-            } catch (...) {
-                diagnostic = "non-standard exception";
-            }
-        }
-        if (diagnostic.empty()) {
-            diagnostic = info.message().empty() ? std::string(ruvia::httpReasonPhrase(status))
-                                                : std::string(info.message());
-        }
-        service::middleware::logError("Unhandled error: " + diagnostic);
-    }
-    c.status(status);
-    co_return c.json(service::common::error(
-        c, service::common::normalizeBusinessErrorCode(info.code(), status.value()),
-        info.message().empty() ? ruvia::httpReasonPhrase(status) : info.message()));
+    const auto issues = info.validation_issues();
+    const auto message =
+        issues.empty()
+            ? (info.message().empty() ? ruvia::http_reason_phrase(status) : info.message())
+            : issues.front().message();
+    co_return c.json(
+        service::common::error(
+            service::common::normalizeBusinessErrorCode(info.code(), status.value()), message),
+        {.status_ = status});
 }
 
-void configureHttpServer(ruvia::App& app) {
+ruvia::task<ruvia::http_response> handleNotFound(ruvia::context& c) {
+    return handleError(c, ruvia::http_error_info({.status_ = ruvia::http_status::not_found}));
+}
+
+void configureHttpServer(ruvia::application& app) {
     const auto settings = serverSettingsFromEnv(app.env());
-    app.setListeners({ruvia::ListenerConfig::http(settings.host, settings.port)})
-        .setWorkersPerListener(settings.threads)
-        .onError(&handleError)
-        .onAccess(ruvia::AccessLogCallback(service::middleware::AccessLogger{}));
-    service::middleware::logInfo("Server starting on " + settings.host + ":" +
-                                 std::to_string(settings.port));
+    app.listen({.address_ = settings.host, .http_ = ruvia::port_number{settings.port}})
+        .workers({.worker_count_ = settings.threads,
+                  .process_signal_handlers_ = ruvia::process_signal_handler_policy::install})
+        .blocking_pool(ruvia::blocking_pool_options{})
+        .on_error(&handleError)
+        .on_not_found(&handleNotFound);
 }
 
 } // namespace
 
 // 健康检查。
-class HealthController final : public ruvia::Controller<HealthController> {
+class HealthController final {
   public:
-    RUVIA_ROUTES_BEGIN
+    RUVIA_ROUTES_BEGIN(HealthController)
     RUVIA_GET("/api/health", health);
     RUVIA_ROUTES_END
 
   private:
-    ruvia::Task<ruvia::HttpResponse> health(ruvia::Context& c) {
-        co_return c.json(service::common::health(c));
+    ruvia::task<ruvia::http_response> health(ruvia::context& c) {
+        co_return c.json(service::common::health());
     }
 };
 
 int main(int argc, char* argv[]) {
     try {
         auto& app = ruvia::app();
-        app.loadDotenv();
+        app.load_dotenv();
         service::utils::validateJwtConfiguration();
         configureDocumentRoot(app, executableDir(argc > 0 ? argv[0] : nullptr));
         configureDatabase(app);

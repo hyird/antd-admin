@@ -2,18 +2,18 @@
 
 #include <array>
 
-#include <ruvia/web/db/DbMigration.h>
+#include <db_migration.h>
 
 namespace service::config {
 
-inline constexpr std::array<ruvia::DbMigration, 17> kSchemaMigrations{{
-    {
-        "0001",
-        R"sql(SET NAMES utf8mb4)sql",
-    },
-    {
-        "0002",
-        R"sql(CREATE TABLE IF NOT EXISTS sys_menu (
+inline const std::array<ruvia::db_migration, 17> kSchemaMigrations{{
+    ruvia::db_migration({
+        .id_ = "0001",
+        .sql_ = R"sql(SET NAMES utf8mb4)sql",
+    }),
+    ruvia::db_migration({
+        .id_ = "0002",
+        .sql_ = R"sql(CREATE TABLE IF NOT EXISTS sys_menu (
     id              INT NOT NULL AUTO_INCREMENT,
     name            VARCHAR(255) NOT NULL,
     path            VARCHAR(255) NULL,
@@ -33,10 +33,10 @@ inline constexpr std::array<ruvia::DbMigration, 17> kSchemaMigrations{{
     INDEX idx_menu_type (type),
     INDEX idx_menu_parent_type (parent_id, type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci)sql",
-    },
-    {
-        "0003",
-        R"sql(CREATE TABLE IF NOT EXISTS sys_role (
+    }),
+    ruvia::db_migration({
+        .id_ = "0003",
+        .sql_ = R"sql(CREATE TABLE IF NOT EXISTS sys_role (
     id          INT NOT NULL AUTO_INCREMENT,
     code        VARCHAR(255) NOT NULL,
     name        VARCHAR(255) NOT NULL,
@@ -48,19 +48,19 @@ inline constexpr std::array<ruvia::DbMigration, 17> kSchemaMigrations{{
     PRIMARY KEY (id),
     UNIQUE KEY uq_role_code (code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci)sql",
-    },
-    {
-        "0004",
-        R"sql(CREATE TABLE IF NOT EXISTS sys_role_menu (
+    }),
+    ruvia::db_migration({
+        .id_ = "0004",
+        .sql_ = R"sql(CREATE TABLE IF NOT EXISTS sys_role_menu (
     role_id INT NOT NULL,
     menu_id INT NOT NULL,
     PRIMARY KEY (role_id, menu_id),
     INDEX idx_role_menu_menu (menu_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci)sql",
-    },
-    {
-        "0005",
-        R"sql(CREATE TABLE IF NOT EXISTS sys_dept (
+    }),
+    ruvia::db_migration({
+        .id_ = "0005",
+        .sql_ = R"sql(CREATE TABLE IF NOT EXISTS sys_dept (
     id          INT NOT NULL AUTO_INCREMENT,
     name        VARCHAR(255) NOT NULL,
     code        VARCHAR(255) NULL,
@@ -73,10 +73,10 @@ inline constexpr std::array<ruvia::DbMigration, 17> kSchemaMigrations{{
     deleted_at  DATETIME(6) NULL,
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci)sql",
-    },
-    {
-        "0006",
-        R"sql(CREATE TABLE IF NOT EXISTS sys_user (
+    }),
+    ruvia::db_migration({
+        .id_ = "0006",
+        .sql_ = R"sql(CREATE TABLE IF NOT EXISTS sys_user (
     id            INT NOT NULL AUTO_INCREMENT,
     username      VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
@@ -93,19 +93,19 @@ inline constexpr std::array<ruvia::DbMigration, 17> kSchemaMigrations{{
     INDEX idx_user_status (status),
     INDEX idx_user_dept (dept_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci)sql",
-    },
-    {
-        "0007",
-        R"sql(CREATE TABLE IF NOT EXISTS sys_user_role (
+    }),
+    ruvia::db_migration({
+        .id_ = "0007",
+        .sql_ = R"sql(CREATE TABLE IF NOT EXISTS sys_user_role (
     user_id INT NOT NULL,
     role_id INT NOT NULL,
     PRIMARY KEY (user_id, role_id),
     INDEX idx_user_role_role (role_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci)sql",
-    },
-    {
-        "0008",
-        R"sql(CREATE TABLE IF NOT EXISTS sys_device (
+    }),
+    ruvia::db_migration({
+        .id_ = "0008",
+        .sql_ = R"sql(CREATE TABLE IF NOT EXISTS sys_device (
     id              INT NOT NULL AUTO_INCREMENT,
     code            VARCHAR(100) NOT NULL,
     name            VARCHAR(200) NOT NULL,
@@ -123,10 +123,10 @@ inline constexpr std::array<ruvia::DbMigration, 17> kSchemaMigrations{{
     INDEX idx_device_name (name),
     INDEX idx_device_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci)sql",
-    },
-    {
-        "0009",
-        R"sql(CREATE TABLE IF NOT EXISTS sys_variable (
+    }),
+    ruvia::db_migration({
+        .id_ = "0009",
+        .sql_ = R"sql(CREATE TABLE IF NOT EXISTS sys_variable (
     id           INT NOT NULL AUTO_INCREMENT,
     device_id    INT NOT NULL,
     name         VARCHAR(200) NOT NULL,
@@ -146,10 +146,10 @@ inline constexpr std::array<ruvia::DbMigration, 17> kSchemaMigrations{{
     INDEX idx_variable_device_sort (device_id, sort_order),
     INDEX idx_variable_enabled (enabled)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci)sql",
-    },
-    {
-        "0010",
-        R"sql(CREATE TABLE IF NOT EXISTS sys_variable_history (
+    }),
+    ruvia::db_migration({
+        .id_ = "0010",
+        .sql_ = R"sql(CREATE TABLE IF NOT EXISTS sys_variable_history (
     id            INT NOT NULL AUTO_INCREMENT,
     device_id     INT NOT NULL,
     device_code   VARCHAR(100) NOT NULL,
@@ -166,10 +166,10 @@ inline constexpr std::array<ruvia::DbMigration, 17> kSchemaMigrations{{
     INDEX idx_variable_history_device (device_id),
     INDEX idx_variable_history_time (collect_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci)sql",
-    },
-    {
-        "0011",
-        R"sql(CREATE TABLE IF NOT EXISTS sys_variable_realtime (
+    }),
+    ruvia::db_migration({
+        .id_ = "0011",
+        .sql_ = R"sql(CREATE TABLE IF NOT EXISTS sys_variable_realtime (
     code          VARCHAR(100) NOT NULL,
     device_id     INT NOT NULL,
     device_code   VARCHAR(100) NOT NULL,
@@ -182,18 +182,19 @@ inline constexpr std::array<ruvia::DbMigration, 17> kSchemaMigrations{{
     INDEX idx_variable_realtime_device (device_id),
     INDEX idx_variable_realtime_time (collect_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci)sql",
-    },
-    {
-        "0012",
-        R"sql(INSERT INTO sys_role (name, code, status, created_at, updated_at)
+    }),
+    ruvia::db_migration({
+        .id_ = "0012",
+        .sql_ = R"sql(INSERT INTO sys_role (name, code, status, created_at, updated_at)
 SELECT '超级管理员', 'superadmin', 'enabled', NOW(), NOW()
 WHERE NOT EXISTS (
     SELECT 1 FROM sys_role WHERE code = 'superadmin' AND deleted_at IS NULL
 ))sql",
-    },
-    {
-        "0013",
-        R"sql(INSERT INTO sys_user (username, password_hash, nickname, status, created_at, updated_at)
+    }),
+    ruvia::db_migration({
+        .id_ = "0013",
+        .sql_ =
+            R"sql(INSERT INTO sys_user (username, password_hash, nickname, status, created_at, updated_at)
 SELECT 'admin',
        'pbkdf2_sha256$210000$616e74645f61646d696e5f7365656431$179aef64cb17bf706f7a58feba1ce0db759ee0a63dae18f3789a78a5d7a9614c',
        '超级管理员',
@@ -203,18 +204,19 @@ SELECT 'admin',
 WHERE NOT EXISTS (
     SELECT 1 FROM sys_user WHERE username = 'admin' AND deleted_at IS NULL
 ))sql",
-    },
-    {
-        "0014",
-        R"sql(INSERT IGNORE INTO sys_user_role (user_id, role_id)
+    }),
+    ruvia::db_migration({
+        .id_ = "0014",
+        .sql_ = R"sql(INSERT IGNORE INTO sys_user_role (user_id, role_id)
 SELECT u.id, r.id
 FROM sys_user u
 INNER JOIN sys_role r ON r.code = 'superadmin' AND r.deleted_at IS NULL
 WHERE u.username = 'admin' AND u.deleted_at IS NULL)sql",
-    },
-    {
-        "0015",
-        R"sql(INSERT INTO sys_menu (name, path, icon, component, parent_id, `order`, type, status, permission_code, is_default, created_at, updated_at)
+    }),
+    ruvia::db_migration({
+        .id_ = "0015",
+        .sql_ =
+            R"sql(INSERT INTO sys_menu (name, path, icon, component, parent_id, `order`, type, status, permission_code, is_default, created_at, updated_at)
 SELECT '首页', '/home', 'HomeOutlined', 'Home', NULL, 0, 'page', 'enabled', NULL, 1, NOW(), NOW()
 WHERE NOT EXISTS (
     SELECT 1 FROM sys_menu WHERE type = 'page' AND component = 'Home' AND deleted_at IS NULL
@@ -224,10 +226,11 @@ SELECT '系统管理', NULL, 'SettingOutlined', NULL, NULL, 10, 'menu', 'enabled
 WHERE NOT EXISTS (
     SELECT 1 FROM sys_menu WHERE type = 'menu' AND name = '系统管理' AND parent_id IS NULL AND deleted_at IS NULL
 ))sql",
-    },
-    {
-        "0016",
-        R"sql(INSERT INTO sys_menu (name, path, icon, component, parent_id, `order`, type, status, permission_code, is_default, created_at, updated_at)
+    }),
+    ruvia::db_migration({
+        .id_ = "0016",
+        .sql_ =
+            R"sql(INSERT INTO sys_menu (name, path, icon, component, parent_id, `order`, type, status, permission_code, is_default, created_at, updated_at)
 SELECT '用户管理', '/system/user', 'UserOutlined', 'User',
        (SELECT id FROM sys_menu WHERE type = 'menu' AND name = '系统管理' AND deleted_at IS NULL ORDER BY id LIMIT 1),
        10, 'page', 'enabled', NULL, 0, NOW(), NOW()
@@ -255,10 +258,11 @@ SELECT '菜单管理', '/system/menu', 'MenuOutlined', 'Menu',
 WHERE NOT EXISTS (
     SELECT 1 FROM sys_menu WHERE type = 'page' AND component = 'Menu' AND deleted_at IS NULL
 ))sql",
-    },
-    {
-        "0017",
-        R"sql(INSERT INTO sys_menu (name, path, icon, component, parent_id, `order`, type, status, permission_code, is_default, created_at, updated_at)
+    }),
+    ruvia::db_migration({
+        .id_ = "0017",
+        .sql_ =
+            R"sql(INSERT INTO sys_menu (name, path, icon, component, parent_id, `order`, type, status, permission_code, is_default, created_at, updated_at)
 SELECT '查看统计', NULL, NULL, NULL,
        (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'Home' AND deleted_at IS NULL ORDER BY id LIMIT 1),
        1, 'button', 'enabled', 'home:dashboard:query', 0, NOW(), NOW()
@@ -348,7 +352,7 @@ SELECT '删除菜单', NULL, NULL, NULL,
        (SELECT id FROM sys_menu WHERE type = 'page' AND component = 'Menu' AND deleted_at IS NULL ORDER BY id LIMIT 1),
        4, 'button', 'enabled', 'system:menu:delete', 0, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM sys_menu WHERE type = 'button' AND permission_code = 'system:menu:delete' AND deleted_at IS NULL))sql",
-    },
+    }),
 }};
 
 } // namespace service::config

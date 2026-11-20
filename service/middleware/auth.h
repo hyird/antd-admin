@@ -3,9 +3,9 @@
 #include <string>
 #include <string_view>
 
-#include <ruvia/core/Task.h>
-#include <ruvia/web/Context.h>
-#include <ruvia/web/Controller.h>
+#include <task.h>
+#include <context.h>
+#include <middleware.h>
 
 #include "service/common/http.h"
 #include "service/utils/jwt.h"
@@ -13,8 +13,8 @@
 namespace service::middleware {
 
 // 路由处理器内调用，校验 Authorization 头并解析 JWT；失败抛出 AppError。
-inline service::core::JwtPayload requireAuth(ruvia::Context& c) {
-    const auto authHeader = c.req().header("Authorization");
+inline service::core::JwtPayload requireAuth(ruvia::context& c) {
+    const auto authHeader = c.request().header("Authorization");
     if (!authHeader || authHeader->empty()) {
         service::common::throwAppError(service::common::kAuthUnauthorizedErrorCode, "未登录", 401);
     }
@@ -37,15 +37,15 @@ inline service::core::JwtPayload requireAuth(ruvia::Context& c) {
     }
 }
 
-inline const service::core::JwtPayload& currentUser(ruvia::Context& c) {
-    return c.requestState<service::core::JwtPayload>();
+inline const service::core::JwtPayload& currentUser(ruvia::context& c) {
+    return c.request_state<service::core::JwtPayload>();
 }
 
-class AuthMiddleware final : public ruvia::Middleware<AuthMiddleware> {
+class AuthMiddleware final {
   public:
-    ruvia::Task<void> handle(ruvia::Context& c, ruvia::Next& next) {
+    ruvia::task<void> invoke(ruvia::context& c, ruvia::next& next) {
         const auto principal = requireAuth(c);
-        const auto binding = c.bindRequestState(principal);
+        const auto binding = c.bind_request_state(principal);
         co_await next();
     }
 };

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <charconv>
 #include <chrono>
 #include <cstdint>
@@ -9,16 +10,14 @@
 #include <string_view>
 #include <utility>
 
-#include <ruvia/web/App.h>
-#include <ruvia/web/auth/Jwt.h>
+#include <app.h>
+#include <jwt.h>
 
 namespace service::core {
 
 struct JwtPayload {
     std::int64_t user_id{0};
     std::string username;
-    std::int64_t iat{0};
-    std::int64_t exp{0};
 };
 
 } // namespace service::core
@@ -41,8 +40,8 @@ namespace service::jwt_detail {
 
 inline std::string accessSecret() {
     auto secret = ruvia::app().env().get("JWT_SECRET");
-    if (!secret || secret->empty()) {
-        throw std::runtime_error("JWT_SECRET environment variable is required");
+    if (!secret || secret->size() < 32) {
+        throw std::runtime_error("JWT_SECRET must contain at least 32 bytes");
     }
     return std::string(*secret);
 }
@@ -52,8 +51,8 @@ inline std::string refreshSecret() {
     if (!secret) {
         return accessSecret();
     }
-    if (secret->empty()) {
-        throw std::runtime_error("JWT_REFRESH_SECRET must not be empty");
+    if (secret->size() < 32) {
+        throw std::runtime_error("JWT_REFRESH_SECRET must contain at least 32 bytes");
     }
     return std::string(*secret);
 }
@@ -106,56 +105,28 @@ inline std::chrono::seconds refreshExpiresIn() {
 
 inline std::string sign(const service::core::JwtPayload& payload, const std::string& secret,
                         std::chrono::seconds expiresIn) {
-    ruvia::JwtSignOptions options;
-    options.secret.assign(secret.data(), secret.size());
-    const std::string subject = std::to_string(payload.user_id);
-    options.subject.assign(subject.data(), subject.size());
-    options.expiresIn = expiresIn;
-
-    // JwtClaim now owns pmr strings (copied from the given views); no field setters.
-    options.claims.emplace_back("user_id", subject);
-    options.claims.emplace_back("username", payload.username);
-
-    const auto token = ruvia::jwtSign(options);
-    return std::string(token.data(), token.size());
+    const auto subject = std::to_string(payload.user_id);
+    const std::array claims{ruvia::jwt_claim_view{"user_id", subject},
+                            ruvia::jwt_claim_view{"username", payload.username}};
+    return ruvia::sign_jwt(
+        {.secret_ = secret, .subject_ = subject, .expires_in_ = expiresIn, .claims_ = claims});
 }
 
 inline service::core::JwtPayload verify(const std::string& token, const std::string& secret) {
-    try {
-        ruvia::JwtVerifyOptions options;
-        options.secret.assign(secret.data(), secret.size());
-        const auto payload = ruvia::jwtVerify(token, options);
+    const auto result = ruvia::verify_jwt({.token_ = token, .secret_ = secret});
+    if (result.error() == ruvia::jwt_error_code::expired)
+        throw utils::JwtExpiredError("token expired");
+    if (!result.has_value())
+        throw utils::JwtInvalidError("invalid token");
 
-        service::core::JwtPayload out;
-        if (auto userId = payload.claim("user_id")) {
-            out.user_id = std::stoll(std::string(*userId));
-        }
-        if (auto username = payload.claim("username")) {
-            out.username = std::string(*username);
-        }
-        if (payload.issuedAt()) {
-            out.iat = std::chrono::duration_cast<std::chrono::seconds>(
-                          payload.issuedAt()->time_since_epoch())
-                          .count();
-        }
-        if (payload.expiresAt()) {
-            out.exp = std::chrono::duration_cast<std::chrono::seconds>(
-                          payload.expiresAt()->time_since_epoch())
-                          .count();
-        }
-        if (out.user_id <= 0 || out.username.empty()) {
-            throw utils::JwtInvalidError("invalid token payload");
-        }
-        return out;
-    } catch (const utils::JwtInvalidError&) {
-        throw;
-    } catch (const std::exception& ex) {
-        const std::string message(ex.what());
-        if (message.find("expired") != std::string::npos) {
-            throw utils::JwtExpiredError(message);
-        }
-        throw utils::JwtInvalidError(message);
-    }
+    const auto& payload = result.value();
+    const auto userId = payload.claim("user_id").value_or("");
+    const auto username = payload.claim("username").value_or("");
+    std::int64_t id = 0;
+    const auto [end, error] = std::from_chars(userId.data(), userId.data() + userId.size(), id);
+    if (error != std::errc{} || end != userId.data() + userId.size() || id <= 0 || username.empty())
+        throw utils::JwtInvalidError("invalid token payload");
+    return {id, std::string(username)};
 }
 
 } // namespace service::jwt_detail

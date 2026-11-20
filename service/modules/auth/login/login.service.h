@@ -8,20 +8,26 @@
 #include <unordered_map>
 #include <utility>
 
-#include <ruvia/core/Task.h>
-#include <ruvia/web/db/Db.h>
-#include <ruvia/web/Context.h>
+#include <task.h>
+#include <db_executor.h>
+#include <context.h>
+
+#include <db_query.h>
 
 #include "service/common/http.h"
+#include "service/config/entities.h"
 #include "service/common/types.h"
 #include "service/middleware/permission.h"
 #include "service/modules/auth/login/login.error.h"
+#include "service/modules/auth/login/login.schema.h"
 #include "service/modules/auth/login/login.types.h"
 #include "service/modules/system/menu/menu.service.h"
 #include "service/utils/password.h"
 #include "service/utils/jwt.h"
 
 namespace service::auth {
+
+using ruvia::db_expr;
 
 class RateLimitService {
   public:
@@ -93,9 +99,9 @@ class AuthService {
         return svc;
     }
 
-    ruvia::Task<LoginResultDto> login(ruvia::Context& c, const LoginBody& req) {
-        const std::string username(req.get<"username">()->view());
-        const std::string password(req.get<"password">()->view());
+    ruvia::task<LoginResultDto> login(ruvia::context& c, const LoginBody& req) {
+        const std::string username(req.get<"username">().view());
+        const std::string password(req.get<"password">().view());
 
         if (rateLimitService().isLocked(username)) {
             const auto remaining = rateLimitService().remainingLockSeconds(username);
@@ -106,10 +112,17 @@ class AuthService {
         }
 
         auto db = c.db();
-        const auto users =
-            co_await db.query("SELECT id, username, password_hash, nickname, status "
-                              "FROM sys_user WHERE username = ? AND deleted_at IS NULL LIMIT 1",
-                              service::common::dbParams(ruvia::DbValue{username}));
+        const auto users = co_await db.query(
+            ruvia::db_query{}
+                .select({storage::User::column<"id">().to_expr(),
+                         storage::User::column<"username">().to_expr(),
+                         storage::User::column<"password_hash">().to_expr(),
+                         storage::User::column<"nickname">().to_expr(),
+                         storage::User::column<"status">().to_expr()})
+                .from(storage::User::table_name())
+                .where(storage::User::column<"username">().to_expr() == username &&
+                       storage::User::column<"deleted_at">().to_expr().is_null())
+                .limit(1));
         if (users.empty()) {
             const int failureCount = rateLimitService().recordFailure(username);
             const int remaining = 5 - failureCount;
@@ -145,17 +158,17 @@ class AuthService {
 
         rateLimitService().clearFailure(username);
 
-        const service::core::JwtPayload payload{userId, username, 0, 0};
+        const service::core::JwtPayload payload{userId, username};
         auto user = co_await buildUserInfo(c, userId, username, nickname, status);
-        LoginResultDto result(c);
+        LoginResultDto result;
         result.set<"token">(service::utils::signAccessToken(payload))
             .set<"refreshToken">(service::utils::signRefreshToken(payload))
             .set<"user">(std::move(user));
         co_return result;
     }
 
-    ruvia::Task<LoginResultDto> refresh(ruvia::Context& c, const RefreshBody& req) {
-        const std::string refreshToken(req.get<"refreshToken">()->view());
+    ruvia::task<LoginResultDto> refresh(ruvia::context& c, const RefreshBody& req) {
+        const std::string refreshToken(req.get<"refreshToken">().view());
         if (refreshToken.empty())
             service::common::throwAppError(AuthError::UNAUTHORIZED);
         service::core::JwtPayload payload;
@@ -166,10 +179,16 @@ class AuthService {
         }
 
         auto db = c.db();
-        const auto users =
-            co_await db.query("SELECT id, username, nickname, status "
-                              "FROM sys_user WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-                              service::common::dbParams(ruvia::DbValue{payload.user_id}));
+        const auto users = co_await db.query(
+            ruvia::db_query{}
+                .select({storage::User::column<"id">().to_expr(),
+                         storage::User::column<"username">().to_expr(),
+                         storage::User::column<"nickname">().to_expr(),
+                         storage::User::column<"status">().to_expr()})
+                .from(storage::User::table_name())
+                .where(storage::User::column<"id">().to_expr() == payload.user_id &&
+                       storage::User::column<"deleted_at">().to_expr().is_null())
+                .limit(1));
         if (users.empty())
             service::common::throwAppError(AuthError::USER_NOT_FOUND);
         const auto& row = users.front();
@@ -181,20 +200,26 @@ class AuthService {
         if (status == "disabled")
             service::common::throwAppError(AuthError::USER_DISABLED);
 
-        const service::core::JwtPayload next{userId, username, 0, 0};
+        const service::core::JwtPayload next{userId, username};
         auto user = co_await buildUserInfo(c, userId, username, nickname, status);
-        LoginResultDto result(c);
+        LoginResultDto result;
         result.set<"token">(service::utils::signAccessToken(next))
             .set<"refreshToken">(service::utils::signRefreshToken(next))
             .set<"user">(std::move(user));
         co_return result;
     }
 
-    ruvia::Task<AuthUserInfoDto> getCurrentUser(ruvia::Context& c, std::int64_t userId) {
+    ruvia::task<AuthUserInfoDto> getCurrentUser(ruvia::context& c, std::int64_t userId) {
         auto db = c.db();
-        const auto users = co_await db.query("SELECT username, nickname, status FROM sys_user "
-                                             "WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-                                             service::common::dbParams(ruvia::DbValue{userId}));
+        const auto users =
+            co_await db.query(ruvia::db_query{}
+                                  .select({storage::User::column<"username">().to_expr(),
+                                           storage::User::column<"nickname">().to_expr(),
+                                           storage::User::column<"status">().to_expr()})
+                                  .from(storage::User::table_name())
+                                  .where(storage::User::column<"id">().to_expr() == userId &&
+                                         storage::User::column<"deleted_at">().to_expr().is_null())
+                                  .limit(1));
         if (users.empty())
             service::common::throwAppError(AuthError::USER_NOT_FOUND);
         const auto& row = users.front();
@@ -210,18 +235,26 @@ class AuthService {
   private:
     AuthService() = default;
 
-    ruvia::Task<bool> loadUserRoles(ruvia::Context& c, AuthUserInfoDto& info, std::int64_t userId) {
+    ruvia::task<bool> loadUserRoles(ruvia::context& c, AuthUserInfoDto& info, std::int64_t userId) {
         auto db = c.db();
-        const auto rs = co_await db.query("SELECT r.id, r.name, r.code FROM sys_role r "
-                                          "INNER JOIN sys_user_role ur ON r.id = ur.role_id "
-                                          "WHERE ur.user_id = ? AND r.deleted_at IS NULL",
-                                          service::common::dbParams(ruvia::DbValue{userId}));
+        const auto rs = co_await db.query(
+            ruvia::db_query{}
+                .select({storage::Role::column<"id">("r").to_expr(),
+                         storage::Role::column<"name">("r").to_expr(),
+                         storage::Role::column<"code">("r").to_expr()})
+                .from(storage::Role::table_name(), "r")
+                .join(ruvia::db_join_type::inner, storage::UserRole::table_name(),
+                      storage::Role::column<"id">("r").to_expr() ==
+                          storage::UserRole::column<"role_id">("ur").to_expr(),
+                      "ur")
+                .where(storage::UserRole::column<"user_id">("ur").to_expr() == userId &&
+                       storage::Role::column<"deleted_at">("r").to_expr().is_null()));
         bool isSuperadmin = false;
         auto& roles = info.ensure<"roles">();
         for (const auto& row : rs) {
-            auto& role = roles.emplace_back(c);
+            auto& role = roles.emplace_back();
             role.set<"id">(
-                static_cast<ruvia::Int64>(std::stoll(std::string(row[0].value().value_or("")))));
+                static_cast<ruvia::int64>(std::stoll(std::string(row[0].value().value_or("")))));
 
             const auto code = row[2].value().value_or("");
             role.set<"name">(row[1].value().value_or(""));
@@ -232,44 +265,58 @@ class AuthService {
         co_return isSuperadmin;
     }
 
-    ruvia::Task<ruvia::BoxedArray<menu::MenuDto>> getAllMenus(ruvia::Context& c) {
+    ruvia::task<ruvia::boxed_array<menu::MenuDto>> getUserRoleMenus(ruvia::context& c,
+                                                                    std::int64_t userId) {
         auto db = c.db();
         const auto rs = co_await db.query(
-            "SELECT id, name, path, icon, parent_id, `order`, type, component, status, "
-            "       permission_code, is_default FROM sys_menu "
-            "WHERE deleted_at IS NULL AND status = 'enabled' "
-            "ORDER BY `order` ASC, id ASC");
-        co_return menu::MenuService::flatFromRows(c, rs);
+            ruvia::db_query{}
+                .select({storage::Menu::column<"id">("m").to_expr(),
+                         storage::Menu::column<"name">("m").to_expr(),
+                         storage::Menu::column<"path">("m").to_expr(),
+                         storage::Menu::column<"icon">("m").to_expr(),
+                         storage::Menu::column<"parent_id">("m").to_expr(),
+                         storage::Menu::column<"order">("m").to_expr(),
+                         storage::Menu::column<"type">("m").to_expr(),
+                         storage::Menu::column<"component">("m").to_expr(),
+                         storage::Menu::column<"status">("m").to_expr(),
+                         storage::Menu::column<"permission_code">("m").to_expr(),
+                         storage::Menu::column<"is_default">("m").to_expr()})
+                .from(storage::Menu::table_name(), "m")
+                .distinct()
+                .join(ruvia::db_join_type::inner, storage::RoleMenu::table_name(),
+                      storage::Menu::column<"id">("m").to_expr() ==
+                          storage::RoleMenu::column<"menu_id">("rm").to_expr(),
+                      "rm")
+                .join(ruvia::db_join_type::inner, storage::UserRole::table_name(),
+                      storage::RoleMenu::column<"role_id">("rm").to_expr() ==
+                          storage::UserRole::column<"role_id">("ur").to_expr(),
+                      "ur")
+                .join(ruvia::db_join_type::inner, storage::Role::table_name(),
+                      storage::UserRole::column<"role_id">("ur").to_expr() ==
+                          storage::Role::column<"id">("r").to_expr(),
+                      "r")
+                .where(storage::UserRole::column<"user_id">("ur").to_expr() == userId &&
+                       storage::Role::column<"deleted_at">("r").to_expr().is_null() &&
+                       storage::Role::column<"status">("r").to_expr() == "enabled" &&
+                       storage::Menu::column<"deleted_at">("m").to_expr().is_null() &&
+                       storage::Menu::column<"status">("m").to_expr() == "enabled")
+                .order_by(storage::Menu::column<"order">("m").to_expr())
+                .add_order_by(storage::Menu::column<"id">("m").to_expr()));
+        co_return menu::MenuService::flatFromRows(rs);
     }
 
-    ruvia::Task<ruvia::BoxedArray<menu::MenuDto>> getUserRoleMenus(ruvia::Context& c,
-                                                                   std::int64_t userId) {
-        auto db = c.db();
-        const auto rs = co_await db.query(
-            "SELECT DISTINCT m.id, m.name, m.path, m.icon, m.parent_id, m.`order`, m.type, "
-            "       m.component, m.status, m.permission_code, m.is_default FROM sys_menu m "
-            "INNER JOIN sys_role_menu rm ON m.id = rm.menu_id "
-            "INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id "
-            "INNER JOIN sys_role r ON ur.role_id = r.id "
-            "WHERE ur.user_id = ? AND r.deleted_at IS NULL AND r.status = 'enabled' "
-            "  AND m.deleted_at IS NULL AND m.status = 'enabled' "
-            "ORDER BY m.`order` ASC, m.id ASC",
-            service::common::dbParams(ruvia::DbValue{userId}));
-        co_return menu::MenuService::flatFromRows(c, rs);
-    }
-
-    ruvia::Task<AuthUserInfoDto> buildUserInfo(ruvia::Context& c, std::int64_t userId,
+    ruvia::task<AuthUserInfoDto> buildUserInfo(ruvia::context& c, std::int64_t userId,
                                                const std::string& username,
                                                const std::string& nickname,
                                                const std::string& status) {
-        AuthUserInfoDto info(c);
-        info.set<"id">(static_cast<ruvia::Int64>(userId))
+        AuthUserInfoDto info;
+        info.set<"id">(static_cast<ruvia::int64>(userId))
             .set<"username">(username)
             .set<"nickname">(nickname)
             .set<"status">(status);
         const bool isSuperadmin = co_await loadUserRoles(c, info, userId);
         if (isSuperadmin) {
-            auto menus = co_await getAllMenus(c);
+            auto menus = co_await menu::menuService().listEnabledFlat(c);
             info.set<"menus">(std::move(menus));
         } else {
             auto menus = co_await getUserRoleMenus(c, userId);

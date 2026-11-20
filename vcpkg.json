@@ -4,14 +4,27 @@
     "description": "C++ backend port of antd-admin (Ruvia + vcpkg).",
     "builtin-baseline": "c16c1bd46c7f6de21efc6dcf19c1069d6825df23",
     "dependencies": [
-        "asio",
+        {
+            "name": "asio",
+            "version>=": "1.38.2"
+        },
         "brotli",
+        {
+            "name": "hiredis",
+            "version>=": "1.5.0"
+        },
         {
             "name": "libmariadb",
             "features": [
                 "openssl"
             ]
         },
+        {
+            "name": "mimalloc",
+            "version>=": "3.5.0",
+            "default-features": false
+        },
+        "nghttp2",
         "openssl",
         "zlib",
         "zstd"

@@ -8,7 +8,7 @@
 #include <string_view>
 #include <tuple>
 
-#include <ruvia/web/Model.h>
+#include <model.h>
 
 namespace service::common {
 
@@ -43,33 +43,17 @@ inline auto normalizePagination(std::optional<std::int64_t> pageInput,
     return std::tuple{page, size, (page - 1) * size, std::move(keyword), paginated};
 }
 
-// 转义 LIKE 模式中的特殊字符（\ % _），避免用户输入被当作通配符解释；
-// 与参数化查询配合使用（MariaDB LIKE 默认以反斜杠为转义符）。
-inline std::string escapeLikePattern(std::string_view input) {
-    std::string out;
-    out.reserve(input.size());
-    for (const char ch : input) {
-        if (ch == '\\' || ch == '%' || ch == '_')
-            out.push_back('\\');
-        out.push_back(ch);
-    }
-    return out;
-}
+RUVIA_MODEL(OperationResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::int64),
+            RUVIA_OPTIONAL_FIELD(message, ruvia::string));
 
-RUVIA_RESPONSE_MODEL(OperationResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::Int64),
-                     RUVIA_OPTIONAL_FIELD(message, ruvia::String));
+RUVIA_MODEL(HealthData, RUVIA_OPTIONAL_FIELD(status, ruvia::string));
 
-RUVIA_RESPONSE_MODEL(HealthData, RUVIA_OPTIONAL_FIELD(status, ruvia::String));
+RUVIA_MODEL(HealthResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::int64),
+            RUVIA_OPTIONAL_FIELD(message, ruvia::string), RUVIA_OPTIONAL_FIELD(data, HealthData));
 
-RUVIA_RESPONSE_MODEL(HealthResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::Int64),
-                     RUVIA_OPTIONAL_FIELD(message, ruvia::String),
-                     RUVIA_OPTIONAL_FIELD(data, HealthData));
+RUVIA_MODEL(CountData, RUVIA_OPTIONAL_FIELD_NAME("created_count", createdCount, ruvia::int64));
 
-RUVIA_RESPONSE_MODEL(CountData,
-                     RUVIA_OPTIONAL_FIELD_NAME("created_count", createdCount, ruvia::Int64));
-
-RUVIA_RESPONSE_MODEL(CountResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::Int64),
-                     RUVIA_OPTIONAL_FIELD(message, ruvia::String),
-                     RUVIA_OPTIONAL_FIELD(data, CountData));
+RUVIA_MODEL(CountResponse, RUVIA_OPTIONAL_FIELD(code, ruvia::int64),
+            RUVIA_OPTIONAL_FIELD(message, ruvia::string), RUVIA_OPTIONAL_FIELD(data, CountData));
 
 } // namespace service::common
